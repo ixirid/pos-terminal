@@ -198,7 +198,7 @@
     const socket = io();
     let html5QrCode = null;
 
-    // Функция для красивого форматирования суммы в рублях
+    // Функция для форматирования суммы в рублях
     function formatCurrency(num) {
       return num.toLocaleString('ru-RU', {
         minimumFractionDigits: 0,
@@ -206,7 +206,7 @@
       }) + ' ₽';
     }
 
-    // 1. Загрузка актуального баланса при открытии страницы через тестовый API
+    // 1. Загрузка актуального баланса при открытии страницы через API
     fetch('/api/shortcut/test')
       .then(res => res.json())
       .then(data => {
@@ -238,7 +238,7 @@
       closeScanner();
     });
 
-    // Функции управления сканером QR-кодов камеры
+    // Функции управления сканером камеры
     function openScanner() {
       document.getElementById('scannerOverlay').classList.add('active');
       html5QrCode = new Html5Qrcode("reader");
