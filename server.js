@@ -6,8 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 
-// Загрузка конфигурации
-let config = { serverIp: 'localhost', port: 3000 };
+let config = { serverIp: 'localhost', port: 3000, askTerminal: true };
 try {
   const configPath = path.join(__dirname, 'config.json');
   if (fs.existsSync(configPath)) {
@@ -15,31 +14,27 @@ try {
     config = { ...config, ...JSON.parse(rawConfig) };
   }
 } catch (err) {
-  console.error('Ошибка чтения config.json, используем значения по умолчанию:', err.message);
+  console.error('Ошибка чтения config.json:', err.message);
 }
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
+  cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-// Настройка CORS для всего приложения
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // In-Memory Хранилище
 let state = {
-  balance: 0,
-  activeTransaction: null, // { id, amount, status: 'pending'|'paid'|'cancelled', createdAt }
-  history: [] // История последних транзакций
+  balance: 5000, // Начальный баланс для тестов
+  activeTransaction: null,
+  history: [], // [{ id, type, amount, createdAt, paidAt, receiptId }]
+  displays: [] // [{ id, name, ip, isBlocked, lastSeen }]
 };
 
-// Динамическое формирование ссылки для QR-кода на основе текущего хоста запроса
 function getPayUrl(req, transactionId) {
   const protocol = req.protocol;
   const host = req.get('host');
@@ -47,45 +42,101 @@ function getPayUrl(req, transactionId) {
 }
 
 // REST API
-// Получение текущей конфигурации
 app.get('/api/info', (req, res) => {
   res.json({
     config,
+    balance: state.balance,
     activeTransaction: state.activeTransaction,
-    history: state.history
+    history: state.history,
+    displays: state.displays
   });
 });
 
-// ТЕСТОВЫЙ ЭНДПОИНТ ДЛЯ ПРОВЕРКИ СВЯЗИ С IPHONE
 app.get('/api/shortcut/test', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.json({
     success: true,
-    message: "Связь с сервером успешно установлена! Код сервера обновлен.",
+    message: "Связь с сервером установлена!",
     currentBalance: state.balance
   });
 });
 
-// Создание транзакции на оплату (без предварительной проверки баланса)
+// Настройка "спрашивать каждый раз"
+app.post('/api/settings', (req, res) => {
+  if (req.body.askTerminal !== undefined) {
+    config.askTerminal = !!req.body.askTerminal;
+  }
+  res.json({ success: true, config });
+});
+
+// Управление дисплеями
+app.get('/api/displays', (req, res) => {
+  res.json({ displays: state.displays });
+});
+
+app.post('/api/displays/register', (req, res) => {
+  const { id, name } = req.body;
+  if (!id) return res.status(400).json({ error: 'ID дисплея обязателен' });
+
+  const clientIp = req.ip || req.connection.remoteAddress;
+  let display = state.displays.find(d => d.id === id);
+
+  if (display) {
+    display.ip = clientIp;
+    display.lastSeen = Date.now();
+  } else {
+    state.displays.push({
+      id,
+      name: name || `Дисплей ${id.slice(0, 4)}`,
+      ip: clientIp,
+      isBlocked: false,
+      lastSeen: Date.now()
+    });
+  }
+  io.emit('displays_updated', { displays: state.displays });
+  res.json({ success: true });
+});
+
+app.post('/api/displays/:id/update', (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  const display = state.displays.find(d => d.id === id);
+  if (display && name) {
+    display.name = name;
+    io.emit('displays_updated', { displays: state.displays });
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/displays/:id/block', (req, res) => {
+  const { id } = req.params;
+  const { isBlocked } = req.body;
+  const display = state.displays.find(d => d.id === id);
+  if (display) {
+    display.isBlocked = !!isBlocked;
+    io.emit('display_block_status', { id, isBlocked: display.isBlocked });
+    io.emit('displays_updated', { displays: state.displays });
+  }
+  res.json({ success: true });
+});
+
+// Создание транзакции
 app.post('/api/create-transaction', async (req, res) => {
   try {
     const amount = parseFloat(req.body.amount);
+    const targetDisplayId = req.body.targetDisplayId || null;
 
     if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ error: 'Укажите корректную сумму оплаты' });
+      return res.status(400).json({ error: 'Укажите корректную сумму' });
     }
 
     const transactionId = 'tx_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
     const payUrl = getPayUrl(req, transactionId);
 
-    // Генерация QR-кода в формате DataURL
     const qrCodeDataUrl = await QRCode.toDataURL(payUrl, {
       margin: 1,
-      color: {
-        dark: '#171717',
-        light: '#FFFFFF'
-      },
+      color: { dark: '#171717', light: '#FFFFFF' },
       width: 320
     });
 
@@ -95,23 +146,19 @@ app.post('/api/create-transaction', async (req, res) => {
       status: 'pending',
       payUrl,
       qrCode: qrCodeDataUrl,
+      targetDisplayId,
       createdAt: new Date().toISOString()
     };
 
-    // Оповещаем терминал и дисплей о создании транзакции
     io.emit('transaction_created', state.activeTransaction);
 
-    res.json({
-      success: true,
-      transaction: state.activeTransaction
-    });
+    res.json({ success: true, transaction: state.activeTransaction });
   } catch (err) {
-    console.error('Ошибка создания транзакции:', err);
     res.status(500).json({ error: 'Ошибка сервера при создании QR-кода' });
   }
 });
 
-// Запрос данных транзакции для клиента (передаем баланс счета)
+// Данные транзакции для страницы оплаты
 app.get('/api/transaction/:id', (req, res) => {
   const { id } = req.params;
   if (state.activeTransaction && state.activeTransaction.id === id) {
@@ -123,7 +170,6 @@ app.get('/api/transaction/:id', (req, res) => {
     });
   }
   
-  // Проверяем в истории
   const historical = state.history.find(t => t.id === id);
   if (historical) {
     return res.json({
@@ -137,7 +183,7 @@ app.get('/api/transaction/:id', (req, res) => {
   res.status(404).json({ error: 'Транзакция не найдена или истекла' });
 });
 
-// Подтверждение оплаты клиентом
+// Подтверждение оплаты
 app.post('/api/pay/:id', (req, res) => {
   const { id } = req.params;
 
@@ -151,12 +197,10 @@ app.post('/api/pay/:id', (req, res) => {
 
   const amount = state.activeTransaction.amount;
 
-  // Проверка баланса в момент оплаты клиентом
   if (amount > state.balance) {
     const failedTx = { ...state.activeTransaction };
-    state.activeTransaction = null; // Сбрасываем активную транзакцию
+    state.activeTransaction = null;
 
-    // Оповещаем терминал и дисплей о неудачной оплате
     io.emit('payment_failed', {
       transaction: failedTx,
       reason: 'insufficient_funds',
@@ -168,20 +212,17 @@ app.post('/api/pay/:id', (req, res) => {
     });
   }
 
-  // Списание с баланса
   state.balance -= amount;
   state.activeTransaction.status = 'paid';
   state.activeTransaction.paidAt = new Date().toISOString();
 
   const completedTx = { ...state.activeTransaction, type: 'payment' };
 
-  // Добавляем в историю
   state.history.unshift(completedTx);
-  if (state.history.length > 20) state.history.pop();
+  if (state.history.length > 50) state.history.pop();
 
   state.activeTransaction = null;
 
-  // Оповещаем терминал и дисплей
   io.emit('payment_success', {
     transaction: completedTx,
     newBalance: state.balance,
@@ -196,77 +237,39 @@ app.post('/api/pay/:id', (req, res) => {
   });
 });
 
-// ОБРАБОТЧИК ДЛЯ БЫСТРЫХ КОМАНД (ЯВНО ПОДДЕРЖИВАЕТ И GET, И POST, И OPTIONS)
-const handleShortcutPay = (req, res) => {
-  // Добавляем заголовки CORS вручную для надежности iOS-запросов
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+// История чеков
+app.get('/api/history', (req, res) => {
+  res.json({ history: state.history });
+});
 
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+// Скачивание уникального чека в текстовом формате
+app.get('/api/receipt/:id', (req, res) => {
+  const { id } = req.params;
+  const tx = state.history.find(t => t.id === id);
+  if (!tx) {
+    return res.status(404.send('Чек не найден'));
   }
 
-  if (!state.activeTransaction || state.activeTransaction.status !== 'pending') {
-    return res.status(400).json({
-      success: false,
-      error: 'Нет активного счета',
-      message: 'На терминале сейчас нет открытых счетов для оплаты.'
-    });
-  }
+  const receiptText = `
+========================================
+           ОФИЦИАЛЬНЫЙ ЧЕК SberPay
+========================================
+Идентификатор (ID): ${tx.id}
+Тип операции: Безналичная оплата
+Сумма: ${tx.amount.toLocaleString('ru-RU')} ₽
+Дата создания: ${tx.createdAt}
+Дата оплаты: ${tx.paidAt || tx.createdAt}
+Статус: Успешно оплачено
+Остаток на карте после оплаты: ${state.balance.toLocaleString('ru-RU')} ₽
+========================================
+      Спасибо за использование SberPay!
+========================================
+  `.trim();
 
-  const amount = state.activeTransaction.amount;
-
-  if (amount > state.balance) {
-    const failedTx = { ...state.activeTransaction };
-    state.activeTransaction = null; // Сбрасываем активную транзакцию
-
-    // Оповещаем терминал и дисплей о неудачной оплате
-    io.emit('payment_failed', {
-      transaction: failedTx,
-      reason: 'insufficient_funds',
-      balance: state.balance
-    });
-
-    return res.status(400).json({
-      success: false,
-      error: 'Недостаточно средств',
-      message: `Недостаточно средств. Счет: ${amount} ₽. Баланс: ${state.balance} ₽.`
-    });
-  }
-
-  // Проводим оплату
-  state.balance -= amount;
-  state.activeTransaction.status = 'paid';
-  state.activeTransaction.paidAt = new Date().toISOString();
-
-  const completedTx = { ...state.activeTransaction, type: 'payment' };
-
-  state.history.unshift(completedTx);
-  if (state.history.length > 20) state.history.pop();
-
-  state.activeTransaction = null;
-
-  // Оповещаем терминал и дисплей по WebSockets
-  io.emit('payment_success', {
-    transaction: completedTx,
-    newBalance: state.balance,
-    history: state.history
-  });
-
-  res.json({
-    success: true,
-    amount: amount,
-    newBalance: state.balance,
-    message: `Успешно оплачено ${amount.toLocaleString('ru-RU')} ₽. Остаток: ${state.balance.toLocaleString('ru-RU')} ₽.`
-  });
-};
-
-// Регистрируем обработчик на все методы
-app.get('/api/shortcut/pay-active', handleShortcutPay);
-app.post('/api/shortcut/pay-active', handleShortcutPay);
-app.all('/api/shortcut/pay-active', handleShortcutPay);
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="receipt_${tx.id}.txt"`);
+  res.send(receiptText);
+});
 
 // Отмена транзакции
 app.post('/api/cancel-transaction', (req, res) => {
@@ -283,7 +286,7 @@ app.post('/api/topup', (req, res) => {
   const amount = parseFloat(req.body.amount);
 
   if (isNaN(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'Укажите корректную сумму для пополнения' });
+    return res.status(400).json({ error: 'Укажите корректную сумму' });
   }
 
   state.balance += amount;
@@ -296,9 +299,8 @@ app.post('/api/topup', (req, res) => {
   };
 
   state.history.unshift(topupRecord);
-  if (state.history.length > 20) state.history.pop();
+  if (state.history.length > 50) state.history.pop();
 
-  // Оповещаем по WebSockets
   io.emit('balance_updated', {
     newBalance: state.balance,
     addedAmount: amount,
@@ -312,7 +314,7 @@ app.post('/api/topup', (req, res) => {
   });
 });
 
-// Маршруты страниц
+// Страницы
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'terminal.html'));
 });
@@ -321,28 +323,29 @@ app.get('/pay/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'pay.html'));
 });
 
-// Новый маршрут для клиентского дисплея
 app.get('/display', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'display.html'));
 });
 
-// Socket.io соединения
+app.get('/client', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'client_portal.html'));
+});
+
 io.on('connection', (socket) => {
   socket.emit('init_state', {
     activeTransaction: state.activeTransaction,
     history: state.history,
+    displays: state.displays,
     config
   });
-
-  socket.on('disconnect', () => {});
 });
 
 const PORT = process.env.PORT || config.port || 3000;
 server.listen(PORT, () => {
   console.log(`====================================================`);
-  console.log(`🚀 POS Терминал запущен!`);
-  console.log(`🖥  Панель Терминала (Касса): http://localhost:${PORT}`);
+  console.log(`🚀 POS Терминал обновлен и запущен!`);
+  console.log(`🖥  Панель Терминала: http://localhost:${PORT}`);
   console.log(`📺 Клиентский Дисплей: http://localhost:${PORT}/display`);
-  console.log(`🌐 Внешний адрес: http://${config.serverIp}:${PORT}`);
+  console.log(`👤 Портал Клиента: http://localhost:${PORT}/client`);
   console.log(`====================================================`);
 });
