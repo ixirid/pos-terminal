@@ -1177,12 +1177,15 @@
       }).catch(e => {});
     }
 
-    // СОБЫТИЯ WEBSOCKET (ГЛОБАЛЬНЫЙ ПОЛНОЭКРАННЫЙ МОДАЛЬ ВЕЗДЕ)
+    // СОБЫТИЯ WEBSOCKET (ИСПРАВЛЕНО ДЛЯ АВТОМАТИЧЕСКОГО СБРОСА QR)
     socket.on('payment_success', (data) => {
       if (window.terminalAudio) window.terminalAudio.playSuccess();
+      
+      // Скрываем панель с QR-кодом
       document.getElementById('qrDisplayPanel').classList.remove('active');
       document.getElementById('errorFullscreenModal').classList.remove('active');
       
+      // Показываем модальное окно успешной оплаты на кассе
       const successModal = document.getElementById('successFullscreenModal');
       successModal.classList.add('active');
       
@@ -1194,9 +1197,12 @@
 
     socket.on('payment_failed', (data) => {
       if (window.terminalAudio) window.terminalAudio.playError();
+      
+      // Скрываем панель с QR-кодом
       document.getElementById('qrDisplayPanel').classList.remove('active');
       document.getElementById('successFullscreenModal').classList.remove('active');
       
+      // Показываем модальное окно ошибки
       const errorModal = document.getElementById('errorFullscreenModal');
       errorModal.classList.add('active');
       
@@ -1207,20 +1213,6 @@
 
     socket.on('transaction_cancelled', () => {
       resetChargeView();
-    });
-
-    // Слушаем обновление списка подключенных дисплеев
-    socket.on('update_displays', (displays) => {
-      const displaySelect = document.getElementById('displaySelect'); 
-      if (!displaySelect) return;
-      
-      displaySelect.innerHTML = '<option value="">Выберите дисплей</option>';
-      displays.forEach(display => {
-        const option = document.createElement('option');
-        option.value = display.id;
-        option.textContent = display.name;
-        displaySelect.appendChild(option);
-      });
     });
 
     // Клавиатурные сокращения
