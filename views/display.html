@@ -616,21 +616,14 @@
 
   </main>
 
-  <script src="/js/audio.js"></script>
+ <script src="/js/audio.js"></script>
   <script>
     const socket = io();
-    let displayId = 'disp_' + Math.random().toString(36.substring(2, 9));
-    
-    // Регистрируем дисплей при загрузке
-    const registerDisplay = () => {
-      fetch('/api/displays/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: displayId, name: 'Дисплей ' + displayId.slice(0, 4) })
-      }).catch(e => {});
-    };
-    registerDisplay();
-    setInterval(registerDisplay, 10000); // Heartbeat
+    let displayId = null;
+
+    socket.on('connect', () => {
+      displayId = socket.id;
+    });
 
     const stateIdle = document.getElementById('state-idle');
     const statePay = document.getElementById('state-pay');
