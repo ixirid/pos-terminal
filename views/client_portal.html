@@ -195,8 +195,12 @@
     }
 
     socket.on('init_state', (data) => {
-      // Можно получить баланс из транзакций или запросить
-    });
+  if (data.balance !== undefined) {
+    // Обновите переменную баланса и текст на странице портала клиента
+    currentBalance = data.balance;
+    document.getElementById('balanceDisplay').textContent = formatCurrency(currentBalance);
+  }
+});
 
     socket.on('balance_updated', (data) => {
       document.getElementById('clientBalanceDisplay').textContent = data.newBalance.toLocaleString('ru-RU') + ' ₽';
