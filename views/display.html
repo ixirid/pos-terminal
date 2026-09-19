@@ -46,7 +46,6 @@
       flex-direction: column;
     }
 
-    /* Состояния экрана */
     .state {
       position: absolute;
       inset: 0;
@@ -66,7 +65,41 @@
       pointer-events: auto;
     }
 
-    /* --- 1. ЭКРАН ОЖИДАНИЯ (IDLE) --- */
+    /* ЗАБЛОКИРОВАННЫЙ ЭКРАН */
+    .blocked-screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 12, 7, 0.95);
+      backdrop-filter: blur(20px);
+      z-index: 2000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .blocked-screen.active {
+      display: flex !important;
+    }
+
+    .lock-icon-circle {
+      width: 100px;
+      height: 100px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 2px solid rgba(239, 68, 68, 0.4);
+      color: #ef4444;
+      font-size: 45px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: 0 0 40px var(--sber-red-glow);
+    }
+
+    /* ЭКРАН ОЖИДАНИЯ (IDLE) */
     .idle-header {
       display: flex;
       align-items: center;
@@ -114,7 +147,7 @@
     }
 
     .idle-title {
-      font-size: clamp(56px, 14vw, 88px);
+      font-size: clamp(52px, 13vw, 84px);
       font-weight: 900;
       line-height: 1.05;
       letter-spacing: -2px;
@@ -132,8 +165,8 @@
     }
 
     .green-dot-icon {
-      width: clamp(40px, 10vw, 60px);
-      height: clamp(40px, 10vw, 60px);
+      width: clamp(38px, 9vw, 56px);
+      height: clamp(38px, 9vw, 56px);
       background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
       border-radius: 50%;
       box-shadow: 0 0 30px rgba(0, 230, 118, 0.8);
@@ -142,15 +175,15 @@
     }
 
     .green-check-icon {
-      width: clamp(46px, 11vw, 68px);
-      height: clamp(46px, 11vw, 68px);
+      width: clamp(44px, 10vw, 64px);
+      height: clamp(44px, 10vw, 64px);
       background: #00e676;
       border-radius: 16px;
       color: #02120b;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(30px, 7.5vw, 44px);
+      font-size: clamp(28px, 7vw, 42px);
       font-weight: 900;
       box-shadow: 0 0 25px rgba(0, 230, 118, 0.7);
       flex-shrink: 0;
@@ -164,7 +197,7 @@
       letter-spacing: 0.5px;
     }
 
-    /* --- 2. ЭКРАН ОПЛАТЫ (PAYMENT) --- */
+    /* ЭКРАН ОПЛАТЫ (PAYMENT) */
     .pay-header {
       display: flex;
       justify-content: space-between;
@@ -193,7 +226,7 @@
     }
 
     .pay-amount-display {
-      font-size: clamp(36px, 9vw, 52px);
+      font-size: clamp(34px, 8.5vw, 50px);
       font-weight: 900;
       letter-spacing: -1px;
       color: #ffffff;
@@ -218,11 +251,6 @@
       flex-shrink: 0;
     }
 
-    .cancel-btn:active {
-      transform: scale(0.9);
-      background: rgba(239, 68, 68, 0.5);
-    }
-
     .pay-body-vertical {
       display: flex;
       flex-direction: column;
@@ -232,7 +260,6 @@
       min-height: 0;
     }
 
-    /* Верхний блок: NFC / Карта */
     .card-nfc-section {
       flex: 0.85;
       min-height: 0;
@@ -271,13 +298,8 @@
       animation: nfc-pulse 2.2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
     }
 
-    .nfc-pulse-ring:nth-child(2) {
-      animation-delay: 0.7s;
-    }
-
-    .nfc-pulse-ring:nth-child(3) {
-      animation-delay: 1.4s;
-    }
+    .nfc-pulse-ring:nth-child(2) { animation-delay: 0.7s; }
+    .nfc-pulse-ring:nth-child(3) { animation-delay: 1.4s; }
 
     .animated-card-graphic {
       width: 88px;
@@ -309,21 +331,18 @@
       font-size: 14px;
       color: #ffffff;
       font-weight: 900;
-      opacity: 0.95;
     }
 
     .card-hint-text {
-      font-size: clamp(22px, 5.8vw, 30px);
+      font-size: clamp(20px, 5.2vw, 28px);
       font-weight: 900;
       color: #ffffff;
       text-align: center;
       line-height: 1.15;
-      letter-spacing: -0.4px;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
     }
 
     .card-subhint {
-      font-size: clamp(12px, 3.2vw, 15px);
+      font-size: clamp(11px, 3vw, 14px);
       color: var(--sber-green-bright);
       font-weight: 800;
       margin-top: 4px;
@@ -331,7 +350,6 @@
       letter-spacing: 0.8px;
     }
 
-    /* Нижний блок: Крупный QR-код с текстом под ним */
     .qr-section {
       flex: 1.5;
       min-height: 0;
@@ -339,7 +357,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: 10px;
       width: 100%;
       background: rgba(255, 255, 255, 0.07);
       border: 1.5px solid rgba(255, 255, 255, 0.2);
@@ -360,8 +378,8 @@
     }
 
     .qr-frame img {
-      width: clamp(190px, 52vw, 290px);
-      height: clamp(190px, 52vw, 290px);
+      width: clamp(170px, 48vw, 260px);
+      height: clamp(170px, 48vw, 260px);
       display: block;
       border-radius: 10px;
       object-fit: contain;
@@ -376,22 +394,20 @@
     }
 
     .qr-hint-text {
-      font-size: clamp(22px, 5.5vw, 30px);
+      font-size: clamp(20px, 5vw, 28px);
       font-weight: 900;
       color: #ffffff;
       line-height: 1.15;
-      letter-spacing: -0.4px;
     }
 
     .qr-subtext {
-      font-size: clamp(12px, 3.2vw, 15px);
+      font-size: clamp(11px, 3vw, 14px);
       color: var(--text-muted);
       margin-top: 4px;
       font-weight: 600;
-      line-height: 1.25;
     }
 
-    /* --- 3. ЭКРАН УСПЕХА (SUCCESS) --- */
+    /* ЭКРАН УСПЕХА */
     .success-viewport {
       display: flex;
       flex-direction: column;
@@ -403,14 +419,14 @@
     }
 
     .success-icon-box {
-      width: 130px;
-      height: 130px;
+      width: 120px;
+      height: 120px;
       background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 70px;
+      font-size: 65px;
       color: #02120b;
       margin-bottom: 20px;
       box-shadow: 0 0 50px rgba(0, 230, 118, 0.7);
@@ -418,20 +434,33 @@
     }
 
     .success-title {
-      font-size: clamp(38px, 9.5vw, 52px);
+      font-size: clamp(36px, 9vw, 50px);
       font-weight: 900;
       color: #ffffff;
-      margin-bottom: 10px;
-      letter-spacing: -1px;
+      margin-bottom: 8px;
     }
 
     .success-subtitle {
-      font-size: clamp(20px, 5vw, 26px);
+      font-size: clamp(18px, 4.5vw, 24px);
       color: var(--sber-green-bright);
       font-weight: 800;
+      margin-bottom: 12px;
     }
 
-    /* --- 4. ЭКРАН ОШИБКИ (FAILED) --- */
+    .remaining-balance-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* ЭКРАН ОШИБКИ */
     .failed-viewport {
       display: flex;
       flex-direction: column;
@@ -443,14 +472,14 @@
     }
 
     .failed-icon-box {
-      width: 130px;
-      height: 130px;
+      width: 120px;
+      height: 120px;
       background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 65px;
+      font-size: 60px;
       color: #ffffff;
       margin-bottom: 20px;
       box-shadow: 0 0 50px var(--sber-red-glow);
@@ -458,15 +487,14 @@
     }
 
     .failed-title {
-      font-size: clamp(34px, 8.5vw, 46px);
+      font-size: clamp(32px, 8vw, 44px);
       font-weight: 900;
       color: #ffffff;
       margin-bottom: 10px;
-      letter-spacing: -1px;
     }
 
     .failed-subtitle {
-      font-size: clamp(18px, 4.5vw, 22px);
+      font-size: clamp(16px, 4vw, 20px);
       color: #fca5a5;
       font-weight: 700;
       max-width: 90%;
@@ -493,6 +521,13 @@
 
   <main class="viewport">
     
+    <!-- Заблокированный экран -->
+    <section class="blocked-screen" id="blockedScreen">
+      <div class="lock-icon-circle">🔒</div>
+      <h2 style="font-size: 32px; font-weight: 900; color: #fff; margin-bottom: 8px;">Терминал заблокирован</h2>
+      <p style="color: var(--text-muted); font-size: 16px;">Пожалуйста, разблокируйте этот дисплей в панели администратора кассы.</p>
+    </section>
+
     <!-- 1. ЭКРАН ОЖИДАНИЯ (IDLE) -->
     <section id="state-idle" class="state active">
       <header class="idle-header">
@@ -517,7 +552,7 @@
       </div>
 
       <footer class="idle-footer">
-        <span>SberPay Terminal • Активен</span>
+        <span id="displayStatusText">SberPay Terminal • Активен</span>
       </footer>
     </section>
 
@@ -564,6 +599,9 @@
         <div class="success-icon-box">✓</div>
         <h2 class="success-title">Оплачено!</h2>
         <p class="success-subtitle" id="success-amount-text">Спасибо за покупку</p>
+        <div class="remaining-balance-badge" id="successBalanceBadge">
+          Остаток на карте: <span id="successRemainingBalance" style="color: var(--sber-green-bright); font-weight: 800;">0 ₽</span>
+        </div>
       </div>
     </section>
 
@@ -578,17 +616,32 @@
 
   </main>
 
+  <script src="/js/audio.js"></script>
   <script>
     const socket = io();
+    let displayId = 'disp_' + Math.random().toString(36.substring(2, 9));
+    
+    // Регистрируем дисплей при загрузке
+    const registerDisplay = () => {
+      fetch('/api/displays/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: displayId, name: 'Дисплей ' + displayId.slice(0, 4) })
+      }).catch(e => {});
+    };
+    registerDisplay();
+    setInterval(registerDisplay, 10000); // Heartbeat
 
     const stateIdle = document.getElementById('state-idle');
     const statePay = document.getElementById('state-pay');
     const stateSuccess = document.getElementById('state-success');
     const stateFailed = document.getElementById('state-failed');
+    const blockedScreen = document.getElementById('blockedScreen');
     
     const payAmount = document.getElementById('pay-amount');
     const qrImage = document.getElementById('qr-image');
     const successAmountText = document.getElementById('success-amount-text');
+    const successRemainingBalance = document.getElementById('successRemainingBalance');
     const failedTitleText = document.getElementById('failed-title-text');
     const failedSubtext = document.getElementById('failed-subtext');
 
@@ -619,6 +672,10 @@
     });
 
     socket.on('transaction_created', (tx) => {
+      // Если у транзакции указан конкретный дисплей, проверяем он ли это
+      if (tx.targetDisplayId && tx.targetDisplayId !== displayId) {
+        return; // Пропускаем, если отправлено на другой терминал
+      }
       renderPayState(tx);
     });
 
@@ -629,19 +686,24 @@
     }
 
     socket.on('payment_success', (data) => {
+      if (window.terminalAudio) window.terminalAudio.playSuccess();
       if (data && data.transaction) {
         successAmountText.textContent = `${formatCurrency(data.transaction.amount)}`;
+      }
+      if (data && data.newBalance !== undefined) {
+        successRemainingBalance.textContent = formatCurrency(data.newBalance);
       }
       switchState(stateSuccess);
       stateTimer = setTimeout(() => {
         switchState(stateIdle);
-      }, 3200);
+      }, 3500);
     });
 
     socket.on('payment_failed', (data) => {
+      if (window.terminalAudio) window.terminalAudio.playError();
       if (data && data.reason === 'insufficient_funds') {
         failedTitleText.textContent = 'Ошибка оплаты';
-        failedSubtext.textContent = 'Недостаточно средств на карте!';
+        failedSubtext.textContent = `Недостаточно средств! Требуется: ${formatCurrency(data.transaction.amount)}`;
       } else {
         failedTitleText.textContent = 'Ошибка оплаты';
         failedSubtext.textContent = 'Транзакция отклонена';
@@ -649,11 +711,21 @@
       switchState(stateFailed);
       stateTimer = setTimeout(() => {
         switchState(stateIdle);
-      }, 3500);
+      }, 3800);
     });
 
     socket.on('transaction_cancelled', () => {
       switchState(stateIdle);
+    });
+
+    socket.on('display_block_status', (data) => {
+      if (data.id === displayId) {
+        if (data.isBlocked) {
+          blockedScreen.classList.add('active');
+        } else {
+          blockedScreen.classList.remove('active');
+        }
+      }
     });
 
     function cancelPayment() {
