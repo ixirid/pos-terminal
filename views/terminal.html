@@ -352,7 +352,6 @@
       width: 100%;
     }
 
-    /* ПОЛНОЭКРАННЫЕ МОДАЛЬНЫЕ ОКНА УСПЕХА / ОШИБКИ */
     .fullscreen-overlay {
       position: fixed;
       inset: 0;
@@ -462,7 +461,6 @@
       100% { transform: scale(0.95); opacity: 0.8; }
     }
 
-    /* ИСТОРИЯ ЧЕКОВ */
     .history-list {
       display: flex;
       flex-direction: column;
@@ -526,7 +524,6 @@
       margin-top: 4px;
     }
 
-    /* НАСТРОЙКИ ДИСПЛЕЕВ И ТЕРМИНАЛОВ */
     .displays-list {
       display: flex;
       flex-direction: column;
@@ -612,7 +609,6 @@
       padding-top: 8px;
     }
 
-    /* Модалка выбора терминала (Спрашивать каждый раз) */
     .select-terminal-modal {
       display: none;
       position: fixed;
@@ -664,7 +660,6 @@
       border-color: rgba(239, 68, 68, 0.3);
     }
 
-    /* Чекбокс настройки "спрашивать каждый раз" */
     .checkbox-label {
       display: flex;
       align-items: center;
@@ -853,13 +848,13 @@
     <button class="btn-primary" onclick="closeErrorOverlay()" style="max-width: 280px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
   </div>
 
-  <!-- МОДАЛКА ВЫБОРА ДИСПЛЕЯ (ЕСЛИ ВКЛЮЧЕНО СПРАШИВАТЬ) -->
+  <!-- МОДАЛКА ВЫБОРА ДИСПЛЕЯ -->
   <div class="select-terminal-modal" id="selectTerminalModal">
     <div class="terminal-selector-card">
       <h3 style="font-size: 18px; font-weight: 800; color: #fff;">Выберите дисплей для отправки</h3>
       <p style="font-size: 13px; color: var(--text-muted);">Куда отправить QR-код оплаты?</p>
       <div id="terminalSelectorList" style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto;">
-        <!-- Сюда динамически рендерятся дисплеи -->
+        <!-- Динамический рендер -->
       </div>
       <button class="btn-secondary" onclick="closeTerminalSelector()">Отмена</button>
     </div>
@@ -873,7 +868,6 @@
     let pendingAmountForTx = 0;
     let activeDisplaysData = [];
 
-    // Загрузка инфо и настроек
     fetch('/api/info')
       .then(res => res.json())
       .then(data => {
@@ -960,7 +954,6 @@
       input.value = current.toLocaleString('ru-RU');
     }
 
-    // Инициация транзакции с проверкой на "спрашивать каждый раз"
     function initiateTransactionFlow() {
       if (window.terminalAudio) terminalAudio.playTap();
       const amountVal = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
@@ -972,7 +965,6 @@
         return;
       }
 
-      // Загружаем актуальный список дисплеев и показываем модалку выбора
       fetch('/api/displays')
         .then(res => res.json())
         .then(data => {
@@ -992,19 +984,34 @@
         setTimeout(() => {
           closeTerminalSelector();
           createQrTransaction(null);
-        }, 1200);
+        }, 1000);
         return;
       }
 
-      container.innerHTML = displays.map(d => `
-        <div class="terminal-option-item ${d.isBlocked ? 'blocked' : ''}" onclick="${d.isBlocked ? '' : `createQrTransaction('${d.id}')`}">
-          <div>
-            <div style="font-weight: 700; color: #fff; font-size: 14px;">${d.name} ${d.isBlocked ? '🔒 (Заблокирован)' : ''}</div>
-            <div style="font-size: 11px; color: var(--text-muted);">IP: ${d.ip || 'Неизвестно'}</div>
+      container.innerHTML = displays.map(d => {
+        // Использование безопасной привязки через обработчики событий или экранированные строки
+        const isBlocked = d.isBlocked;
+        return `
+          <div class="terminal-option-item ${isBlocked ? 'blocked' : ''}" data-id="${d.id}" data-blocked="${isBlocked}">
+            <div>
+              <div style="font-weight: 700; color: #fff; font-size: 14px;">${d.name} ${isBlocked ? '🔒 (Заблокирован)' : ''}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">IP: ${d.ip || 'Неизвестно'}</div>
+            </div>
+            <div style="font-size: 12px; color: var(--primary); font-weight: 700;">${isBlocked ? 'Заблокирован' : 'Выбрать →'}</div>
           </div>
-          <div style="font-size: 12px; color: var(--primary); font-weight: 700;">Выбрать →</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+
+      // Навешиваем безопасные обработчики кликов вместо запекания в строки
+      container.querySelectorAll('.terminal-option-item').forEach(item => {
+        const isBlocked = item.getAttribute('data-blocked') === 'true';
+        if (!isBlocked) {
+          item.addEventListener('click', () => {
+            const displayId = item.getAttribute('data-id');
+            createQrTransaction(displayId);
+          });
+        }
+      });
     }
 
     function closeTerminalSelector() {
@@ -1081,7 +1088,6 @@
       });
     }
 
-    // ИСТОРИЯ ЧЕКОВ
     function loadHistory() {
       fetch('/api/history')
         .then(res => res.json())
@@ -1116,7 +1122,6 @@
       }).join('');
     }
 
-    // УПРАВЛЕНИЕ ДИСПЛЕЯМИ
     function loadDisplays() {
       fetch('/api/displays')
         .then(res => res.json())
@@ -1177,15 +1182,11 @@
       }).catch(e => {});
     }
 
-    // СОБЫТИЯ WEBSOCKET (ИСПРАВЛЕНО ДЛЯ АВТОМАТИЧЕСКОГО СБРОСА QR)
     socket.on('payment_success', (data) => {
       if (window.terminalAudio) window.terminalAudio.playSuccess();
-      
-      // Скрываем панель с QR-кодом
       document.getElementById('qrDisplayPanel').classList.remove('active');
       document.getElementById('errorFullscreenModal').classList.remove('active');
       
-      // Показываем модальное окно успешной оплаты на кассе
       const successModal = document.getElementById('successFullscreenModal');
       successModal.classList.add('active');
       
@@ -1197,12 +1198,9 @@
 
     socket.on('payment_failed', (data) => {
       if (window.terminalAudio) window.terminalAudio.playError();
-      
-      // Скрываем панель с QR-кодом
       document.getElementById('qrDisplayPanel').classList.remove('active');
       document.getElementById('successFullscreenModal').classList.remove('active');
       
-      // Показываем модальное окно ошибки
       const errorModal = document.getElementById('errorFullscreenModal');
       errorModal.classList.add('active');
       
@@ -1215,7 +1213,19 @@
       resetChargeView();
     });
 
-    // Клавиатурные сокращения
+    socket.on('update_displays', (displays) => {
+      const displaySelect = document.getElementById('displaySelect'); 
+      if (!displaySelect) return;
+      
+      displaySelect.innerHTML = '<option value="">Выберите дисплей</option>';
+      displays.forEach(display => {
+        const option = document.createElement('option');
+        option.value = display.id;
+        option.textContent = display.name;
+        displaySelect.appendChild(option);
+      });
+    });
+
     document.addEventListener('keydown', (e) => {
       const errModal = document.getElementById('errorFullscreenModal');
       const succModal = document.getElementById('successFullscreenModal');
