@@ -2,736 +2,125 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>SberPay POS Terminal Display</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Экран Клиента</title>
   <script src="/socket.io/socket.io.js"></script>
-  
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      user-select: none;
-      -webkit-font-smoothing: antialiased;
-      -webkit-tap-highlight-color: transparent;
-    }
-
     :root {
-      --sber-green: #22c55e;
-      --sber-green-bright: #00e676;
-      --sber-green-glow: rgba(0, 230, 118, 0.4);
-      --sber-red: #ef4444;
-      --sber-red-glow: rgba(239, 68, 68, 0.5);
-      --bg-dark: #020c07;
-      --bg-gradient: radial-gradient(circle at 50% 35%, #083b25 0%, #031c11 60%, #010805 100%);
-      --text-main: #ffffff;
-      --text-muted: #a3c4b5;
+      --primary: #10b981;
+      --error: #ef4444;
+      --bg: #090d16;
+      --surface: #111827;
     }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: var(--bg); color: #fff; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow: hidden; }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background-color: var(--bg-dark);
-      background-image: var(--bg-gradient);
-      color: var(--text-main);
-    }
+    .card { background: var(--surface); border: 1px solid rgba(255,255,255,0.1); padding: 32px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; max-width: 400px; width: 90%; }
+    .qr-box img { width: 220px; height: 220px; border-radius: 16px; margin: 20px 0; background: #fff; padding: 10px; }
 
-    .viewport {
-      width: 100vw;
-      height: 100dvh;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .state {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      padding: 14px 14px 16px 14px;
-      opacity: 0;
-      transform: scale(0.97);
-      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-      pointer-events: none;
-      box-sizing: border-box;
-    }
-
-    .state.active {
-      opacity: 1;
-      transform: scale(1);
-      pointer-events: auto;
-    }
-
-    /* ЗАБЛОКИРОВАННЫЙ ЭКРАН */
-    .blocked-screen {
-      position: absolute;
-      inset: 0;
-      background: rgba(2, 12, 7, 0.95);
-      backdrop-filter: blur(20px);
-      z-index: 2000;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px;
-    }
-
-    .blocked-screen.active {
-      display: flex !important;
-    }
-
-    .lock-icon-circle {
-      width: 100px;
-      height: 100px;
-      background: rgba(239, 68, 68, 0.15);
-      border: 2px solid rgba(239, 68, 68, 0.4);
-      color: #ef4444;
-      font-size: 45px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      box-shadow: 0 0 40px var(--sber-red-glow);
-    }
-
-    /* ЭКРАН ОЖИДАНИЯ (IDLE) */
-    .idle-header {
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      padding-top: 8px;
-    }
-
-    .sber-pay-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 26px;
-      border-radius: 30px;
-      background: rgba(255, 255, 255, 0.14);
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(12px);
-      font-size: 26px;
-      font-weight: 800;
-      letter-spacing: -0.3px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-    }
-
-    .sber-pay-badge .check-circle {
-      width: 30px;
-      height: 30px;
-      background: var(--sber-green-bright);
-      border-radius: 50%;
-      color: #010a06;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      font-weight: 900;
-      box-shadow: 0 0 12px var(--sber-green-bright);
-    }
-
-    .idle-main-content {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: flex-start;
-      padding-left: 8px;
-      margin: auto 0;
-    }
-
-    .idle-title {
-      font-size: clamp(52px, 13vw, 84px);
-      font-weight: 900;
-      line-height: 1.05;
-      letter-spacing: -2px;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      width: 100%;
-    }
-
-    .idle-title .row {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .green-dot-icon {
-      width: clamp(38px, 9vw, 56px);
-      height: clamp(38px, 9vw, 56px);
-      background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
-      border-radius: 50%;
-      box-shadow: 0 0 30px rgba(0, 230, 118, 0.8);
-      display: inline-block;
-      flex-shrink: 0;
-    }
-
-    .green-check-icon {
-      width: clamp(44px, 10vw, 64px);
-      height: clamp(44px, 10vw, 64px);
-      background: #00e676;
-      border-radius: 16px;
-      color: #02120b;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: clamp(28px, 7vw, 42px);
-      font-weight: 900;
-      box-shadow: 0 0 25px rgba(0, 230, 118, 0.7);
-      flex-shrink: 0;
-    }
-
-    .idle-footer {
-      font-size: 16px;
-      color: rgba(255, 255, 255, 0.5);
-      font-weight: 700;
-      padding-bottom: 8px;
-      letter-spacing: 0.5px;
-    }
-
-    /* ЭКРАН ОПЛАТЫ (PAYMENT) */
-    .pay-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1.5px solid rgba(255, 255, 255, 0.15);
-      border-radius: 22px;
-      padding: 16px 20px;
-      backdrop-filter: blur(14px);
-      flex-shrink: 0;
-    }
-
-    .pay-title-group {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .pay-subtitle {
-      font-size: 14px;
-      color: var(--text-muted);
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
-    }
-
-    .pay-amount-display {
-      font-size: clamp(34px, 8.5vw, 50px);
-      font-weight: 900;
-      letter-spacing: -1px;
-      color: #ffffff;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-      line-height: 1;
-    }
-
-    .cancel-btn {
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #ffffff;
-      font-size: 22px;
-      font-weight: 800;
-      cursor: pointer;
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      transition: all 0.2s;
-      flex-shrink: 0;
-    }
-
-    .pay-body-vertical {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      width: 100%;
-      gap: 12px;
-      min-height: 0;
-    }
-
-    .card-nfc-section {
-      flex: 0.85;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      background: rgba(0, 230, 118, 0.08);
-      border: 2px solid rgba(0, 230, 118, 0.4);
-      border-radius: 24px;
-      padding: 12px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 230, 118, 0.18);
-    }
-
-    .nfc-animation-box {
-      position: relative;
-      width: 110px;
-      height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 8px;
-      flex-shrink: 0;
-    }
-
-    .nfc-pulse-ring {
-      position: absolute;
-      width: 95px;
-      height: 95px;
-      border-radius: 50%;
-      border: 2.5px solid var(--sber-green-bright);
-      opacity: 0;
-      animation: nfc-pulse 2.2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
-    }
-
-    .nfc-pulse-ring:nth-child(2) { animation-delay: 0.7s; }
-    .nfc-pulse-ring:nth-child(3) { animation-delay: 1.4s; }
-
-    .animated-card-graphic {
-      width: 88px;
-      height: 54px;
-      background: linear-gradient(135deg, #00e676 0%, #00897b 100%);
-      border-radius: 10px;
-      position: relative;
-      box-shadow: 0 8px 22px rgba(0, 230, 118, 0.5);
-      z-index: 2;
-      animation: card-float 2.5s infinite ease-in-out;
-      border: 1.5px solid rgba(255, 255, 255, 0.5);
-      display: flex;
-      align-items: center;
-      padding: 6px;
-    }
-
-    .card-chip {
-      width: 16px;
-      height: 11px;
-      background: #ffd700;
-      border-radius: 3px;
-      border: 1px solid rgba(0, 0, 0, 0.2);
-    }
-
-    .card-waves-icon {
-      position: absolute;
-      right: 10px;
-      top: 8px;
-      font-size: 14px;
-      color: #ffffff;
-      font-weight: 900;
-    }
-
-    .card-hint-text {
-      font-size: clamp(20px, 5.2vw, 28px);
-      font-weight: 900;
-      color: #ffffff;
-      text-align: center;
-      line-height: 1.15;
-    }
-
-    .card-subhint {
-      font-size: clamp(11px, 3vw, 14px);
-      color: var(--sber-green-bright);
-      font-weight: 800;
-      margin-top: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-    }
-
-    .qr-section {
-      flex: 1.5;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: 100%;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1.5px solid rgba(255, 255, 255, 0.2);
-      border-radius: 24px;
-      padding: 14px;
-    }
-
-    .qr-frame {
-      position: relative;
-      background: #ffffff;
-      padding: 10px;
-      border-radius: 20px;
-      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.7);
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .qr-frame img {
-      width: clamp(170px, 48vw, 260px);
-      height: clamp(170px, 48vw, 260px);
-      display: block;
-      border-radius: 10px;
-      object-fit: contain;
-    }
-
-    .qr-info-side {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-    }
-
-    .qr-hint-text {
-      font-size: clamp(20px, 5vw, 28px);
-      font-weight: 900;
-      color: #ffffff;
-      line-height: 1.15;
-    }
-
-    .qr-subtext {
-      font-size: clamp(11px, 3vw, 14px);
-      color: var(--text-muted);
-      margin-top: 4px;
-      font-weight: 600;
-    }
-
-    /* ЭКРАН УСПЕХА */
-    .success-viewport {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      text-align: center;
-      padding: 20px;
-    }
-
-    .success-icon-box {
-      width: 120px;
-      height: 120px;
-      background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 65px;
-      color: #02120b;
-      margin-bottom: 20px;
-      box-shadow: 0 0 50px rgba(0, 230, 118, 0.7);
-      animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    .success-title {
-      font-size: clamp(36px, 9vw, 50px);
-      font-weight: 900;
-      color: #ffffff;
-      margin-bottom: 8px;
-    }
-
-    .success-subtitle {
-      font-size: clamp(18px, 4.5vw, 24px);
-      color: var(--sber-green-bright);
-      font-weight: 800;
-      margin-bottom: 12px;
-    }
-
-    .remaining-balance-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1.5px solid rgba(255, 255, 255, 0.2);
-      padding: 10px 20px;
-      border-radius: 30px;
-      font-size: 16px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    /* ЭКРАН ОШИБКИ */
-    .failed-viewport {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      text-align: center;
-      padding: 20px;
-    }
-
-    .failed-icon-box {
-      width: 120px;
-      height: 120px;
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 60px;
-      color: #ffffff;
-      margin-bottom: 20px;
-      box-shadow: 0 0 50px var(--sber-red-glow);
-      animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    .failed-title {
-      font-size: clamp(32px, 8vw, 44px);
-      font-weight: 900;
-      color: #ffffff;
-      margin-bottom: 10px;
-    }
-
-    .failed-subtitle {
-      font-size: clamp(16px, 4vw, 20px);
-      color: #fca5a5;
-      font-weight: 700;
-      max-width: 90%;
-      line-height: 1.3;
-    }
-
-    @keyframes nfc-pulse {
-      0% { transform: scale(0.6); opacity: 0.9; }
-      100% { transform: scale(1.65); opacity: 0; }
-    }
-
-    @keyframes card-float {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-7px) rotate(-3deg); }
-    }
-
-    @keyframes pop-in {
-      0% { transform: scale(0.3); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
+    .lock-overlay { position: fixed; inset: 0; background: #1f2937; z-index: 999; display: none; flex-direction: column; align-items: center; justify-content: center; }
+    .lock-overlay.active { display: flex; }
   </style>
 </head>
 <body>
 
-  <main class="viewport">
-    
-    <!-- Заблокированный экран -->
-    <section class="blocked-screen" id="blockedScreen">
-      <div class="lock-icon-circle">🔒</div>
-      <h2 style="font-size: 32px; font-weight: 900; color: #fff; margin-bottom: 8px;">Терминал заблокирован</h2>
-      <p style="color: var(--text-muted); font-size: 16px;">Пожалуйста, разблокируйте этот дисплей в панели администратора кассы.</p>
-    </section>
+  <div class="card" id="idleState">
+    <h2>Экран Кассы</h2>
+    <p style="color: #9ca3af; margin-top: 8px;">Готов к работе</p>
+  </div>
 
-    <!-- 1. ЭКРАН ОЖИДАНИЯ (IDLE) -->
-    <section id="state-idle" class="state active">
-      <header class="idle-header">
-        <div class="sber-pay-badge">
-          <span class="check-circle">✓</span>
-          <span>Pay</span>
-        </div>
-      </header>
+  <div class="card" id="qrState" style="display: none;">
+    <h3>Сканируйте для оплаты</h3>
+    <div class="qr-box"><img id="qrImg" src=""></div>
+    <h2 style="color: var(--primary);" id="qrAmount">0 ₽</h2>
+  </div>
 
-      <div class="idle-main-content">
-        <div class="idle-title">
-          <div>платите</div>
-          <div class="row">
-            <span class="green-dot-icon"></span>
-            <span>как вам</span>
-          </div>
-          <div class="row">
-            <span>удобно</span>
-            <span class="green-check-icon">✓</span>
-          </div>
-        </div>
-      </div>
+  <div class="card" id="successState" style="display: none;">
+    <div style="font-size: 60px; color: var(--primary);">✓</div>
+    <h2>Оплата прошла!</h2>
+    <p style="font-size: 24px; margin: 12px 0;" id="successAmount">0 ₽</p>
+    <p style="color: #9ca3af;">Остаток на карте: <strong style="color: #fff;" id="remainingBalance">0 ₽</strong></p>
+  </div>
 
-      <footer class="idle-footer">
-        <span id="displayStatusText">SberPay Terminal • Активен</span>
-      </footer>
-    </section>
+  <div class="card" id="errorState" style="display: none;">
+    <div style="font-size: 60px; color: var(--error);">✕</div>
+    <h2>Ошибка оплаты</h2>
+    <p style="color: #9ca3af; margin-top: 8px;">Недостаточно средств</p>
+  </div>
 
-    <!-- 2. ЭКРАН ОПЛАТЫ (PAYMENT) -->
-    <section id="state-pay" class="state">
-      <header class="pay-header">
-        <div class="pay-title-group">
-          <span class="pay-subtitle">К оплате</span>
-          <div id="pay-amount" class="pay-amount-display">0,00 ₽</div>
-        </div>
-        <div class="cancel-btn" onclick="cancelPayment()" title="Отменить">✕</div>
-      </header>
+  <!-- Экран Блокировки -->
+  <div class="lock-overlay" id="lockOverlay">
+    <div style="font-size: 80px;">🔒</div>
+    <h2 style="margin-top: 16px;">Терминал заблокирован</h2>
+  </div>
 
-      <div class="pay-body-vertical">
-        <div class="card-nfc-section">
-          <div class="nfc-animation-box">
-            <div class="nfc-pulse-ring"></div>
-            <div class="nfc-pulse-ring"></div>
-            <div class="nfc-pulse-ring"></div>
-            <div class="animated-card-graphic">
-              <div class="card-chip"></div>
-              <div class="card-waves-icon">))))</div>
-            </div>
-          </div>
-          <div class="card-hint-text">Приложите карту<br>или телефон</div>
-          <div class="card-subhint">Бесконтактная оплата NFC</div>
-        </div>
-
-        <div class="qr-section">
-          <div class="qr-frame">
-            <img id="qr-image" src="" alt="QR-код оплаты">
-          </div>
-          <div class="qr-info-side">
-            <div class="qr-hint-text">Отсканируйте QR-код</div>
-            <div class="qr-subtext">Камерой смартфона или через СберБанк Онлайн</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 3. ЭКРАН УСПЕХА (SUCCESS) -->
-    <section id="state-success" class="state">
-      <div class="success-viewport">
-        <div class="success-icon-box">✓</div>
-        <h2 class="success-title">Оплачено!</h2>
-        <p class="success-subtitle" id="success-amount-text">Спасибо за покупку</p>
-        <div class="remaining-balance-badge" id="successBalanceBadge">
-          Остаток на карте: <span id="successRemainingBalance" style="color: var(--sber-green-bright); font-weight: 800;">0 ₽</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- 4. ЭКРАН ОШИБКИ (FAILED) -->
-    <section id="state-failed" class="state">
-      <div class="failed-viewport">
-        <div class="failed-icon-box">✕</div>
-        <h2 class="failed-title" id="failed-title-text">Ошибка оплаты</h2>
-        <p class="failed-subtitle" id="failed-subtext">Недостаточно средств на балансе</p>
-      </div>
-    </section>
-
-  </main>
-
-  <script src="/js/audio.js"></script>
   <script>
     const socket = io();
-    let displayId = 'disp_' + Math.random().toString(36.substring(2, 9));
-    
-    // Регистрируем дисплей при загрузке
-    const registerDisplay = () => {
-      fetch('/api/displays/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: displayId, name: 'Дисплей ' + displayId.slice(0, 4) })
-      }).catch(e => {});
-    };
-    registerDisplay();
-    setInterval(registerDisplay, 10000); // Heartbeat
 
-    const stateIdle = document.getElementById('state-idle');
-    const statePay = document.getElementById('state-pay');
-    const stateSuccess = document.getElementById('state-success');
-    const stateFailed = document.getElementById('state-failed');
-    const blockedScreen = document.getElementById('blockedScreen');
-    
-    const payAmount = document.getElementById('pay-amount');
-    const qrImage = document.getElementById('qr-image');
-    const successAmountText = document.getElementById('success-amount-text');
-    const successRemainingBalance = document.getElementById('successRemainingBalance');
-    const failedTitleText = document.getElementById('failed-title-text');
-    const failedSubtext = document.getElementById('failed-subtext');
+    // Синтезатор звуков
+    function playSound(type) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-    let stateTimer = null;
-
-    function switchState(targetState) {
-      if (stateTimer) {
-        clearTimeout(stateTimer);
-        stateTimer = null;
-      }
-      [stateIdle, statePay, stateSuccess, stateFailed].forEach(el => el.classList.remove('active'));
-      targetState.classList.add('active');
+        if (type === 'success') {
+          osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+          osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.4);
+        } else {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(180, ctx.currentTime);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        }
+      } catch (e) {}
     }
 
-    function formatCurrency(num) {
-      return num.toLocaleString('ru-RU', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }) + ' ₽';
+    socket.emit('register_display', { name: 'Главный экран' });
+
+    function hideAll() {
+      document.getElementById('idleState').style.display = 'none';
+      document.getElementById('qrState').style.display = 'none';
+      document.getElementById('successState').style.display = 'none';
+      document.getElementById('errorState').style.display = 'none';
     }
 
-    socket.on('init_state', (data) => {
-      if (data.activeTransaction && data.activeTransaction.status === 'pending') {
-        renderPayState(data.activeTransaction);
-      } else {
-        switchState(stateIdle);
-      }
+    socket.on('new_transaction', (tx) => {
+      hideAll();
+      document.getElementById('qrImg').src = tx.qrCode;
+      document.getElementById('qrAmount').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
+      document.getElementById('qrState').style.display = 'flex';
     });
-
-    socket.on('transaction_created', (tx) => {
-      // Если у транзакции указан конкретный дисплей, проверяем он ли это
-      if (tx.targetDisplayId && tx.targetDisplayId !== displayId) {
-        return; // Пропускаем, если отправлено на другой терминал
-      }
-      renderPayState(tx);
-    });
-
-    function renderPayState(tx) {
-      payAmount.textContent = formatCurrency(parseFloat(tx.amount));
-      qrImage.src = tx.qrCode;
-      switchState(statePay);
-    }
 
     socket.on('payment_success', (data) => {
-      if (window.terminalAudio) window.terminalAudio.playSuccess();
-      if (data && data.transaction) {
-        successAmountText.textContent = `${formatCurrency(data.transaction.amount)}`;
-      }
-      if (data && data.newBalance !== undefined) {
-        successRemainingBalance.textContent = formatCurrency(data.newBalance);
-      }
-      switchState(stateSuccess);
-      stateTimer = setTimeout(() => {
-        switchState(stateIdle);
-      }, 3500);
+      hideAll();
+      playSound('success');
+      document.getElementById('successAmount').textContent = data.transaction.amount.toLocaleString('ru-RU') + ' ₽';
+      document.getElementById('remainingBalance').textContent = data.cardRemaining.toLocaleString('ru-RU') + ' ₽';
+      document.getElementById('successState').style.display = 'flex';
+      setTimeout(() => { hideAll(); document.getElementById('idleState').style.display = 'flex'; }, 5000);
     });
 
-    socket.on('payment_failed', (data) => {
-      if (window.terminalAudio) window.terminalAudio.playError();
-      if (data && data.reason === 'insufficient_funds') {
-        failedTitleText.textContent = 'Ошибка оплаты';
-        failedSubtext.textContent = `Недостаточно средств! Требуется: ${formatCurrency(data.transaction.amount)}`;
-      } else {
-        failedTitleText.textContent = 'Ошибка оплаты';
-        failedSubtext.textContent = 'Транзакция отклонена';
-      }
-      switchState(stateFailed);
-      stateTimer = setTimeout(() => {
-        switchState(stateIdle);
-      }, 3800);
+    socket.on('payment_failed', () => {
+      hideAll();
+      playSound('error');
+      document.getElementById('errorState').style.display = 'flex';
+      setTimeout(() => { hideAll(); document.getElementById('idleState').style.display = 'flex'; }, 4000);
     });
 
     socket.on('transaction_cancelled', () => {
-      switchState(stateIdle);
+      hideAll();
+      document.getElementById('idleState').style.display = 'flex';
     });
 
-    socket.on('display_block_status', (data) => {
-      if (data.id === displayId) {
-        if (data.isBlocked) {
-          blockedScreen.classList.add('active');
-        } else {
-          blockedScreen.classList.remove('active');
-        }
-      }
-    });
-
-    function cancelPayment() {
-      fetch('/api/cancel-transaction', { method: 'POST' })
-        .catch(err => console.error(err));
-    }
+    socket.on('terminal_locked', () => { document.getElementById('lockOverlay').classList.add('active'); });
+    socket.on('terminal_unlocked', () => { document.getElementById('lockOverlay').classList.remove('active'); });
   </script>
 </body>
 </html>
