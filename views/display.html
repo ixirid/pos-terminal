@@ -21,6 +21,8 @@
       --sber-green: #22c55e;
       --sber-green-bright: #00e676;
       --sber-green-glow: rgba(0, 230, 118, 0.4);
+      --sber-red: #ef4444;
+      --sber-red-glow: rgba(239, 68, 68, 0.5);
       --bg-dark: #020c07;
       --bg-gradient: radial-gradient(circle at 50% 35%, #083b25 0%, #031c11 60%, #010805 100%);
       --text-main: #ffffff;
@@ -50,7 +52,7 @@
       inset: 0;
       display: flex;
       flex-direction: column;
-      padding: 16px 16px 20px 16px;
+      padding: 14px 14px 16px 14px;
       opacity: 0;
       transform: scale(0.97);
       transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -112,7 +114,7 @@
     }
 
     .idle-title {
-      font-size: clamp(54px, 13vw, 84px);
+      font-size: clamp(56px, 14vw, 88px);
       font-weight: 900;
       line-height: 1.05;
       letter-spacing: -2px;
@@ -130,8 +132,8 @@
     }
 
     .green-dot-icon {
-      width: clamp(38px, 9vw, 56px);
-      height: clamp(38px, 9vw, 56px);
+      width: clamp(40px, 10vw, 60px);
+      height: clamp(40px, 10vw, 60px);
       background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
       border-radius: 50%;
       box-shadow: 0 0 30px rgba(0, 230, 118, 0.8);
@@ -140,15 +142,15 @@
     }
 
     .green-check-icon {
-      width: clamp(44px, 10vw, 64px);
-      height: clamp(44px, 10vw, 64px);
+      width: clamp(46px, 11vw, 68px);
+      height: clamp(46px, 11vw, 68px);
       background: #00e676;
       border-radius: 16px;
       color: #02120b;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(28px, 7vw, 42px);
+      font-size: clamp(30px, 7.5vw, 44px);
       font-weight: 900;
       box-shadow: 0 0 25px rgba(0, 230, 118, 0.7);
       flex-shrink: 0;
@@ -167,11 +169,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       background: rgba(255, 255, 255, 0.08);
       border: 1.5px solid rgba(255, 255, 255, 0.15);
       border-radius: 22px;
-      padding: 18px 22px;
+      padding: 16px 20px;
       backdrop-filter: blur(14px);
       flex-shrink: 0;
     }
@@ -183,7 +185,7 @@
     }
 
     .pay-subtitle {
-      font-size: 15px;
+      font-size: 14px;
       color: var(--text-muted);
       font-weight: 800;
       text-transform: uppercase;
@@ -191,7 +193,7 @@
     }
 
     .pay-amount-display {
-      font-size: clamp(38px, 9.5vw, 54px);
+      font-size: clamp(36px, 9vw, 52px);
       font-weight: 900;
       letter-spacing: -1px;
       color: #ffffff;
@@ -200,15 +202,15 @@
     }
 
     .cancel-btn {
-      width: 48px;
-      height: 48px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.15);
       display: flex;
       align-items: center;
       justify-content: center;
       color: #ffffff;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 800;
       cursor: pointer;
       border: 1.5px solid rgba(255, 255, 255, 0.25);
@@ -221,19 +223,18 @@
       background: rgba(239, 68, 68, 0.5);
     }
 
-    /* Основной контейнер оплаты - растягивается на весь остаток экрана без дыр */
     .pay-body-vertical {
       display: flex;
       flex-direction: column;
       flex: 1;
       width: 100%;
-      gap: 14px;
+      gap: 12px;
       min-height: 0;
     }
 
-    /* Верхняя зона: Оплата картой / NFC (растянута на весь квадрат) */
+    /* Верхний блок: NFC / Карта */
     .card-nfc-section {
-      flex: 1;
+      flex: 0.85;
       min-height: 0;
       display: flex;
       flex-direction: column;
@@ -242,29 +243,28 @@
       width: 100%;
       background: rgba(0, 230, 118, 0.08);
       border: 2px solid rgba(0, 230, 118, 0.4);
-      border-radius: 26px;
-      padding: 16px;
+      border-radius: 24px;
+      padding: 12px;
       position: relative;
       overflow: hidden;
       box-shadow: 0 10px 30px rgba(0, 230, 118, 0.18);
     }
 
-    /* Анимированная пластиковая карта + Волны NFC */
     .nfc-animation-box {
       position: relative;
-      width: 130px;
-      height: 86px;
+      width: 110px;
+      height: 72px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       flex-shrink: 0;
     }
 
     .nfc-pulse-ring {
       position: absolute;
-      width: 110px;
-      height: 110px;
+      width: 95px;
+      height: 95px;
       border-radius: 50%;
       border: 2.5px solid var(--sber-green-bright);
       opacity: 0;
@@ -280,23 +280,23 @@
     }
 
     .animated-card-graphic {
-      width: 100px;
-      height: 62px;
+      width: 88px;
+      height: 54px;
       background: linear-gradient(135deg, #00e676 0%, #00897b 100%);
-      border-radius: 12px;
+      border-radius: 10px;
       position: relative;
-      box-shadow: 0 8px 25px rgba(0, 230, 118, 0.5);
+      box-shadow: 0 8px 22px rgba(0, 230, 118, 0.5);
       z-index: 2;
       animation: card-float 2.5s infinite ease-in-out;
       border: 1.5px solid rgba(255, 255, 255, 0.5);
       display: flex;
       align-items: center;
-      padding: 8px;
+      padding: 6px;
     }
 
     .card-chip {
-      width: 18px;
-      height: 13px;
+      width: 16px;
+      height: 11px;
       background: #ffd700;
       border-radius: 3px;
       border: 1px solid rgba(0, 0, 0, 0.2);
@@ -304,46 +304,47 @@
 
     .card-waves-icon {
       position: absolute;
-      right: 12px;
-      top: 10px;
-      font-size: 16px;
+      right: 10px;
+      top: 8px;
+      font-size: 14px;
       color: #ffffff;
       font-weight: 900;
       opacity: 0.95;
     }
 
     .card-hint-text {
-      font-size: clamp(26px, 6.8vw, 36px);
+      font-size: clamp(22px, 5.8vw, 30px);
       font-weight: 900;
       color: #ffffff;
       text-align: center;
       line-height: 1.15;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.4px;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
     }
 
     .card-subhint {
-      font-size: clamp(14px, 3.8vw, 17px);
+      font-size: clamp(12px, 3.2vw, 15px);
       color: var(--sber-green-bright);
       font-weight: 800;
-      margin-top: 6px;
+      margin-top: 4px;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.8px;
     }
 
-    /* Нижняя зона: Крупный QR-код (растянут на весь нижний квадрат) */
+    /* Нижний блок: Крупный QR-код с текстом под ним */
     .qr-section {
-      flex: 1.35;
+      flex: 1.5;
       min-height: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 18px;
+      gap: 12px;
       width: 100%;
       background: rgba(255, 255, 255, 0.07);
       border: 1.5px solid rgba(255, 255, 255, 0.2);
-      border-radius: 26px;
-      padding: 16px;
+      border-radius: 24px;
+      padding: 14px;
     }
 
     .qr-frame {
@@ -351,17 +352,17 @@
       background: #ffffff;
       padding: 10px;
       border-radius: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.7);
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    /* Огромный QR для сканирования */
+    /* Огромный QR-код на весь квадрат */
     .qr-frame img {
-      width: clamp(145px, 39vw, 220px);
-      height: clamp(145px, 39vw, 220px);
+      width: clamp(190px, 52vw, 290px);
+      height: clamp(190px, 52vw, 290px);
       display: block;
       border-radius: 10px;
       object-fit: contain;
@@ -370,24 +371,25 @@
     .qr-info-side {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
+      text-align: center;
     }
 
     .qr-hint-text {
-      font-size: clamp(22px, 5.8vw, 32px);
+      font-size: clamp(22px, 5.5vw, 30px);
       font-weight: 900;
       color: #ffffff;
-      line-height: 1.2;
+      line-height: 1.15;
       letter-spacing: -0.4px;
     }
 
     .qr-subtext {
-      font-size: clamp(13px, 3.6vw, 16px);
+      font-size: clamp(12px, 3.2vw, 15px);
       color: var(--text-muted);
-      margin-top: 8px;
+      margin-top: 4px;
       font-weight: 600;
-      line-height: 1.35;
+      line-height: 1.25;
     }
 
     /* --- 3. ЭКРАН УСПЕХА (SUCCESS) --- */
@@ -402,53 +404,85 @@
     }
 
     .success-icon-box {
-      width: 140px;
-      height: 140px;
+      width: 130px;
+      height: 130px;
       background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 75px;
+      font-size: 70px;
       color: #02120b;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       box-shadow: 0 0 50px rgba(0, 230, 118, 0.7);
       animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
     .success-title {
-      font-size: clamp(40px, 10vw, 54px);
+      font-size: clamp(38px, 9.5vw, 52px);
       font-weight: 900;
       color: #ffffff;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       letter-spacing: -1px;
     }
 
     .success-subtitle {
-      font-size: clamp(22px, 5.5vw, 28px);
+      font-size: clamp(20px, 5vw, 26px);
       color: var(--sber-green-bright);
       font-weight: 800;
     }
 
-    /* АНИМАЦИИ */
+    /* --- 4. ЭКРАН ОШИБКИ (FAILED) --- */
+    .failed-viewport {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .failed-icon-box {
+      width: 130px;
+      height: 130px;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 65px;
+      color: #ffffff;
+      margin-bottom: 20px;
+      box-shadow: 0 0 50px var(--sber-red-glow);
+      animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .failed-title {
+      font-size: clamp(34px, 8.5vw, 46px);
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 10px;
+      letter-spacing: -1px;
+    }
+
+    .failed-subtitle {
+      font-size: clamp(18px, 4.5vw, 22px);
+      color: #fca5a5;
+      font-weight: 700;
+      max-width: 90%;
+      line-height: 1.3;
+    }
+
+    /* Keyframes */
     @keyframes nfc-pulse {
-      0% {
-        transform: scale(0.6);
-        opacity: 0.9;
-      }
-      100% {
-        transform: scale(1.65);
-        opacity: 0;
-      }
+      0% { transform: scale(0.6); opacity: 0.9; }
+      100% { transform: scale(1.65); opacity: 0; }
     }
 
     @keyframes card-float {
-      0%, 100% {
-        transform: translateY(0) rotate(0deg);
-      }
-      50% {
-        transform: translateY(-8px) rotate(-3deg);
-      }
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-7px) rotate(-3deg); }
     }
 
     @keyframes pop-in {
@@ -500,7 +534,7 @@
       </header>
 
       <div class="pay-body-vertical">
-        <!-- Квадрат 1: Приложите карту / NFC с анимацией (на весь верхний блок) -->
+        <!-- Блок 1: NFC / Карта -->
         <div class="card-nfc-section">
           <div class="nfc-animation-box">
             <div class="nfc-pulse-ring"></div>
@@ -515,14 +549,14 @@
           <div class="card-subhint">Бесконтактная оплата NFC</div>
         </div>
 
-        <!-- Квадрат 2: Крупный QR-код (на весь нижний блок) -->
+        <!-- Блок 2: Крупный QR-код в рамочке + Надпись СНИЗУ -->
         <div class="qr-section">
           <div class="qr-frame">
             <img id="qr-image" src="" alt="QR-код оплаты">
           </div>
           <div class="qr-info-side">
-            <div class="qr-hint-text">Отсканируйте<br>QR-код</div>
-            <div class="qr-subtext">Камерой смартфона<br>или через СберБанк Онлайн</div>
+            <div class="qr-hint-text">Отсканируйте QR-код</div>
+            <div class="qr-subtext">Камерой смартфона или через СберБанк Онлайн</div>
           </div>
         </div>
       </div>
@@ -537,6 +571,15 @@
       </div>
     </section>
 
+    <!-- 4. ЭКРАН ОШИБКИ (FAILED) -->
+    <section id="state-failed" class="state">
+      <div class="failed-viewport">
+        <div class="failed-icon-box">✕</div>
+        <h2 class="failed-title" id="failed-title-text">Ошибка оплаты</h2>
+        <p class="failed-subtitle" id="failed-subtext">Недостаточно средств на балансе</p>
+      </div>
+    </section>
+
   </main>
 
   <script>
@@ -545,17 +588,26 @@
     const stateIdle = document.getElementById('state-idle');
     const statePay = document.getElementById('state-pay');
     const stateSuccess = document.getElementById('state-success');
+    const stateFailed = document.getElementById('state-failed');
     
     const payAmount = document.getElementById('pay-amount');
     const qrImage = document.getElementById('qr-image');
     const successAmountText = document.getElementById('success-amount-text');
+    const failedTitleText = document.getElementById('failed-title-text');
+    const failedSubtext = document.getElementById('failed-subtext');
+
+    let stateTimer = null;
 
     function switchState(targetState) {
-      [stateIdle, statePay, stateSuccess].forEach(el => el.classList.remove('active'));
+      if (stateTimer) {
+        clearTimeout(stateTimer);
+        stateTimer = null;
+      }
+      [stateIdle, statePay, stateSuccess, stateFailed].forEach(el => el.classList.remove('active'));
       targetState.classList.add('active');
     }
 
-    // Форматирование суммы в стиле Сбербанка: 1 500,00 ₽
+    // Форматирование суммы в стиле Сбербанка
     function formatCurrency(num) {
       return num.toLocaleString('ru-RU', {
         minimumFractionDigits: 2,
@@ -563,7 +615,7 @@
       }) + ' ₽';
     }
 
-    // Инициализация при подключении
+    // Инициализация
     socket.on('init_state', (data) => {
       if (data.activeTransaction && data.activeTransaction.status === 'pending') {
         renderPayState(data.activeTransaction);
@@ -572,27 +624,41 @@
       }
     });
 
-    // Создание транзакции с терминала
+    // Создание транзакции
     socket.on('transaction_created', (tx) => {
       renderPayState(tx);
     });
 
-    // Отображение данных оплаты
     function renderPayState(tx) {
       payAmount.textContent = formatCurrency(parseFloat(tx.amount));
       qrImage.src = tx.qrCode;
       switchState(statePay);
     }
 
-    // Успешная оплата
+    // Успешная оплата (Автоматический сброс через 3.2 сек)
     socket.on('payment_success', (data) => {
       if (data && data.transaction) {
         successAmountText.textContent = `${formatCurrency(data.transaction.amount)}`;
       }
       switchState(stateSuccess);
-      setTimeout(() => {
+      stateTimer = setTimeout(() => {
         switchState(stateIdle);
       }, 3200);
+    });
+
+    // Ошибка оплаты (Недостаточно средств) - Автоматический сброс через 3.5 сек
+    socket.on('payment_failed', (data) => {
+      if (data && data.reason === 'insufficient_funds') {
+        failedTitleText.textContent = 'Ошибка оплаты';
+        failedSubtext.textContent = 'Недостаточно средств на карте!';
+      } else {
+        failedTitleText.textContent = 'Ошибка оплаты';
+        failedSubtext.textContent = 'Транзакция отклонена';
+      }
+      switchState(stateFailed);
+      stateTimer = setTimeout(() => {
+        switchState(stateIdle);
+      }, 3500);
     });
 
     // Отмена или сброс
@@ -600,11 +666,7 @@
       switchState(stateIdle);
     });
 
-    socket.on('payment_failed', () => {
-      switchState(stateIdle);
-    });
-
-    // Ручная отмена нажатием на крестик
+    // Ручная отмена
     function cancelPayment() {
       fetch('/api/cancel-transaction', { method: 'POST' })
         .catch(err => console.error(err));
