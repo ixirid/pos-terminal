@@ -332,22 +332,7 @@ app.get('/client', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  const displayId = socket.id;
-  const clientIp = socket.handshake.address;
-
-  // Автоматически регистрируем подключенный сокет как дисплей
-  let display = state.displays.find(d => d.id === displayId);
-  if (!display) {
-    state.displays.push({
-      id: displayId,
-      name: `Дисплей ${displayId.slice(0, 4)}`,
-      ip: clientIp,
-      isBlocked: false,
-      lastSeen: Date.now()
-    });
-  }
-
-  // Отправляем начальное состояние подключившемуся клиенту
+  // Отправляем начальные данные любому подключившемуся экрану/терминалу
   socket.emit('init_state', {
     activeTransaction: state.activeTransaction,
     history: state.history,
@@ -355,18 +340,33 @@ io.on('connection', (socket) => {
     config
   });
 
-  // Уведомляем все терминалы об обновлении списка дисплеев
-  io.emit('displays_updated', { displays: state.displays });
+  // Регистрируем клиент в списке дисплеев ТОЛЬКО если он сам об этом заявит
+  socket.on('register_display', () => {
+    socket.isDisplay = true;
+    const displayId = socket.id;
+    const clientIp = socket.handshake.address;
 
-  // При закрытии страницы дисплея удаляем его из списка
-  socket.on('disconnect', () => {
-    state.displays = state.displays.filter(d => d.id !== displayId);
+    let display = state.displays.find(d => d.id === displayId);
+    if (!display) {
+      state.displays.push({
+        id: displayId,
+        name: `Дисплей ${displayId.slice(0, 4)}`,
+        ip: clientIp,
+        isBlocked: false,
+        lastSeen: Date.now()
+      });
+    }
     io.emit('displays_updated', { displays: state.displays });
   });
-});
 
-const PORT = process.env.PORT || config.port || 3000;
-server.listen(PORT, () => {
+  // При закрытии страницы удаляем из списка ТОЛЬКО если это был дисплей
+  socket.on('disconnect', () => {
+    if (socket.isDisplay) {
+      state.displays = state.displays.filter(d => d.id !== socket.id);
+      io.emit('displays_updated', { displays: state.displays });
+    }
+  });
+});
   console.log(`====================================================`);
   console.log(`🚀 POS Терминал обновлен и запущен!`);
   console.log(`🖥  Панель Терминала: http://localhost:${PORT}`);
