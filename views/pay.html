@@ -3,174 +3,170 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Оплата Счета</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/socket.io/socket.io.js"></script>
+  <title>Оплата по QR-коду — SberPay</title>
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-glow: rgba(16, 185, 129, 0.35);
+      --primary-dark: #059669;
+      --error: #ef4444;
+      --bg-base: #090d16;
+      --surface: #111827;
+      --surface-card: #1f2937;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      background-image: radial-gradient(circle at 50% 0%, #111e38 0%, var(--bg-base) 70%);
+      color: var(--text-main);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .pay-card {
+      background: var(--surface);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 28px;
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    .amount-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .amount-value {
+      font-size: 38px;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 20px;
+    }
+
+    .btn-pay {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border: none;
+      color: #fff;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 800;
+      border-radius: 16px;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 10px 25px var(--primary-glow);
+      transition: all 0.2s;
+      margin-bottom: 12px;
+    }
+
+    .btn-pay:active {
+      transform: scale(0.98);
+    }
+
+    .back-home-btn {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 14px;
+      cursor: pointer;
+      width: 100%;
+      text-decoration: none;
+      display: block;
+    }
+  </style>
 </head>
-<body style="background: #121214;">
+<body>
 
-  <div class="mobile-pay-container">
-    <div class="client-card" id="clientCard">
-      <!-- Идет загрузка -->
-      <div id="loadingView">
-        <div class="pulse-dot" style="margin: 0 auto 16px auto; width: 16px; height: 16px;"></div>
-        <p style="color: var(--text-muted);">Загрузка сведений о платеже...</p>
-      </div>
-
-      <!-- Карточка Оплаты -->
-      <div id="payFormView" style="display: none;">
-        <div style="font-size: 13px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 1px;">
-          Терминал Оплаты
-        </div>
-
-        <!-- Отображение Текущего Баланса Клиента -->
-        <div class="client-balance-badge" id="clientBalanceBadge">
-          <span>Ваш доступный баланс:</span>
-          <strong id="clientBalanceVal">0 ₽</strong>
-        </div>
-
-        <div class="client-amount-box">
-          <span style="font-size: 13px; color: var(--text-muted);">Сумма к списанию</span>
-          <div class="client-amount-val" id="payAmountDisplay">0 ₽</div>
-        </div>
-
-        <div id="insufficientWarning" class="warning-banner" style="display: none;">
-          ⚠️ Недостаточно средств на балансе
-        </div>
-
-        <button class="btn-primary" id="payBtn" onclick="confirmPayment()">
-          Подтвердить и оплатить
-        </button>
-      </div>
-
-      <!-- Состояние Успеха -->
-      <div id="successView" style="display: none; animation: scaleUp 0.3s ease;">
-        <div class="check-icon-circle" style="margin: 0 auto 20px auto;">✓</div>
-        <h2 style="font-size: 28px; font-weight: 800; margin-bottom: 8px;">Оплачено!</h2>
-        <p style="color: var(--text-muted); margin-bottom: 20px;">Спасибо за покупку</p>
-        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); padding: 12px; border-radius: 12px; color: #6ee7b7; font-weight: 600; font-size: 14px;">
-          Транзакция завершена успешно
-        </div>
-      </div>
-
-      <!-- Состояние Ошибки -->
-      <div id="errorView" style="display: none;">
-        <div style="width: 70px; height: 70px; background: rgba(239, 68, 68, 0.15); color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; margin: 0 auto 16px auto;">✕</div>
-        <h3 id="errorTitle" style="font-size: 20px; margin-bottom: 8px;">Ошибка оплаты</h3>
-        <p id="errorMessage" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;"></p>
-        <button class="btn-secondary" onclick="loadTransaction()">Обновить статус</button>
-      </div>
+  <div class="pay-card" id="payCardContainer">
+    <div class="amount-title">Сумма к оплате</div>
+    <div class="amount-value" id="txAmount">0 ₽</div>
+    
+    <div id="clientBalanceInfo" style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+      Баланс на карте: <strong id="clientBalanceVal" style="color: #fff;">0 ₽</strong>
     </div>
+
+    <button class="btn-pay" id="payBtn" onclick="confirmPayment()">Подтвердить оплату</button>
+    <a href="/client" class="back-home-btn">← Вернуться на главную портала</a>
   </div>
 
   <script>
-    const socket = io();
-    const transactionId = window.location.pathname.split('/').pop();
+    const txId = window.location.pathname.split('/').pop();
 
-    let transactionData = null;
-
-    async function loadTransaction() {
-      try {
-        document.getElementById('errorView').style.display = 'none';
-        document.getElementById('loadingView').style.display = 'block';
-
-        const res = await fetch(`/api/transaction/${transactionId}`);
-        const data = await res.json();
-
-        document.getElementById('loadingView').style.display = 'none';
-
-        if (!res.ok || !data.found) {
-          showError('Транзакция не найдена', data.error || 'Ссылка недействительна или срок действия истек');
-          return;
-        }
-
-        transactionData = data.transaction;
-
-        if (transactionData.status === 'paid') {
-          showSuccess();
-          return;
-        }
-
-        if (transactionData.status === 'cancelled') {
-          showError('Транзакция отменена', 'Оператор терминала отменил запрос оплаты.');
-          return;
-        }
-
-        document.getElementById('payFormView').style.display = 'block';
-        document.getElementById('payAmountDisplay').innerText = `${transactionData.amount.toLocaleString('ru-RU')} ₽`;
-        document.getElementById('clientBalanceVal').innerText = `${data.clientBalance.toLocaleString('ru-RU')} ₽`;
-
-        // Проверка достаточности средств
-        const payBtn = document.getElementById('payBtn');
-        const warnBanner = document.getElementById('insufficientWarning');
-
-        if (!data.balanceAvailable) {
-          warnBanner.style.display = 'block';
-          payBtn.disabled = true;
-          payBtn.style.opacity = '0.5';
-          payBtn.style.cursor = 'not-allowed';
-          payBtn.innerText = 'Недостаточно средств';
+    fetch(`/api/transaction/${txId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.found && data.transaction) {
+          document.getElementById('txAmount').textContent = data.transaction.amount.toLocaleString('ru-RU') + ' ₽';
+          if (data.clientBalance !== undefined) {
+            document.getElementById('clientBalanceVal').textContent = data.clientBalance.toLocaleString('ru-RU') + ' ₽';
+          }
         } else {
-          warnBanner.style.display = 'none';
-          payBtn.disabled = false;
-          payBtn.style.opacity = '1';
-          payBtn.style.cursor = 'pointer';
-          payBtn.innerText = 'Подтвердить и оплатить';
+          document.getElementById('payCardContainer').innerHTML = `<h2 style="color: #fff; font-size: 20px;">Транзакция не найдена или уже завершена</h2><br><a href="/client" class="back-home-btn">На главную</a>`;
         }
+      })
+      .catch(e => {
+        document.getElementById('payCardContainer').innerHTML = `<h2 style="color: #fff; font-size: 20px;">Ошибка загрузки транзакции</h2>`;
+      });
 
-      } catch (err) {
-        document.getElementById('loadingView').style.display = 'none';
-        showError('Ошибка подключения', 'Не удалось связаться с сервером терминала.');
-      }
-    }
-
-    async function confirmPayment() {
+    function confirmPayment() {
       const btn = document.getElementById('payBtn');
       btn.disabled = true;
-      btn.innerText = 'Обработка...';
+      btn.textContent = 'Обработка...';
 
-      try {
-        const res = await fetch(`/api/pay/${transactionId}`, {
-          method: 'POST'
-        });
-
-        const data = await res.json();
-
-        if (res.ok && data.success) {
-          showSuccess();
+      fetch(`/api/pay/${txId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('payCardContainer').innerHTML = `
+            <div style="font-size: 50px; color: var(--primary); margin-bottom: 12px;">✓</div>
+            <h2 style="font-size: 24px; color: #fff; margin-bottom: 8px;">Оплата успешна!</h2>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Остаток на карте: <strong style="color: var(--primary);">${data.newBalance.toLocaleString('ru-RU')} ₽</strong></p>
+            <a href="/client" class="back-home-btn" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: #fff;">Вернуться на главную</a>
+          `;
         } else {
+          alert(data.error || 'Ошибка оплаты');
           btn.disabled = false;
-          btn.innerText = 'Подтвердить и оплатить';
-          showError('Ошибка проведения платежа', data.error || 'Списание не удалось');
+          btn.textContent = 'Подтвердить оплату';
         }
-      } catch (err) {
+      })
+      .catch(err => {
+        alert('Ошибка связи с сервером');
         btn.disabled = false;
-        btn.innerText = 'Подтвердить и оплатить';
-        showError('Сбой сети', 'Проверьте соединение с интернетом');
-      }
+        btn.textContent = 'Подтвердить оплату';
+      });
     }
-
-    function showSuccess() {
-      document.getElementById('payFormView').style.display = 'none';
-      document.getElementById('errorView').style.display = 'none';
-      document.getElementById('successView').style.display = 'block';
-    }
-
-    function showError(title, msg) {
-      document.getElementById('payFormView').style.display = 'none';
-      document.getElementById('errorView').style.display = 'block';
-      document.getElementById('errorTitle').innerText = title;
-      document.getElementById('errorMessage').innerText = msg;
-    }
-
-    // Слушаем отмену с терминала
-    socket.on('transaction_cancelled', (data) => {
-      if (data.id === transactionId) {
-        showError('Транзакция отменена', 'Операция была отменена на терминале.');
-      }
-    });
-
-    loadTransaction();
   </script>
 </body>
 </html>
