@@ -1,6 +1,6 @@
 /**
- * Управление звуковыми эффектами POS-терминала
- * Адаптировано под iOS / Safari (с автоматической разблокировкой AudioContext)
+ * Управление звуковыми эффектами POS-терминала и Дисплея
+ * Поддерживает успешную оплату и звуки ошибки на всех экранах.
  */
 class TerminalAudioController {
   constructor() {
@@ -9,7 +9,6 @@ class TerminalAudioController {
     this.setupiOSUnlocker();
   }
 
-  // Настройка автоматической разблокировки при первом касании экрана iOS
   setupiOSUnlocker() {
     const unlockEvents = ['touchstart', 'touchend', 'click', 'keydown'];
     
@@ -22,8 +21,6 @@ class TerminalAudioController {
       } else {
         this.isUnlocked = true;
       }
-
-      // После первого взаимодействия снимаем слушатели
       unlockEvents.forEach(evt => document.removeEventListener(evt, unlock));
     };
 
@@ -48,12 +45,8 @@ class TerminalAudioController {
     }
   }
 
-  // 1. Звук нажатия на кнопку (отключен по запросу)
-  playTap() {
-    // Звук нажатия клавиш отключен
-  }
+  playTap() {}
 
-  // 2. Звук УСПЕШНОЙ оплаты (Приятный двухтональный дзинь в стиле Сбера)
   playSuccess() {
     try {
       this.ensureActiveContext();
@@ -61,7 +54,6 @@ class TerminalAudioController {
 
       const now = this.audioCtx.currentTime;
 
-      // Нота 1: E6 (1318.51 Гц)
       const osc1 = this.audioCtx.createOscillator();
       const gain1 = this.audioCtx.createGain();
       osc1.type = 'sine';
@@ -74,7 +66,6 @@ class TerminalAudioController {
       osc1.start(now);
       osc1.stop(now + 0.22);
 
-      // Нота 2: B6 (1975.53 Гц) через 100мс
       const osc2 = this.audioCtx.createOscillator();
       const gain2 = this.audioCtx.createGain();
       osc2.type = 'sine';
@@ -87,11 +78,10 @@ class TerminalAudioController {
       osc2.start(now + 0.1);
       osc2.stop(now + 0.45);
     } catch (e) {
-      console.warn('Ошибка воспроизведения звука успеха:', e);
+      console.warn('Ошибка звука успеха:', e);
     }
   }
 
-  // 3. Звук ОШИБКИ / Отказа (Двойной низкий сигнал)
   playError() {
     try {
       this.ensureActiveContext();
@@ -99,7 +89,6 @@ class TerminalAudioController {
 
       const now = this.audioCtx.currentTime;
 
-      // Гудок 1
       const osc1 = this.audioCtx.createOscillator();
       const gain1 = this.audioCtx.createGain();
       osc1.type = 'sawtooth';
@@ -112,10 +101,9 @@ class TerminalAudioController {
       osc1.start(now);
       osc1.stop(now + 0.18);
 
-      // Гудок 2
       const osc2 = this.audioCtx.createOscillator();
       const gain2 = this.audioCtx.createGain();
-      osc2.type = 'sawtooth';
+      osc2.type, osc2.type = 'sawtooth';
       osc2.frequency.setValueAtTime(180, now + 0.22);
       gain2.gain.setValueAtTime(0.25, now + 0.22);
       gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
@@ -125,10 +113,9 @@ class TerminalAudioController {
       osc2.start(now + 0.22);
       osc2.stop(now + 0.45);
     } catch (e) {
-      console.warn('Ошибка воспроизведения звука ошибки:', e);
+      console.warn('Ошибка звука ошибки:', e);
     }
   }
 }
 
-// Экспортируем единственный экземпляр
 window.terminalAudio = new TerminalAudioController();
