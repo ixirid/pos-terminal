@@ -194,11 +194,11 @@
         });
     }
 
-  <script>
+ <script>
     const socket = io();
     let html5QrCode = null;
 
-    // Функция форматирования валюты
+    // Функция для красивого форматирования суммы в рублях
     function formatCurrency(num) {
       return num.toLocaleString('ru-RU', {
         minimumFractionDigits: 0,
@@ -206,7 +206,7 @@
       }) + ' ₽';
     }
 
-    // 1. Загрузка начального баланса через тестовый API при входе
+    // 1. Загрузка актуального баланса при открытии страницы через тестовый API
     fetch('/api/shortcut/test')
       .then(res => res.json())
       .then(data => {
@@ -214,29 +214,61 @@
           document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.currentBalance);
         }
       })
-      .catch(err => console.error(err));
+      .catch(err => console.error('Ошибка загрузки баланса:', err));
 
-    // 2. Обработка начального состояния от сервера
+    // 2. Получение начального состояния от сервера при подключении/обновлении
     socket.on('init_state', (data) => {
       if (data.balance !== undefined) {
         document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.balance);
       }
     });
 
-    // 3. Обновление баланса в реальном времени через сокеты
+    // 3. Динамическое обновление баланса (при пополнении)
     socket.on('balance_updated', (data) => {
       if (data.newBalance !== undefined) {
         document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.newBalance);
       }
     });
 
-    // 4. Обновление при успешной оплате
+    // 4. Обновление баланса и закрытие сканера при успешной оплате
     socket.on('payment_success', (data) => {
       if (data.newBalance !== undefined) {
         document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.newBalance);
       }
       closeScanner();
     });
+
+    // Функции управления сканером QR-кодов камеры
+    function openScanner() {
+      document.getElementById('scannerOverlay').classList.add('active');
+      html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText, decodedResult) => {
+          if (decodedText.includes('/pay/')) {
+            closeScanner();
+            window.location.href = decodedText;
+          }
+        },
+        (errorMessage) => {
+          // Игнорируем промежуточные ошибки поиска QR-кода
+        }
+      ).catch(err => {
+        alert("Не удалось запустить камеру. Проверьте разрешения браузера.");
+        closeScanner();
+      });
+    }
+
+    function closeScanner() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+        }).catch(err => {});
+      }
+      document.getElementById('scannerOverlay').classList.remove('active');
+    }
+  </script>
 
     // Функции сканера камеры
     function openScanner() {
