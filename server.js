@@ -367,6 +367,10 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+// ВОТ ЭТОГО КУСКА НЕ ХВАТАЛО:
+const PORT = process.env.PORT || config.port || 3000;
+server.listen(PORT, () => {
   console.log(`====================================================`);
   console.log(`🚀 POS Терминал обновлен и запущен!`);
   console.log(`🖥  Панель Терминала: http://localhost:${PORT}`);
