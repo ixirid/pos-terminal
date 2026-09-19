@@ -24,7 +24,7 @@
       --bg-dark: #020c07;
       --bg-gradient: radial-gradient(circle at 50% 35%, #083b25 0%, #031c11 60%, #010805 100%);
       --text-main: #ffffff;
-      --text-muted: #9ab4a7;
+      --text-muted: #a3c4b5;
     }
 
     html, body {
@@ -42,7 +42,6 @@
       position: relative;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
     }
 
     /* Состояния экрана */
@@ -51,7 +50,7 @@
       inset: 0;
       display: flex;
       flex-direction: column;
-      padding: 24px 20px;
+      padding: 16px 16px 20px 16px;
       opacity: 0;
       transform: scale(0.97);
       transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -76,30 +75,30 @@
     .sber-pay-badge {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 22px;
+      gap: 12px;
+      padding: 12px 26px;
       border-radius: 30px;
       background: rgba(255, 255, 255, 0.14);
       border: 1.5px solid rgba(255, 255, 255, 0.25);
       backdrop-filter: blur(12px);
-      font-size: 22px;
+      font-size: 26px;
       font-weight: 800;
       letter-spacing: -0.3px;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
     }
 
     .sber-pay-badge .check-circle {
-      width: 26px;
-      height: 26px;
+      width: 30px;
+      height: 30px;
       background: var(--sber-green-bright);
       border-radius: 50%;
       color: #010a06;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 900;
-      box-shadow: 0 0 10px var(--sber-green-bright);
+      box-shadow: 0 0 12px var(--sber-green-bright);
     }
 
     .idle-main-content {
@@ -113,14 +112,14 @@
     }
 
     .idle-title {
-      font-size: clamp(48px, 11vw, 76px);
+      font-size: clamp(54px, 13vw, 84px);
       font-weight: 900;
-      line-height: 1.08;
+      line-height: 1.05;
       letter-spacing: -2px;
       color: #ffffff;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 12px;
       width: 100%;
     }
 
@@ -131,8 +130,8 @@
     }
 
     .green-dot-icon {
-      width: clamp(34px, 8vw, 50px);
-      height: clamp(34px, 8vw, 50px);
+      width: clamp(38px, 9vw, 56px);
+      height: clamp(38px, 9vw, 56px);
       background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
       border-radius: 50%;
       box-shadow: 0 0 30px rgba(0, 230, 118, 0.8);
@@ -141,24 +140,24 @@
     }
 
     .green-check-icon {
-      width: clamp(40px, 9vw, 56px);
-      height: clamp(40px, 9vw, 56px);
+      width: clamp(44px, 10vw, 64px);
+      height: clamp(44px, 10vw, 64px);
       background: #00e676;
-      border-radius: 14px;
+      border-radius: 16px;
       color: #02120b;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(26px, 6vw, 36px);
+      font-size: clamp(28px, 7vw, 42px);
       font-weight: 900;
       box-shadow: 0 0 25px rgba(0, 230, 118, 0.7);
       flex-shrink: 0;
     }
 
     .idle-footer {
-      font-size: 15px;
-      color: rgba(255, 255, 255, 0.45);
-      font-weight: 600;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 700;
       padding-bottom: 8px;
       letter-spacing: 0.5px;
     }
@@ -167,13 +166,14 @@
     .pay-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
-      padding: 16px 20px;
-      backdrop-filter: blur(10px);
+      align-items: center;
+      margin-bottom: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      border-radius: 22px;
+      padding: 18px 22px;
+      backdrop-filter: blur(14px);
+      flex-shrink: 0;
     }
 
     .pay-title-group {
@@ -183,87 +183,90 @@
     }
 
     .pay-subtitle {
-      font-size: 16px;
+      font-size: 15px;
       color: var(--text-muted);
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.2px;
     }
 
     .pay-amount-display {
-      font-size: clamp(34px, 8.5vw, 48px);
+      font-size: clamp(38px, 9.5vw, 54px);
       font-weight: 900;
       letter-spacing: -1px;
       color: #ffffff;
       text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      line-height: 1;
     }
 
     .cancel-btn {
-      width: 44px;
-      height: 44px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.15);
       display: flex;
       align-items: center;
       justify-content: center;
       color: #ffffff;
-      font-size: 22px;
-      font-weight: 700;
+      font-size: 24px;
+      font-weight: 800;
       cursor: pointer;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
       transition: all 0.2s;
-      margin-top: 4px;
+      flex-shrink: 0;
     }
 
     .cancel-btn:active {
-      transform: scale(0.92);
-      background: rgba(239, 68, 68, 0.4);
+      transform: scale(0.9);
+      background: rgba(239, 68, 68, 0.5);
     }
 
+    /* Основной контейнер оплаты - растягивается на весь остаток экрана без дыр */
     .pay-body-vertical {
       display: flex;
       flex-direction: column;
-      justify-content: space-around;
-      align-items: center;
-      flex-grow: 1;
+      flex: 1;
       width: 100%;
-      gap: 16px;
-      padding: 10px 0;
+      gap: 14px;
+      min-height: 0;
     }
 
-    /* Верхняя зона: Оплата картой / NFC с мощной анимацией */
+    /* Верхняя зона: Оплата картой / NFC (растянута на весь квадрат) */
     .card-nfc-section {
+      flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       width: 100%;
-      background: rgba(0, 230, 118, 0.06);
-      border: 2px solid rgba(0, 230, 118, 0.35);
-      border-radius: 24px;
-      padding: 20px 16px;
+      background: rgba(0, 230, 118, 0.08);
+      border: 2px solid rgba(0, 230, 118, 0.4);
+      border-radius: 26px;
+      padding: 16px;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 230, 118, 0.15);
+      box-shadow: 0 10px 30px rgba(0, 230, 118, 0.18);
     }
 
     /* Анимированная пластиковая карта + Волны NFC */
     .nfc-animation-box {
       position: relative;
-      width: 120px;
-      height: 80px;
+      width: 130px;
+      height: 86px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 12px;
+      flex-shrink: 0;
     }
 
     .nfc-pulse-ring {
       position: absolute;
-      width: 100px;
-      height: 100px;
+      width: 110px;
+      height: 110px;
       border-radius: 50%;
-      border: 2px solid var(--sber-green-bright);
+      border: 2.5px solid var(--sber-green-bright);
       opacity: 0;
       animation: nfc-pulse 2.2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
     }
@@ -277,23 +280,23 @@
     }
 
     .animated-card-graphic {
-      width: 90px;
-      height: 56px;
+      width: 100px;
+      height: 62px;
       background: linear-gradient(135deg, #00e676 0%, #00897b 100%);
-      border-radius: 10px;
+      border-radius: 12px;
       position: relative;
       box-shadow: 0 8px 25px rgba(0, 230, 118, 0.5);
       z-index: 2;
       animation: card-float 2.5s infinite ease-in-out;
-      border: 1px solid rgba(255, 255, 255, 0.4);
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
       display: flex;
-      align-items: flex-center;
+      align-items: center;
       padding: 8px;
     }
 
     .card-chip {
-      width: 16px;
-      height: 12px;
+      width: 18px;
+      height: 13px;
       background: #ffd700;
       border-radius: 3px;
       border: 1px solid rgba(0, 0, 0, 0.2);
@@ -301,42 +304,45 @@
 
     .card-waves-icon {
       position: absolute;
-      right: 10px;
-      top: 8px;
+      right: 12px;
+      top: 10px;
       font-size: 16px;
       color: #ffffff;
-      opacity: 0.9;
+      font-weight: 900;
+      opacity: 0.95;
     }
 
     .card-hint-text {
-      font-size: clamp(22px, 5.5vw, 28px);
+      font-size: clamp(26px, 6.8vw, 36px);
       font-weight: 900;
       color: #ffffff;
       text-align: center;
-      line-height: 1.2;
+      line-height: 1.15;
       letter-spacing: -0.5px;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
     }
 
     .card-subhint {
-      font-size: 14px;
+      font-size: clamp(14px, 3.8vw, 17px);
       color: var(--sber-green-bright);
-      font-weight: 700;
-      margin-top: 4px;
+      font-weight: 800;
+      margin-top: 6px;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 1px;
     }
 
-    /* Нижняя зона: QR-код */
+    /* Нижняя зона: Крупный QR-код (растянут на весь нижний квадрат) */
     .qr-section {
+      flex: 1.35;
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 20px;
+      gap: 18px;
       width: 100%;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1.5px solid rgba(255, 255, 255, 0.15);
-      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      border-radius: 26px;
       padding: 16px;
     }
 
@@ -344,37 +350,44 @@
       position: relative;
       background: #ffffff;
       padding: 10px;
-      border-radius: 16px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
+    /* Огромный QR для сканирования */
     .qr-frame img {
-      width: clamp(100px, 26vw, 140px);
-      height: clamp(100px, 26vw, 140px);
+      width: clamp(145px, 39vw, 220px);
+      height: clamp(145px, 39vw, 220px);
       display: block;
-      border-radius: 6px;
+      border-radius: 10px;
+      object-fit: contain;
     }
 
     .qr-info-side {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
+      justify-content: center;
     }
 
     .qr-hint-text {
-      font-size: clamp(18px, 4.5vw, 22px);
-      font-weight: 800;
+      font-size: clamp(22px, 5.8vw, 32px);
+      font-weight: 900;
       color: #ffffff;
-      line-height: 1.25;
-      letter-spacing: -0.3px;
+      line-height: 1.2;
+      letter-spacing: -0.4px;
     }
 
     .qr-subtext {
-      font-size: 13px;
+      font-size: clamp(13px, 3.6vw, 16px);
       color: var(--text-muted);
-      margin-top: 6px;
-      font-weight: 500;
+      margin-top: 8px;
+      font-weight: 600;
+      line-height: 1.35;
     }
 
     /* --- 3. ЭКРАН УСПЕХА (SUCCESS) --- */
@@ -389,32 +402,32 @@
     }
 
     .success-icon-box {
-      width: 130px;
-      height: 130px;
+      width: 140px;
+      height: 140px;
       background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 70px;
+      font-size: 75px;
       color: #02120b;
       margin-bottom: 24px;
-      box-shadow: 0 0 50px rgba(0, 230, 118, 0.6);
+      box-shadow: 0 0 50px rgba(0, 230, 118, 0.7);
       animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
     .success-title {
-      font-size: clamp(36px, 9vw, 48px);
+      font-size: clamp(40px, 10vw, 54px);
       font-weight: 900;
       color: #ffffff;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       letter-spacing: -1px;
     }
 
     .success-subtitle {
-      font-size: clamp(20px, 5vw, 26px);
+      font-size: clamp(22px, 5.5vw, 28px);
       color: var(--sber-green-bright);
-      font-weight: 700;
+      font-weight: 800;
     }
 
     /* АНИМАЦИИ */
@@ -424,7 +437,7 @@
         opacity: 0.9;
       }
       100% {
-        transform: scale(1.6);
+        transform: scale(1.65);
         opacity: 0;
       }
     }
@@ -487,7 +500,7 @@
       </header>
 
       <div class="pay-body-vertical">
-        <!-- Блок 1: Приложите карту / NFC с анимацией -->
+        <!-- Квадрат 1: Приложите карту / NFC с анимацией (на весь верхний блок) -->
         <div class="card-nfc-section">
           <div class="nfc-animation-box">
             <div class="nfc-pulse-ring"></div>
@@ -502,7 +515,7 @@
           <div class="card-subhint">Бесконтактная оплата NFC</div>
         </div>
 
-        <!-- Блок 2: QR-код в рамочке -->
+        <!-- Квадрат 2: Крупный QR-код (на весь нижний блок) -->
         <div class="qr-section">
           <div class="qr-frame">
             <img id="qr-image" src="" alt="QR-код оплаты">
@@ -542,7 +555,7 @@
       targetState.classList.add('active');
     }
 
-    // Форматирование суммы в стиле Сбербанка: 329,00 ₽
+    // Форматирование суммы в стиле Сбербанка: 1 500,00 ₽
     function formatCurrency(num) {
       return num.toLocaleString('ru-RU', {
         minimumFractionDigits: 2,
