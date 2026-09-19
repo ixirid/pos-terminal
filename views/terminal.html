@@ -2,18 +2,14 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>POS Терминал Кассы — Премиум Управление</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>POS Терминал</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
     :root {
       --primary: #10b981;
-      --primary-glow: rgba(16, 185, 129, 0.35);
       --primary-dark: #059669;
-      --accent: #3b82f6;
       --error: #ef4444;
-      --error-glow: rgba(239, 68, 68, 0.35);
       --bg-base: #090d16;
       --surface: #111827;
       --surface-card: #1f2937;
@@ -23,1216 +19,305 @@
       --text-muted: #9ca3af;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      background-color: var(--bg-base);
-      background-image: radial-gradient(circle at 50% 0%, #111e38 0%, var(--bg-base) 70%);
-      color: var(--text-main);
-      min-height: 100vh;
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-    }
-
-    .pos-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px 20px;
-      background: rgba(17, 24, 39, 0.85);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-      flex-shrink: 0;
-    }
-
-    .brand-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-icon {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, var(--primary) 0%, #047857 100%);
-      color: #fff;
-      font-size: 22px;
-      font-weight: 800;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 15px var(--primary-glow);
-    }
-
-    .brand-text h1 {
-      font-size: 17px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: #fff;
-      line-height: 1.2;
-    }
-
-    .brand-text p {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 1px;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .client-link-btn {
-      padding: 8px 12px;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: var(--primary);
-      border-radius: 10px;
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: 700;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-
-    .status-badge-online {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(16, 185, 129, 0.1);
-      padding: 8px 10px;
-      border-radius: 20px;
-      border: 1px solid rgba(16, 185, 129, 0.2);
-      color: var(--primary);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .pulse-dot-green {
-      width: 6px;
-      height: 6px;
-      background: var(--primary);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--primary);
-      animation: pulse 1.5s infinite;
-    }
-
-    .pos-container {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: stretch;
-      padding: 12px 14px;
-      max-width: 640px;
-      margin: 0 auto;
-      width: 100%;
-    }
-
-    .pos-main-panel {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-    }
-
-    .tabs-header {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      background: rgba(0, 0, 0, 0.25);
-      border-bottom: 1px solid var(--border-color);
-      padding: 4px;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-
-    .tab-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 10px 4px;
-      font-size: 12px;
-      font-weight: 700;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-
-    .tab-btn.active {
-      background: var(--surface-card);
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border-color);
-    }
-
-    .tab-content {
-      display: none;
-      padding: 16px;
-      flex-direction: column;
-      gap: 12px;
-      flex: 1;
-      justify-content: space-between;
-    }
-
-    .tab-content.active {
-      display: flex;
-    }
-
-    .amount-display-wrapper {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
-      flex-shrink: 0;
-    }
-
-    .amount-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-    }
-
-    .amount-input-container {
-      display: flex;
-      align-items: baseline;
-      justify-content: flex-end;
-      gap: 6px;
-    }
-
-    .amount-input {
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-size: 38px;
-      font-weight: 900;
-      text-align: right;
-      width: 100%;
-      outline: none;
-      letter-spacing: -1px;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-    }
-
-    .amount-currency {
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--primary);
-    }
-
-    .quick-presets {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
-    .preset-btn {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      color: #fff;
-      padding: 10px 4px;
-      font-size: 13px;
-      font-weight: 700;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-      text-align: center;
-    }
-
-    .preset-btn:active {
-      transform: scale(0.95);
-      background: var(--surface-hover);
-    }
-
-    .numpad-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      flex: 1;
-    }
-
-    .num-btn {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      color: #fff;
-      height: 100%;
-      min-height: 54px;
-      font-size: 24px;
-      font-weight: 700;
-      border-radius: 14px;
-      cursor: pointer;
-      transition: all 0.1s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .num-btn:active {
-      transform: scale(0.93);
-      background: #4b5563;
-    }
-
-    .num-btn.clear {
-      color: #f87171;
-      background: rgba(239, 68, 68, 0.12);
-      border-color: rgba(239, 68, 68, 0.25);
-    }
-
-    .num-btn.action {
-      color: #60a5fa;
-      background: rgba(59, 130, 246, 0.12);
-      border-color: rgba(59, 130, 246, 0.25);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      border: none;
-      color: #fff;
-      padding: 14px;
-      font-size: 15px;
-      font-weight: 800;
-      border-radius: 14px;
-      cursor: pointer;
-      box-shadow: 0 8px 20px var(--primary-glow);
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      flex-shrink: 0;
-      width: 100%;
-    }
-
-    .btn-primary:active {
-      transform: scale(0.98);
-      filter: brightness(0.95);
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: var(--bg-base); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
 
-    .btn-secondary {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
-      padding: 12px;
-      font-size: 14px;
-      font-weight: 700;
-      border-radius: 14px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      width: 100%;
-    }
-
-    /* ПОЛНОЭКРАННЫЕ МОДАЛЬНЫЕ ОКНА УСПЕХА / ОШИБКИ */
-    .fullscreen-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(9, 13, 22, 0.96);
-      backdrop-filter: blur(16px);
-      z-index: 1000;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-      animation: fadeInOverlay 0.2s ease-out;
-    }
-
-    .fullscreen-overlay.active {
-      display: flex !important;
-    }
-
-    @keyframes fadeInOverlay {
-      from { opacity: 0; transform: scale(1.03); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    .check-icon-circle {
-      width: 90px;
-      height: 90px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: #fff;
-      font-size: 45px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      box-shadow: 0 0 40px var(--primary-glow);
-    }
-
-    .error-circle {
-      width: 90px;
-      height: 90px;
-      background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
-      color: #fff;
-      font-size: 45px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      box-shadow: 0 0 40px var(--error-glow);
-    }
-
-    .qr-display-panel {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 10px 0;
-      flex: 1;
-    }
-
-    .qr-display-panel.active {
-      display: flex !important;
-    }
-
-    .qr-box {
-      background: #ffffff;
-      padding: 16px;
-      border-radius: 20px;
-      margin: 16px 0;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-    }
-
-    .qr-box img {
-      width: 200px;
-      height: 200px;
-      display: block;
-    }
-
-    .qr-status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(16, 185, 129, 0.12);
-      padding: 8px 16px;
-      border-radius: 30px;
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 14px;
-      margin-bottom: 12px;
-    }
-
-    .pulse-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--primary);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--primary);
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(0.95); opacity: 0.8; }
-      50% { transform: scale(1.35); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.8; }
-    }
-
-    /* ИСТОРИЯ ЧЕКОВ */
-    .history-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      overflow-y: auto;
-      flex: 1;
-      max-height: 420px;
-      padding-right: 4px;
-    }
-
-    .history-item {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .history-info h4 {
-      font-size: 14px;
-      font-weight: 700;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .history-info p {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .history-amount {
-      font-size: 16px;
-      font-weight: 800;
-      color: var(--primary);
-      text-align: right;
-    }
-
-    .history-amount.topup {
-      color: var(--accent);
-    }
-
-    .receipt-download-btn {
-      background: rgba(59, 130, 246, 0.15);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      color: #60a5fa;
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 4px;
-    }
-
-    /* НАСТРОЙКИ ДИСПЛЕЕВ И ТЕРМИНАЛОВ */
-    .displays-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      overflow-y: auto;
-      flex: 1;
-      max-height: 380px;
-    }
-
-    .display-card {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .display-card.blocked {
-      opacity: 0.6;
-      border-color: rgba(239, 68, 68, 0.3);
-      background: rgba(31, 41, 55, 0.5);
-    }
-
-    .display-card-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .display-name-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .display-title-input {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border-color);
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 700;
-      outline: none;
-      width: 160px;
-    }
-
-    .display-actions-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .icon-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border-color);
-      color: #fff;
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .icon-btn.danger {
-      color: #f87171;
-      background: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.2);
-    }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: rgba(17, 24, 39, 0.8); border-bottom: 1px solid var(--border-color); }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 18px; }
+    .brand-icon { width: 36px; height: 36px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
 
-    .setting-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      color: var(--text-muted);
-      border-top: 1px solid var(--border-color);
-      padding-top: 8px;
-    }
+    .main { flex: 1; display: flex; justify-content: center; padding: 16px; }
+    .panel { width: 100%; max-width: 500px; background: var(--surface); border-radius: 20px; border: 1px solid var(--border-color); overflow: hidden; display: flex; flex-direction: column; }
 
-    /* Модалка выбора терминала (Спрашивать каждый раз) */
-    .select-terminal-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(9, 13, 22, 0.85);
-      backdrop-filter: blur(12px);
-      z-index: 1100;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
+    .nav-tabs { display: grid; grid-template-columns: repeat(4, 1fr); background: rgba(0,0,0,0.2); padding: 4px; gap: 4px; }
+    .tab-btn { background: none; border: none; color: var(--text-muted); padding: 12px 4px; font-weight: 700; font-size: 13px; border-radius: 10px; cursor: pointer; }
+    .tab-btn.active { background: var(--surface-card); color: #fff; }
 
-    .select-terminal-modal.active {
-      display: flex !important;
-    }
+    .content { padding: 20px; display: none; flex-direction: column; gap: 16px; flex: 1; }
+    .content.active { display: flex; }
 
-    .terminal-selector-card {
-      background: var(--surface);
-      border: 1px solid var(--border-color);
-      border-radius: 20px;
-      width: 100%;
-      max-width: 420px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
-    }
+    .display-box { background: rgba(0,0,0,0.3); border-radius: 14px; padding: 16px; text-align: right; border: 1px solid var(--border-color); }
+    .amount { font-size: 38px; font-weight: 900; color: #fff; }
 
-    .terminal-option-item {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 14px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex: 1; }
 
-    .terminal-option-item:hover {
-      border-color: var(--primary);
-    }
+    .btn { background: var(--surface-card); border: 1px solid var(--border-color); color: #fff; border-radius: 12px; font-weight: 700; font-size: 18px; padding: 14px; cursor: pointer; }
+    .btn:active { background: var(--surface-hover); }
+    .btn-action { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none; padding: 16px; font-size: 16px; width: 100%; margin-top: auto; }
 
-    .terminal-option-item.blocked {
-      opacity: 0.5;
-      cursor: not-allowed;
-      border-color: rgba(239, 68, 68, 0.3);
+    /* Полноэкранный оверлей для всего интерфейса */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(9, 13, 22, 0.95);
+      z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center;
     }
+    .modal-overlay.active { display: flex; }
 
-    /* Чекбокс настройки "спрашивать каждый раз" */
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      color: var(--text-main);
-      background: var(--surface-card);
-      padding: 10px 14px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-    }
+    .receipt-item { background: var(--surface-card); padding: 12px 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .receipt-link { color: var(--primary); text-decoration: none; font-weight: bold; }
 
-    .checkbox-label input {
-      accent-color: var(--primary);
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-    }
+    .display-card { background: var(--surface-card); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
   </style>
 </head>
 <body>
 
-  <header class="pos-header">
-    <div class="brand-title">
+  <header class="header">
+    <div class="brand">
       <div class="brand-icon">₽</div>
-      <div class="brand-text">
-        <h1>POS Терминал</h1>
-        <p id="serverInfoText">Подключение...</p>
-      </div>
+      <div>POS Терминал</div>
     </div>
-
-    <div class="header-actions">
-      <a href="/client" target="_blank" class="client-link-btn">
-        👤 Портал клиента
-      </a>
-      <a href="/display" target="_blank" class="client-link-btn">
-        📺 Дисплей
-      </a>
-      <div class="status-badge-online">
-        <span class="pulse-dot-green"></span>
-        <span>Онлайн</span>
-      </div>
-    </div>
+    <a href="/display" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: bold; font-size: 13px;">📺 Экран</a>
   </header>
 
-  <main class="pos-container">
-    <section class="pos-main-panel">
-      <nav class="tabs-header">
-        <button class="tab-btn active" id="tabBtnCharge" onclick="switchTab('charge')">💸 Оплата</button>
-        <button class="tab-btn" id="tabBtnTopup" onclick="switchTab('topup')">➕ Баланс</button>
-        <button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">📜 Чеки</button>
-        <button class="tab-btn" id="tabBtnSettings" onclick="switchTab('settings')">⚙️ Дисплеи</button>
+  <main class="main">
+    <section class="panel">
+      <nav class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('charge')">💸 Оплата</button>
+        <button class="tab-btn" onclick="switchTab('topup')">➕ Пополнение</button>
+        <button class="tab-btn" onclick="switchTab('receipts')">🧾 Чеки</button>
+        <button class="tab-btn" onclick="switchTab('settings')">⚙️ Настройки</button>
       </nav>
 
-      <!-- ВКЛАДКА 1: ОПЛАТА -->
-      <div class="tab-content active" id="tabCharge">
-        <div id="chargeFormView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-          <div class="amount-display-wrapper">
-            <span class="amount-label">Сумма к оплате</span>
-            <div class="amount-input-container">
-              <input type="text" id="chargeAmount" class="amount-input" value="0" readonly>
-              <span class="amount-currency">₽</span>
-            </div>
-          </div>
-
-          <label class="checkbox-label">
-            <input type="checkbox" id="askTerminalCheckbox" checked onchange="toggleAskTerminalSetting(this)">
-            <span>Спрашивать дисплей перед отправкой оплаты</span>
-          </label>
-
-          <div class="quick-presets">
-            <button class="preset-btn" onclick="addPreset('charge', 100)">+100</button>
-            <button class="preset-btn" onclick="addPreset('charge', 500)">+500</button>
-            <button class="preset-btn" onclick="addPreset('charge', 1000)">+1 000</button>
-            <button class="preset-btn" onclick="addPreset('charge', 5000)">+5 000</button>
-          </div>
-
-          <div class="numpad-grid">
-            <button class="num-btn" onclick="appendDigit('charge', '1')">1</button>
-            <button class="num-btn" onclick="appendDigit('charge', '2')">2</button>
-            <button class="num-btn" onclick="appendDigit('charge', '3')">3</button>
-            <button class="num-btn" onclick="appendDigit('charge', '4')">4</button>
-            <button class="num-btn" onclick="appendDigit('charge', '5')">5</button>
-            <button class="num-btn" onclick="appendDigit('charge', '6')">6</button>
-            <button class="num-btn" onclick="appendDigit('charge', '7')">7</button>
-            <button class="num-btn" onclick="appendDigit('charge', '8')">8</button>
-            <button class="num-btn" onclick="appendDigit('charge', '9')">9</button>
-            <button class="num-btn clear" onclick="clearInput('charge')">C</button>
-            <button class="num-btn" onclick="appendDigit('charge', '0')">0</button>
-            <button class="num-btn action" onclick="backspace('charge')">⌫</button>
-          </div>
-
-          <button class="btn-primary" onclick="initiateTransactionFlow()">Сгенерировать QR-код [Enter]</button>
+      <!-- Вкладка Оплаты -->
+      <div class="content active" id="tabCharge">
+        <div class="display-box">
+          <span id="chargeAmount">0</span> <span style="color: var(--primary);">₽</span>
         </div>
-
-        <div class="qr-display-panel" id="qrDisplayPanel">
-          <div class="qr-status-badge">
-            <span class="pulse-dot"></span>
-            <span>Ожидание оплаты клиентом...</span>
-          </div>
-          <h2 style="font-size: 20px; margin-bottom: 12px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
-          <div class="qr-box">
-            <img id="qrImage" src="" alt="QR-код">
-          </div>
-          <button class="btn-secondary" onclick="cancelTransaction()">Отменить оплату [Esc]</button>
+        <div class="grid-4">
+          <button class="btn" onclick="addPreset('charge', 100)">+100</button>
+          <button class="btn" onclick="addPreset('charge', 500)">+500</button>
+          <button class="btn" onclick="addPreset('charge', 1000)">+1k</button>
+          <button class="btn" onclick="addPreset('charge', 5000)">+5k</button>
         </div>
+        <div class="grid-3">
+          <button class="btn" onclick="num('charge','1')">1</button>
+          <button class="btn" onclick="num('charge','2')">2</button>
+          <button class="btn" onclick="num('charge','3')">3</button>
+          <button class="btn" onclick="num('charge','4')">4</button>
+          <button class="btn" onclick="num('charge','5')">5</button>
+          <button class="btn" onclick="num('charge','6')">6</button>
+          <button class="btn" onclick="num('charge','7')">7</button>
+          <button class="btn" onclick="num('charge','8')">8</button>
+          <button class="btn" onclick="num('charge','9')">9</button>
+          <button class="btn" style="color:#f87171;" onclick="clearNum('charge')">C</button>
+          <button class="btn" onclick="num('charge','0')">0</button>
+          <button class="btn" style="color:#60a5fa;" onclick="backspace('charge')">⌫</button>
+        </div>
+        <button class="btn btn-action" onclick="handleGenerateQr()">Сгенерировать QR-код</button>
       </div>
 
-      <!-- ВКЛАДКА 2: ПОПОЛНЕНИЕ -->
-      <div class="tab-content" id="tabTopup">
-        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-          <div class="amount-display-wrapper">
-            <span class="amount-label">Сумма пополнения счета</span>
-            <div class="amount-input-container">
-              <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
-              <span class="amount-currency">₽</span>
-            </div>
-          </div>
-
-          <div class="quick-presets">
-            <button class="preset-btn" onclick="addPreset('topup', 100)">+100</button>
-            <button class="preset-btn" onclick="addPreset('topup', 500)">+500</button>
-            <button class="preset-btn" onclick="addPreset('topup', 1000)">+1 000</button>
-            <button class="preset-btn" onclick="addPreset('topup', 5000)">+5 000</button>
-          </div>
-
-          <div class="numpad-grid">
-            <button class="num-btn" onclick="appendDigit('topup', '1')">1</button>
-            <button class="num-btn" onclick="appendDigit('topup', '2')">2</button>
-            <button class="num-btn" onclick="appendDigit('topup', '3')">3</button>
-            <button class="num-btn" onclick="appendDigit('topup', '4')">4</button>
-            <button class="num-btn" onclick="appendDigit('topup', '5')">5</button>
-            <button class="num-btn" onclick="appendDigit('topup', '6')">6</button>
-            <button class="num-btn" onclick="appendDigit('topup', '7')">7</button>
-            <button class="num-btn" onclick="appendDigit('topup', '8')">8</button>
-            <button class="num-btn" onclick="appendDigit('topup', '9')">9</button>
-            <button class="num-btn clear" onclick="clearInput('topup')">C</button>
-            <button class="num-btn" onclick="appendDigit('topup', '0')">0</button>
-            <button class="num-btn action" onclick="backspace('topup')">⌫</button>
-          </div>
-
-          <button class="btn-primary" onclick="submitTopup()">Внести на счет [Enter]</button>
+      <!-- Вкладка Пополнения -->
+      <div class="content" id="tabTopup">
+        <div class="display-box">
+          <span id="topupAmount">0</span> <span style="color: var(--primary);">₽</span>
         </div>
+        <div class="grid-4">
+          <button class="btn" onclick="addPreset('topup', 100)">+100</button>
+          <button class="btn" onclick="addPreset('topup', 500)">+500</button>
+          <button class="btn" onclick="addPreset('topup', 1000)">+1k</button>
+          <button class="btn" onclick="addPreset('topup', 5000)">+5k</button>
+        </div>
+        <div class="grid-3">
+          <button class="btn" onclick="num('topup','1')">1</button>
+          <button class="btn" onclick="num('topup','2')">2</button>
+          <button class="btn" onclick="num('topup','3')">3</button>
+          <button class="btn" onclick="num('topup','4')">4</button>
+          <button class="btn" onclick="num('topup','5')">5</button>
+          <button class="btn" onclick="num('topup','6')">6</button>
+          <button class="btn" onclick="num('topup','7')">7</button>
+          <button class="btn" onclick="num('topup','8')">8</button>
+          <button class="btn" onclick="num('topup','9')">9</button>
+          <button class="btn" style="color:#f87171;" onclick="clearNum('topup')">C</button>
+          <button class="btn" onclick="num('topup','0')">0</button>
+          <button class="btn" style="color:#60a5fa;" onclick="backspace('topup')">⌫</button>
+        </div>
+        <button class="btn btn-action" onclick="submitTopup()">Внести на счет</button>
       </div>
 
-      <!-- ВКЛАДКА 3: ИСТОРИЯ ЧЕКОВ -->
-      <div class="tab-content" id="tabHistory">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">История операций и чеков</h3>
-          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="loadHistory()">Обновить</button>
-        </div>
-        <div class="history-list" id="historyListContainer">
-          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка истории...</p>
-        </div>
+      <!-- Вкладка Чеков -->
+      <div class="content" id="tabReceipts">
+        <h3 style="margin-bottom: 12px;">История операций</h3>
+        <div id="receiptsList" style="overflow-y: auto; flex: 1;"></div>
       </div>
 
-      <!-- ВКЛАДКА 4: НАСТРОЙКИ ДИСПЛЕЕВ -->
-      <div class="tab-content" id="tabSettings">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">Управление дисплеями / терминалами</h3>
-          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="loadDisplays()">Обновить</button>
-        </div>
-        <div class="displays-list" id="displaysListContainer">
-          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Поиск активных дисплеев...</p>
-        </div>
+      <!-- Вкладка Настроек -->
+      <div class="content" id="tabSettings">
+        <h3>Активные дисплеи</h3>
+        <div id="displaysList" style="margin: 12px 0;"></div>
+        <hr style="border-color: var(--border-color); margin: 16px 0;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="chkAskEveryTime" onchange="toggleAskEveryTime(this.checked)">
+          <span>Спрашивать экран перед каждым QR</span>
+        </label>
       </div>
     </section>
   </main>
 
-  <!-- ПОЛНОЭКРАННОЕ ОКНО УСПЕХА -->
-  <div class="fullscreen-overlay" id="successFullscreenModal">
-    <div class="check-icon-circle">✓</div>
-    <h2 style="font-size: 32px; margin-bottom: 8px; color: #fff;">Оплата успешно завершена!</h2>
-    <p style="color: var(--text-muted); font-size: 18px; margin-bottom: 8px;">Сумма: <strong id="successOverlayAmount" style="color: #fff;">0 ₽</strong></p>
-    <p style="color: var(--primary); font-size: 16px; font-weight: 700; margin-bottom: 24px;" id="successOverlayRemaining">Остаток на карте: 0 ₽</p>
-    <button class="btn-primary" onclick="closeSuccessOverlay()" style="max-width: 280px;">Новая операция [Enter]</button>
+  <!-- Полноэкранный оверлей выбора дисплея -->
+  <div class="modal-overlay" id="selectDisplayModal">
+    <h2>Выберите дисплей для отправки</h2>
+    <div id="modalDisplaysList" style="width: 100%; max-width: 300px; margin: 20px 0;"></div>
+    <button class="btn" onclick="closeModal('selectDisplayModal')">Отмена</button>
   </div>
 
-  <!-- ПОЛНОЭКРАННОЕ ОКНО ОШИБКИ -->
-  <div class="fullscreen-overlay" id="errorFullscreenModal">
-    <div class="error-circle">✕</div>
-    <h2 style="font-size: 32px; margin-bottom: 8px; color: #fff;">Ошибка оплаты</h2>
-    <p style="color: #fca5a5; font-size: 18px; margin-bottom: 24px;" id="errorOverlaySubtitle">Недостаточно средств на балансе карты!</p>
-    <button class="btn-primary" onclick="closeErrorOverlay()" style="max-width: 280px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
+  <!-- Полноэкранный оверлей успешной оплаты -->
+  <div class="modal-overlay" id="successModal">
+    <div style="font-size: 60px; color: var(--primary);">✓</div>
+    <h2>Оплачено успешно!</h2>
+    <p style="font-size: 20px; margin: 12px 0;">Сумма: <strong id="successAmount">0 ₽</strong></p>
+    <p style="color: var(--text-muted); margin-bottom: 24px;">Остаток на карте: <span id="successRemaining">0 ₽</span></p>
+    <button class="btn btn-action" onclick="closeModal('successModal')">Закрыть</button>
   </div>
 
-  <!-- МОДАЛКА ВЫБОРА ДИСПЛЕЯ (ЕСЛИ ВКЛЮЧЕНО СПРАШИВАТЬ) -->
-  <div class="select-terminal-modal" id="selectTerminalModal">
-    <div class="terminal-selector-card">
-      <h3 style="font-size: 18px; font-weight: 800; color: #fff;">Выберите дисплей для отправки</h3>
-      <p style="font-size: 13px; color: var(--text-muted);">Куда отправить QR-код оплаты?</p>
-      <div id="terminalSelectorList" style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto;">
-        <!-- Сюда динамически рендерятся дисплеи -->
-      </div>
-      <button class="btn-secondary" onclick="closeTerminalSelector()">Отмена</button>
-    </div>
+  <!-- Полноэкранный оверлей ошибки оплаты -->
+  <div class="modal-overlay" id="errorModal">
+    <div style="font-size: 60px; color: var(--error);">✕</div>
+    <h2>Ошибка оплаты</h2>
+    <p style="color: var(--text-muted); margin: 12px 0;">Недостаточно средств на карте!</p>
+    <button class="btn btn-action" style="background: var(--error);" onclick="closeModal('errorModal')">Закрыть</button>
   </div>
 
-  <script src="/js/audio.js"></script>
   <script>
     const socket = io();
     let currentTab = 'charge';
-    let askTerminalEnabled = true;
-    let pendingAmountForTx = 0;
-    let activeDisplaysData = [];
-
-    // Загрузка инфо и настроек
-    fetch('/api/info')
-      .then(res => res.json())
-      .then(data => {
-        if (data.config) {
-          if (data.config.serverIp) {
-            document.getElementById('serverInfoText').textContent = `IP: ${data.config.serverIp}`;
-          }
-          if (data.config.askTerminal !== undefined) {
-            askTerminalEnabled = data.config.askTerminal;
-            document.getElementById('askTerminalCheckbox').checked = askTerminalEnabled;
-          }
-        }
-        if (data.history) renderHistory(data.history);
-        if (data.displays) renderDisplays(data.displays);
-      })
-      .catch(e => {});
+    let displays = [];
+    let askEveryTime = false;
 
     function switchTab(tab) {
-      if (window.terminalAudio) terminalAudio.playTap();
       currentTab = tab;
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      
-      if (tab === 'charge') {
-        document.getElementById('tabBtnCharge').classList.add('active');
-        document.getElementById('tabCharge').classList.add('active');
-      } else if (tab === 'topup') {
-        document.getElementById('tabBtnTopup').classList.add('active');
-        document.getElementById('tabTopup').classList.add('active');
-      } else if (tab === 'history') {
-        document.getElementById('tabBtnHistory').classList.add('active');
-        document.getElementById('tabHistory').classList.add('active');
-        loadHistory();
-      } else if (tab === 'settings') {
-        document.getElementById('tabBtnSettings').classList.add('active');
-        document.getElementById('tabSettings').classList.add('active');
-        loadDisplays();
-      }
+      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+      if (tab === 'receipts') loadReceipts();
     }
 
-    function toggleAskTerminalSetting(checkbox) {
-      askTerminalEnabled = checkbox.checked;
-      fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ askTerminal: askTerminalEnabled })
-      }).catch(e => {});
+    function num(type, val) {
+      const el = document.getElementById(type + 'Amount');
+      let current = el.textContent.replace(/\D/g, '');
+      if (current === '0') current = val;
+      else if (current.length < 7) current += val;
+      el.textContent = parseInt(current, 10).toLocaleString('ru-RU');
     }
 
-    function appendDigit(type, digit) {
-      if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
-      let val = input.value.replace(/\D/g, '');
-      if (val === '0' || val === '') {
-        val = digit;
-      } else {
-        if (val.length < 7) val += digit;
-      }
-      input.value = parseInt(val, 10).toLocaleString('ru-RU');
-    }
-
+    function clearNum(type) { document.getElementById(type + 'Amount').textContent = '0'; }
     function backspace(type) {
-      if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
-      let val = input.value.replace(/\D/g, '');
-      val = val.slice(0, -1);
-      input.value = (val === '' ? '0' : parseInt(val, 10)).toLocaleString('ru-RU');
+      const el = document.getElementById(type + 'Amount');
+      let current = el.textContent.replace(/\D/g, '').slice(0, -1);
+      el.textContent = (current === '' ? '0' : parseInt(current, 10)).toLocaleString('ru-RU');
+    }
+    function addPreset(type, val) {
+      const el = document.getElementById(type + 'Amount');
+      let current = parseInt(el.textContent.replace(/\D/g, '') || '0', 10) + val;
+      el.textContent = current.toLocaleString('ru-RU');
     }
 
-    function clearInput(type) {
-      if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      document.getElementById(inputId).value = '0';
-    }
+    function handleGenerateQr() {
+      const amount = parseInt(document.getElementById('chargeAmount').textContent.replace(/\D/g, '') || '0', 10);
+      if (amount <= 0) return;
 
-    function addPreset(type, amount) {
-      if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
-      let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
-      current += amount;
-      input.value = current.toLocaleString('ru-RU');
-    }
-
-    // Инициация транзакции с проверкой на "спрашивать каждый раз"
-    function initiateTransactionFlow() {
-      if (window.terminalAudio) terminalAudio.playTap();
-      const amountVal = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amountVal <= 0) return;
-      pendingAmountForTx = amountVal;
-
-      if (!askTerminalEnabled) {
-        createQrTransaction(null);
-        return;
+      if (askEveryTime && displays.length > 0) {
+        openSelectDisplayModal();
+      } else {
+        sendQr(amount, null);
       }
-
-      // Загружаем актуальный список дисплеев и показываем модалку выбора
-      fetch('/api/displays')
-        .then(res => res.json())
-        .then(data => {
-          activeDisplaysData = data.displays || [];
-          renderTerminalSelector(activeDisplaysData);
-          document.getElementById('selectTerminalModal').classList.add('active');
-        })
-        .catch(err => {
-          createQrTransaction(null);
-        });
     }
 
-    function renderTerminalSelector(displays) {
-      const container = document.getElementById('terminalSelectorList');
-      if (!displays || displays.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 10px;">Нет активных дисплеев. QR откроется на главном экране.</p>`;
-        setTimeout(() => {
-          closeTerminalSelector();
-          createQrTransaction(null);
-        }, 1200);
-        return;
-      }
-
-      container.innerHTML = displays.map(d => `
-        <div class="terminal-option-item ${d.isBlocked ? 'blocked' : ''}" onclick="${d.isBlocked ? '' : `createQrTransaction('${d.id}')`}">
-          <div>
-            <div style="font-weight: 700; color: #fff; font-size: 14px;">${d.name} ${d.isBlocked ? '🔒 (Заблокирован)' : ''}</div>
-            <div style="font-size: 11px; color: var(--text-muted);">IP: ${d.ip || 'Неизвестно'}</div>
-          </div>
-          <div style="font-size: 12px; color: var(--primary); font-weight: 700;">Выбрать →</div>
-        </div>
-      `).join('');
-    }
-
-    function closeTerminalSelector() {
-      document.getElementById('selectTerminalModal').classList.remove('active');
-    }
-
-    function createQrTransaction(targetDisplayId) {
-      closeTerminalSelector();
+    function sendQr(amount, displayId) {
       fetch('/api/create-transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: pendingAmountForTx, targetDisplayId })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          renderQrView(data.transaction);
-        }
-      })
-      .catch(err => console.error(err));
+        body: JSON.stringify({ amount, displayId })
+      });
+      closeModal('selectDisplayModal');
     }
 
-    function renderQrView(tx) {
-      document.getElementById('chargeFormView').style.display = 'none';
-      document.getElementById('qrDisplayPanel').classList.add('active');
-      document.getElementById('qrAmountDisplay').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('qrImage').src = tx.qrCode;
-    }
-
-    function cancelTransaction() {
-      if (window.terminalAudio) terminalAudio.playTap();
-      fetch('/api/cancel-transaction', { method: 'POST' }).catch(e => {});
-      resetChargeView();
-    }
-
-    function resetChargeView() {
-      if (window.terminalAudio) terminalAudio.playTap();
-      document.getElementById('chargeAmount').value = '0';
-      document.getElementById('chargeFormView').style.display = 'flex';
-      document.getElementById('qrDisplayPanel').classList.remove('active');
-      document.getElementById('successFullscreenModal').classList.remove('active');
-      document.getElementById('errorFullscreenModal').classList.remove('active');
-    }
-
-    function closeSuccessOverlay() {
-      if (window.terminalAudio) terminalAudio.playTap();
-      document.getElementById('successFullscreenModal').classList.remove('active');
-      resetChargeView();
-    }
-
-    function closeErrorOverlay() {
-      if (window.terminalAudio) terminalAudio.playTap();
-      document.getElementById('errorFullscreenModal').classList.remove('active');
-      resetChargeView();
+    function openSelectDisplayModal() {
+      const container = document.getElementById('modalDisplaysList');
+      const amount = parseInt(document.getElementById('chargeAmount').textContent.replace(/\D/g, '') || '0', 10);
+      container.innerHTML = displays.map(d => `
+        <button class="btn" style="width: 100%; margin-bottom: 8px;" onclick="sendQr(${amount}, '${d.id}')">
+          ${d.name} ${d.isLocked ? '🔒' : ''}
+        </button>
+      `).join('');
+      document.getElementById('selectDisplayModal').classList.add('active');
     }
 
     function submitTopup() {
-      if (window.terminalAudio) terminalAudio.playTap();
-      const amountVal = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amountVal <= 0) return;
-
+      const amount = parseInt(document.getElementById('topupAmount').textContent.replace(/\D/g, '') || '0', 10);
+      if (amount <= 0) return;
       fetch('/api/topup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amountVal })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          if (window.terminalAudio) terminalAudio.playSuccess();
-          clearInput('topup');
-          switchTab('charge');
-        }
+        body: JSON.stringify({ amount })
+      }).then(() => {
+        clearNum('topup');
+        alert('Баланс успешно пополнен!');
       });
     }
 
-    // ИСТОРИЯ ЧЕКОВ
-    function loadHistory() {
-      fetch('/api/history')
-        .then(res => res.json())
-        .then(data => {
-          renderHistory(data.history || []);
-        })
-        .catch(e => {});
-    }
-
-    function renderHistory(history) {
-      const container = document.getElementById('historyListContainer');
-      if (!history || history.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">История чеков пуста</p>`;
-        return;
-      }
-
-      container.innerHTML = history.map(item => {
-        const isTopup = item.type === 'topup';
-        const dateStr = new Date(item.createdAt || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        return `
-          <div class="history-item">
-            <div class="history-info">
-              <h4>${isTopup ? '➕ Пополнение счета' : '🧾 Чек оплаты'} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">#${item.id}</span></h4>
-              <p>${dateStr} • ${isTopup ? 'Пополнение' : 'Безналичный расчет'}</p>
-              ${!isTopup ? `<a href="/api/receipt/${item.id}" target="_blank" class="receipt-download-btn">📥 Скачать чек</a>` : ''}
+    function loadReceipts() {
+      fetch('/api/receipts').then(r => r.json()).then(data => {
+        document.getElementById('receiptsList').innerHTML = data.map(r => `
+          <div class="receipt-item">
+            <div>
+              <strong>${r.id}</strong><br>
+              <small>${new Date(r.date).toLocaleTimeString('ru-RU')}</small>
             </div>
-            <div class="history-amount ${isTopup ? 'topup' : ''}">
-              ${isTopup ? '+' : ''}${item.amount.toLocaleString('ru-RU')} ₽
+            <div>
+              <strong>${r.type === 'charge' ? '-' : '+'}${r.amount} ₽</strong><br>
+              <a href="/api/receipts/${r.id}/download" class="receipt-link">Скачать</a>
             </div>
           </div>
-        `;
-      }).join('');
+        `).join('');
+      });
     }
 
-    // УПРАВЛЕНИЕ ДИСПЛЕЯМИ
-    function loadDisplays() {
-      fetch('/api/displays')
-        .then(res => res.json())
-        .then(data => {
-          renderDisplays(data.displays || []);
-        })
-        .catch(e => {});
+    function toggleAskEveryTime(val) {
+      askEveryTime = val;
+      fetch('/api/terminal/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ askEveryTime: val })
+      });
     }
 
-    function renderDisplays(displays) {
-      const container = document.getElementById('displaysListContainer');
-      if (!displays || displays.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет подключенных дисплеев. Откройте /display в браузере.</p>`;
-        return;
-      }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-      container.innerHTML = displays.map(d => `
-        <div class="display-card ${d.isBlocked ? 'blocked' : ''}" id="disp_${d.id}">
-          <div class="display-card-top">
-            <div class="display-name-group">
-              <input type="text" class="display-title-input" value="${d.name}" id="input_name_${d.id}" onchange="updateDisplayName('${d.id}')">
-              ${d.isBlocked ? '<span style="font-size: 11px; background: rgba(239,68,68,0.2); color: #f87171; padding: 2px 8px; border-radius: 6px; font-weight: 700;">🔒 Заблокирован</span>' : '<span style="font-size: 11px; background: rgba(16,185,129,0.2); color: var(--primary); padding: 2px 8px; border-radius: 6px; font-weight: 700;">Активен</span>'}
-            </div>
-            <div class="display-actions-group">
-              <button class="icon-btn ${d.isBlocked ? '' : 'danger'}" title="${d.isBlocked ? 'Разблокировать' : 'Заблокировать'}" onclick="toggleBlockDisplay('${d.id}', ${!d.isBlocked})">
-                ${d.isBlocked ? '🔓' : '🔒'}
-              </button>
-            </div>
-          </div>
-          <div class="setting-row">
-            <span>ID: ${d.id}</span>
-            <span>IP: ${d.ip || 'localhost'}</span>
+    socket.on('update_displays', (data) => {
+      displays = data;
+      document.getElementById('displaysList').innerHTML = data.map(d => `
+        <div class="display-card">
+          <span>${d.name} ${d.isLocked ? '🔒' : ''}</span>
+          <div>
+            <button class="btn" style="padding: 6px 10px; font-size: 12px;" onclick="renameDisp('${d.id}')">✏️</button>
+            <button class="btn" style="padding: 6px 10px; font-size: 12px;" onclick="toggleLock('${d.id}')">${d.isLocked ? '🔓' : '🔒'}</button>
           </div>
         </div>
       `).join('');
-    }
+    });
 
-    function updateDisplayName(id) {
-      const newName = document.getElementById(`input_name_${id}`).value;
-      fetch(`/api/displays/${id}/update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName })
-      }).catch(e => {});
+    function renameDisp(id) {
+      const name = prompt('Введите новое название терминала:');
+      if (name) socket.emit('rename_display', { id, name });
     }
+    function toggleLock(id) { socket.emit('toggle_lock_display', { id }); }
 
-    function toggleBlockDisplay(id, blockStatus) {
-      fetch(`/api/displays/${id}/block`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isBlocked: blockStatus })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          loadDisplays();
-        }
-      }).catch(e => {});
-    }
-
-    // СОБЫТИЯ WEBSOCKET (ГЛОБАЛЬНЫЙ ПОЛНОЭКРАННЫЙ МОДАЛЬ ВЕЗДЕ)
     socket.on('payment_success', (data) => {
-      if (window.terminalAudio) window.terminalAudio.playSuccess();
-      document.getElementById('qrDisplayPanel').classList.remove('active');
-      document.getElementById('errorFullscreenModal').classList.remove('active');
-      
-      const successModal = document.getElementById('successFullscreenModal');
-      successModal.classList.add('active');
-      
-      document.getElementById('successOverlayAmount').textContent = data.transaction.amount.toLocaleString('ru-RU') + ' ₽';
-      if (data.newBalance !== undefined) {
-        document.getElementById('successOverlayRemaining').textContent = 'Остаток на карте: ' + data.newBalance.toLocaleString('ru-RU') + ' ₽';
-      }
+      document.getElementById('successAmount').textContent = data.transaction.amount + ' ₽';
+      document.getElementById('successRemaining').textContent = data.cardRemaining + ' ₽';
+      document.getElementById('successModal').classList.add('active');
+      clearNum('charge');
     });
 
-    socket.on('payment_failed', (data) => {
-      if (window.terminalAudio) window.terminalAudio.playError();
-      document.getElementById('qrDisplayPanel').classList.remove('active');
-      document.getElementById('successFullscreenModal').classList.remove('active');
-      
-      const errorModal = document.getElementById('errorFullscreenModal');
-      errorModal.classList.add('active');
-      
-      if (data.reason === 'insufficient_funds') {
-        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств на балансе! Требуется: ${data.transaction.amount.toLocaleString('ru-RU')} ₽`;
-      }
+    socket.on('payment_failed', () => {
+      document.getElementById('errorModal').classList.add('active');
     });
 
-    socket.on('transaction_cancelled', () => {
-      resetChargeView();
-    });
-
-    // Клавиатурные сокращения
-    document.addEventListener('keydown', (e) => {
-      const errModal = document.getElementById('errorFullscreenModal');
-      const succModal = document.getElementById('successFullscreenModal');
-      const qrPanel = document.getElementById('qrDisplayPanel');
-
-      if (e.key === 'Enter') {
-        if (errModal.classList.contains('active')) {
-          closeErrorOverlay();
-        } else if (succModal.classList.contains('active')) {
-          closeSuccessOverlay();
-        } else if (qrPanel.classList.contains('active')) {
-          // Ожидание
-        } else {
-          if (currentTab === 'charge') initiateTransactionFlow();
-          else if (currentTab === 'topup') submitTopup();
-        }
-      } else if (e.key === 'Escape') {
-        cancelTransaction();
-        closeTerminalSelector();
-      } else if (!isNaN(e.key) && currentTab !== 'history' && currentTab !== 'settings') {
-        appendDigit(currentTab, e.key);
-      } else if (e.key === 'Backspace' && currentTab !== 'history' && currentTab !== 'settings') {
-        backspace(currentTab);
+    fetch('/api/info').then(r => r.json()).then(d => {
+      if (d.settings) {
+        askEveryTime = d.settings.askEveryTime;
+        document.getElementById('chkAskEveryTime').checked = askEveryTime;
       }
     });
   </script>
