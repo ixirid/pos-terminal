@@ -1,147 +1,155 @@
-// Web Audio API Synthesizer Helper с поддержкой разблокировки на iOS
-class SoundEngine {
+/**
+ * Управление звуковыми эффектами POS-терминала
+ * Адаптировано под iOS / Safari (с автоматической разблокировкой AudioContext)
+ */
+class TerminalAudioController {
   constructor() {
-    this.ctx = null;
-    this.enabled = true;
-    this.unlocked = false;
+    this.audioCtx = null;
+    this.isUnlocked = false;
+    this.setupiOSUnlocker();
+  }
 
-    // Автоматическая разблокировка аудиоконтекста при первом тапе по экрану (требование iOS Safari)
+  // Настройка автоматической разблокировки при первом касании экрана iOS
+  setupiOSUnlocker() {
+    const unlockEvents = ['touchstart', 'touchend', 'click', 'keydown'];
+    
     const unlock = () => {
-      this.init();
-      if (this.ctx) {
-        if (this.ctx.state === 'suspended') {
-          this.ctx.resume().then(() => {
-            this.unlocked = true;
-            this.removeUnlockListeners();
-          });
-        } else {
-          this.unlocked = true;
-          this.removeUnlockListeners();
-        }
+      this.initContext();
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().then(() => {
+          this.isUnlocked = true;
+        });
+      } else {
+        this.isUnlocked = true;
       }
+
+      // После первого взаимодействия снимаем слушатели
+      unlockEvents.forEach(evt => document.removeEventListener(evt, unlock));
     };
 
-    this.unlockHandler = unlock;
-    this.addUnlockListeners();
-  }
-
-  addUnlockListeners() {
-    ['click', 'touchstart', 'touchend', 'mousedown'].forEach(evt => {
-      document.addEventListener(evt, this.unlockHandler, { passive: true });
+    unlockEvents.forEach(evt => {
+      document.addEventListener(evt, unlock, { passive: true });
     });
   }
 
-  removeUnlockListeners() {
-    ['click', 'touchstart', 'touchend', 'mousedown'].forEach(evt => {
-      document.removeEventListener(evt, this.unlockHandler);
-    });
-  }
-
-  init() {
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        this.ctx = new AudioCtx();
+  initContext() {
+    if (!this.audioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        this.audioCtx = new AudioContextClass();
       }
     }
   }
 
-  // Звук успешного пополнения счета (восходящее мажорное трезвучие)
-  playTopup() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-
-    // Если контекст все еще приостановлен (например, на iOS), пробуем запустить его принудительно
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+  ensureActiveContext() {
+    this.initContext();
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume();
     }
+  }
 
-    const now = this.ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+  // 1. Звук нажатия на кнопку (короткий щелчок)
+  playTap() {
+    try {
+      this.ensureActiveContext();
+      if (!this.audioCtx) return;
 
-    notes.forEach((freq, index) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + index * 0.08);
+      osc.frequency.setValueAtTime(600, this.audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, this.audioCtx.currentTime + 0.04);
 
-      gain.gain.setValueAtTime(0.2, now + index * 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.08 + 0.3);
+      gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.04);
 
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.audioCtx.destination);
 
-      osc.start(now + index * 0.08);
-      osc.stop(now + index * 0.08 + 0.35);
-    });
-  }
-
-  // Звук успешной оплаты (двойной сигнал кассы + колокольчик)
-  playPaymentSuccess() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
-
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      osc.start();
+      osc.stop(this.audioCtx.currentTime + 0.04);
+    } catch (e) {
+      console.warn('Ошибка воспроизведения звука нажатия:', e);
     }
-
-    const now = this.ctx.currentTime;
-    
-    // Сигнал 1
-    const osc1 = this.ctx.createOscillator();
-    const gain1 = this.ctx.createGain();
-    osc1.type = 'triangle';
-    osc1.frequency.setValueAtTime(880, now); // A5
-    gain1.gain.setValueAtTime(0.25, now);
-    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-    osc1.connect(gain1);
-    gain1.connect(this.ctx.destination);
-    osc1.start(now);
-    osc1.stop(now + 0.15);
-
-    // Сигнал 2 (звонкий шиммер)
-    const osc2 = this.ctx.createOscillator();
-    const gain2 = this.ctx.createGain();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1760, now + 0.12); // A6
-    gain2.gain.setValueAtTime(0.3, now + 0.12);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-    osc2.connect(gain2);
-    gain2.connect(this.ctx.destination);
-    osc2.start(now + 0.12);
-    osc2.stop(now + 0.65);
   }
 
-  // Звук ошибки / недостатка средств
+  // 2. Звук УСПЕШНОЙ оплаты (Приятный двухтональный дзинь в стиле Сбера)
+  playSuccess() {
+    try {
+      this.ensureActiveContext();
+      if (!this.audioCtx) return;
+
+      const now = this.audioCtx.currentTime;
+
+      // Нота 1: E6 (1318.51 Гц)
+      const osc1 = this.audioCtx.createOscillator();
+      const gain1 = this.audioCtx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(1318.51, now);
+      gain1.gain.setValueAtTime(0.25, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+      osc1.connect(gain1);
+      gain1.connect(this.audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.22);
+
+      // Нота 2: B6 (1975.53 Гц) через 100мс
+      const osc2 = this.audioCtx.createOscillator();
+      const gain2 = this.audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1975.53, now + 0.1);
+      gain2.gain.setValueAtTime(0.3, now + 0.1);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      osc2.connect(gain2);
+      gain2.connect(this.audioCtx.destination);
+      osc2.start(now + 0.1);
+      osc2.stop(now + 0.45);
+    } catch (e) {
+      console.warn('Ошибка воспроизведения звука успеха:', e);
+    }
+  }
+
+  // 3. Звук ОШИБКИ / Отказа (Двойной низкий сигнал)
   playError() {
-    if (!this.enabled) return;
-    this.init();
-    if (!this.ctx) return;
+    try {
+      this.ensureActiveContext();
+      if (!this.audioCtx) return;
 
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      const now = this.audioCtx.currentTime;
+
+      // Гудок 1
+      const osc1 = this.audioCtx.createOscillator();
+      const gain1 = this.audioCtx.createGain();
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(220, now);
+      gain1.gain.setValueAtTime(0.2, now);
+      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+
+      osc1.connect(gain1);
+      gain1.connect(this.audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.18);
+
+      // Гудок 2
+      const osc2 = this.audioCtx.createOscillator();
+      const gain2 = this.audioCtx.createGain();
+      osc2.type = 'sawtooth';
+      osc2.frequency.setValueAtTime(180, now + 0.22);
+      gain2.gain.setValueAtTime(0.25, now + 0.22);
+      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+
+      osc2.connect(gain2);
+      gain2.connect(this.audioCtx.destination);
+      osc2.start(now + 0.22);
+      osc2.stop(now + 0.45);
+    } catch (e) {
+      console.warn('Ошибка воспроизведения звука ошибки:', e);
     }
-
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, now);
-    osc.frequency.setValueAtTime(110, now + 0.1);
-
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.35);
   }
 }
 
-window.soundEngine = new SoundEngine();
+// Экспортируем единственный экземпляр
+window.terminalAudio = new TerminalAudioController();
