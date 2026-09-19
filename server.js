@@ -247,7 +247,7 @@ app.get('/api/receipt/:id', (req, res) => {
   const { id } = req.params;
   const tx = state.history.find(t => t.id === id);
   if (!tx) {
-    return res.status(404.send('Чек не найден'));
+    return res.status(404).send('Чек не найден');
   }
 
   const receiptText = `
