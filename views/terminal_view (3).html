@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>POS Терминал Кассы</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+  <!-- Верхняя панель кассира без показа баланса -->
+  <header class="pos-header">
+    <div class="brand-title">
+      <div class="brand-icon">Б</div>
+      <div class="brand-text">
+        <h1>POS Terminal</h1>
+        <p id="serverInfoText">Загрузка адреса...</p>
+      </div>
+    </div>
+
+    <div style="display: flex; items-center; gap: 12px;">
+      <a href="/display" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.35); color: #22c55e; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(34, 197, 94, 0.25)'" onmouseout="this.style.background='rgba(34, 197, 94, 0.15)'">
+        <span>📺 Экран клиента</span>
+      </a>
+
+      <div class="status-badge-online">
+        <span class="pulse-dot-green"></span>
+        <span>Терминал Активен</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Главный контейнер терминала -->
+  <main class="pos-container">
+    
+    <!-- Интерактивный блок кассы -->
+    <section class="pos-main-panel">
+      <!-- Навигация Вкладок -->
+      <nav class="tabs-header">
+        <button class="tab-btn active" id="tabBtnCharge" onclick="switchTab('charge')">
+          💸 Списать / Оплата
+        </button>
+        <button class="tab-btn" id="tabBtnTopup" onclick="switchTab('topup')">
+          ➕ Пополнить баланс
+        </button>
+      </nav>
+
+      <!-- Вкладка 1: Оплата / Списание -->
+      <div class="tab-content active" id="tabCharge">
+        <div id="chargeFormView" style="display: flex; flex-direction: column; height: 100%;">
+          <div class="amount-display-wrapper">
+            <span class="amount-label">Сумма к оплате</span>
+            <div class="amount-input-container">
+              <input type="text" id="chargeAmount" class="amount-input" value="0" readonly>
+              <span class="amount-currency">₽</span>
+            </div>
+          </div>
+
+          <div class="quick-presets">
+            <button class="preset-btn" onclick="addPreset('charge', 100)">+100 ₽</button>
+            <button class="preset-btn" onclick="addPreset('charge', 500)">+500 ₽</button>
+            <button class="preset-btn" onclick="addPreset('charge', 1000)">+1 000 ₽</button>
+            <button class="preset-btn" onclick="addPreset('charge', 5000)">+5 000 ₽</button>
+          </div>
+
+          <!-- Нумпад -->
+          <div class="numpad-grid">
+            <button class="num-btn" onclick="appendDigit('charge', '1')">1</button>
+            <button class="num-btn" onclick="appendDigit('charge', '2')">2</button>
+            <button class="num-btn" onclick="appendDigit('charge', '3')">3</button>
+            <button class="num-btn" onclick="appendDigit('charge', '4')">4</button>
+            <button class="num-btn" onclick="appendDigit('charge', '5')">5</button>
+            <button class="num-btn" onclick="appendDigit('charge', '6')">6</button>
+            <button class="num-btn" onclick="appendDigit('charge', '7')">7</button>
+            <button class="num-btn" onclick="appendDigit('charge', '8')">8</button>
+            <button class="num-btn" onclick="appendDigit('charge', '9')">9</button>
+            <button class="num-btn clear" onclick="clearInput('charge')">C</button>
+            <button class="num-btn" onclick="appendDigit('charge', '0')">0</button>
+            <button class="num-btn action" onclick="backspace('charge')">⌫</button>
+          </div>
+
+          <button class="btn-primary" onclick="createQrTransaction()">
+            Сгенерировать QR для оплаты [Enter]
+          </button>
+        </div>
+
+        <!-- Режим Отображения QR-кода (Полный экран) -->
+        <div class="qr-display-panel" id="qrDisplayPanel">
+          <div class="qr-status-badge">
+            <span class="pulse-dot"></span>
+            <span>Ожидание сканирования или прикладывания карты...</span>
+          </div>
+
+          <h2>Сумма к оплате: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
+
+          <div class="qr-box">
+            <img id="qrImage" src="" alt="QR-код оплаты">
+          </div>
+
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;" id="qrLinkText">
+            Отсканируйте камерой смартфона
+          </p>
+
+          <button class="btn-secondary" onclick="cancelTransaction()">
+            Отменить оплату [Esc]
+          </button>
+        </div>
+
+        <!-- Успешная Оплата -->
+        <div class="success-card" id="paymentSuccessCard">
+          <div class="check-icon-circle">✓</div>
+          <h2 style="font-size: 26px; margin-bottom: 8px;">Оплачено успешно!</h2>
+          <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 12px;">
+            Сумма: <strong id="successAmountText" style="color: #ffffff;">0 ₽</strong>
+          </p>
+          <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 24px;" id="successBalanceWrapper">
+            Остаток на карте: <strong id="successBalanceText" style="color: var(--secondary);">0 ₽</strong>
+          </p>
+          <button class="btn-primary" onclick="resetChargeView()">
+            Новая операция [Enter] (<span id="successCountdown">7</span>)
+          </button>
+        </div>
+      </div>
+
+      <!-- Вкладка 2: Пополнение -->
+      <div class="tab-content" id="tabTopup">
+        <div style="display: flex; flex-direction: column; height: 100%;">
+          <div class="amount-display-wrapper">
+            <span class="amount-label">Сумма пополнения</span>
+            <div class="amount-input-container">
+              <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
+              <span class="amount-currency">₽</span>
+            </div>
+          </div>
+
+          <div class="quick-presets">
+            <button class="preset-btn" onclick="addPreset('topup', 100)">+100 ₽</button>
+            <button class="preset-btn" onclick="addPreset('topup', 500)">+500 ₽</button>
+            <button class="preset-btn" onclick="addPreset('topup', 1000)">+1 000 ₽</button>
+            <button class="preset-btn" onclick="addPreset('topup', 5000)">+5 000 ₽</button>
+          </div>
+
+          <!-- Нумпад -->
+          <div class="numpad-grid">
+            <button class="num-btn" onclick="appendDigit('topup', '1')">1</button>
+            <button class="num-btn" onclick="appendDigit('topup', '2')">2</button>
+            <button class="num-btn" onclick="appendDigit('topup', '3')">3</button>
+            <button class="num-btn" onclick="appendDigit('topup', '4')">4</button>
+            <button class="num-btn" onclick="appendDigit('topup', '5')">5</button>
+            <button class="num-btn" onclick="appendDigit('topup', '6')">6</button>
+            <button class="num-btn" onclick="appendDigit('topup', '7')">7</button>
+            <button class="num-btn" onclick="appendDigit('topup', '8')">8</button>
+            <button class="num-btn" onclick="appendDigit('topup', '9')">9</button>
+            <button class="num-btn clear" onclick="clearInput('topup')">C</button>
+            <button class="num-btn" onclick="appendDigit('topup', '0')">0</button>
+            <button class="num-btn action" onclick="backspace('topup')">⌫</button>
+          </div>
+
+          <button class="btn-primary" onclick="submitTopup()">
+            Внести на счет [Enter]
+          </button>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Оверлей ошибки "Недостаточно средств" на весь экран -->
+  <div class="error-overlay" id="errorOverlay">
+    <div class="error-circle">✕</div>
+    <h2>Ошибка оплаты</h2>
+    <p class="error-subtitle">Недостаточно средств на балансе карты!</p>
+    <div class="error-details">
+      <div>Требуется: <span id="errorRequiredAmount" style="color: var(--error); font-weight: 700;">0 ₽</span></div>
+      <div>Доступно: <span id="errorAvailableBalance" style="color: var(--success); font-weight: 700;">0 ₽</span></div>
+    </div>
+    <button class="btn-primary" onclick="closeErrorOverlay()" style="background: var(--error); box-shadow: 0 8px 25px rgba(239, 68, 68, 0.35); max-width: 320px; margin-top: 12px;">
+      Закрыть [Enter]
+    </button>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/audio.js"></script>
+  <script src="/js/terminal.js"></script>
+</body>
+</html>
