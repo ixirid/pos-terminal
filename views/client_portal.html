@@ -194,11 +194,26 @@
         });
     }
 
-    socket.on('init_state', (data) => {
+   const socket = io();
+
+// Когда получаем начальное состояние от сервера при подключении/обновлении страницы
+socket.on('init_state', (data) => {
   if (data.balance !== undefined) {
-    // Обновите переменную баланса и текст на странице портала клиента
-    currentBalance = data.balance;
-    document.getElementById('balanceDisplay').textContent = formatCurrency(currentBalance);
+    // Обновляем баланс на экране портала клиента
+    const balanceEl = document.getElementById('balanceDisplay'); // или имя вашего элемента с балансом
+    if (balanceEl) {
+      balanceEl.textContent = formatCurrency(data.balance);
+    }
+  }
+});
+
+// Также слушаем событие обновления баланса (например, после пополнения или оплаты)
+socket.on('balance_updated', (data) => {
+  if (data.newBalance !== undefined) {
+    const balanceEl = document.getElementById('balanceDisplay');
+    if (balanceEl) {
+      balanceEl.textContent = formatCurrency(data.newBalance);
+    }
   }
 });
 
