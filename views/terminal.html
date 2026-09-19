@@ -3,104 +3,472 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>POS Терминал Кассы</title>
+  <title>POS Терминал Кассы — Премиум Дизайн</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
   <style>
     :root {
-      --primary: #22c55e;
-      --primary-dark: #16a34a;
+      --primary: #10b981;
+      --primary-glow: rgba(16, 185, 129, 0.35);
+      --primary-dark: #059669;
+      --accent: #3b82f6;
       --error: #ef4444;
-      --bg-dark: #0f172a;
-      --card-bg: #1e293b;
-      --text-muted: #94a3b8;
+      --error-glow: rgba(239, 68, 68, 0.35);
+      --bg-base: #090d16;
+      --surface: #111827;
+      --surface-card: #1f2937;
+      --surface-hover: #374151;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
     }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      background-image: radial-gradient(circle at 50% 0%, #111e38 0%, var(--bg-base) 70%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    .pos-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 36px;
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary) 0%, #047857 100%);
+      color: #fff;
+      font-size: 26px;
+      font-weight: 800;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .brand-text h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+
+    .brand-text p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .client-link-btn {
+      padding: 10px 18px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--primary);
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .client-link-btn:hover {
+      background: rgba(16, 185, 129, 0.22);
+      transform: translateY(-1px);
+    }
+
+    .status-badge-online {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .pulse-dot-green {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--primary);
+      animation: pulse 1.5s infinite;
+    }
+
+    .pos-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 32px 20px;
+    }
+
+    .pos-main-panel {
+      width: 100%;
+      max-width: 580px;
+      background: var(--surface);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tabs-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: rgba(0, 0, 0, 0.25);
+      border-bottom: 1px solid var(--border-color);
+      padding: 6px;
+      gap: 6px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .tab-btn.active {
+      background: var(--surface-card);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+    }
+
+    .tab-content {
+      display: none;
+      padding: 32px;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .amount-display-wrapper {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .amount-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .amount-input-container {
+      display: flex;
+      align-items: baseline;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .amount-input {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 48px;
+      font-weight: 900;
+      text-align: right;
+      width: 100%;
+      outline: none;
+      letter-spacing: -1px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .amount-currency {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .quick-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .preset-btn {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 12px 8px;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .preset-btn:hover {
+      background: var(--surface-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .preset-btn:active {
+      transform: translateY(0);
+    }
+
+    .numpad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .num-btn {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      height: 68px;
+      font-size: 26px;
+      font-weight: 700;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    }
+
+    .num-btn:hover {
+      background: var(--surface-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: scale(1.02);
+    }
+
+    .num-btn:active {
+      transform: scale(0.96);
+      background: #4b5563;
+    }
+
+    .num-btn.clear {
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .num-btn.clear:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .num-btn.action {
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.1);
+      border-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .num-btn.action:hover {
+      background: rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border: none;
+      color: #fff;
+      padding: 18px;
+      font-size: 18px;
+      font-weight: 800;
+      border-radius: 16px;
+      cursor: pointer;
+      box-shadow: 0 8px 25px var(--primary-glow);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px var(--primary-glow);
+      filter: brightness(1.08);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-hover);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
     .qr-display-panel, .success-card {
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100%;
       text-align: center;
-      padding: 24px;
+      padding: 12px 0;
     }
+
     .qr-display-panel.active, .success-card.active {
       display: flex !important;
     }
+
     .error-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.92);
+      background: rgba(9, 13, 22, 0.92);
+      backdrop-filter: blur(12px);
       z-index: 100;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 24px;
-      text-align: container;
+      text-align: center;
     }
+
     .error-overlay.active {
       display: flex !important;
     }
+
     .qr-box {
       background: #ffffff;
-      padding: 16px;
-      border-radius: 16px;
-      margin: 20px 0;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      padding: 20px;
+      border-radius: 24px;
+      margin: 24px 0;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
     }
+
     .qr-box img {
-      width: 220px;
-      height: 220px;
+      width: 240px;
+      height: 240px;
       display: block;
     }
+
     .check-icon-circle {
-      width: 80px;
-      height: 80px;
-      background: var(--primary);
+      width: 90px;
+      height: 90px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: #fff;
-      font-size: 40px;
+      font-size: 46px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
-      box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+      margin-bottom: 24px;
+      box-shadow: 0 0 40px var(--primary-glow);
     }
+
     .error-circle {
-      width: 80px;
-      height: 80px;
-      background: var(--error);
+      width: 90px;
+      height: 90px;
+      background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
       color: #fff;
-      font-size: 40px;
+      font-size: 46px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
-      box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+      margin-bottom: 24px;
+      box-shadow: 0 0 40px var(--error-glow);
     }
+
     .qr-status-badge {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      background: rgba(34, 197, 94, 0.15);
-      padding: 8px 16px;
-      border-radius: 20px;
+      gap: 10px;
+      background: rgba(16, 185, 129, 0.12);
+      padding: 10px 20px;
+      border-radius: 30px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
       color: var(--primary);
       font-weight: 700;
+      font-size: 15px;
       margin-bottom: 16px;
     }
+
     .pulse-dot {
       width: 10px;
       height: 10px;
       background: var(--primary);
       border-radius: 50%;
+      box-shadow: 0 0 10px var(--primary);
       animation: pulse 1.5s infinite;
     }
+
     @keyframes pulse {
       0% { transform: scale(0.95); opacity: 0.8; }
-      50% { transform: scale(1.3); opacity: 1; }
+      50% { transform: scale(1.35); opacity: 1; }
       100% { transform: scale(0.95); opacity: 0.8; }
     }
   </style>
@@ -109,15 +477,15 @@
 
   <header class="pos-header">
     <div class="brand-title">
-      <div class="brand-icon">Б</div>
+      <div class="brand-icon">₽</div>
       <div class="brand-text">
-        <h1>POS Terminal</h1>
-        <p id="serverInfoText">Загрузка адреса...</p>
+        <h1>POS Терминал</h1>
+        <p id="serverInfoText">Подключение к кассе...</p>
       </div>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <a href="/display" target="_blank" style="padding: 8px 14px; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.35); color: var(--primary); border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 700;">
+    <div class="header-actions">
+      <a href="/display" target="_blank" class="client-link-btn">
         📺 Экран клиента
       </a>
       <div class="status-badge-online">
@@ -135,7 +503,7 @@
       </nav>
 
       <div class="tab-content active" id="tabCharge">
-        <div id="chargeFormView" style="display: flex; flex-direction: column; height: 100%;">
+        <div id="chargeFormView" style="display: flex; flex-direction: column; gap: 24px;">
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма к оплате</span>
             <div class="amount-input-container">
@@ -174,7 +542,7 @@
             <span class="pulse-dot"></span>
             <span>Ожидание оплаты клиентом...</span>
           </div>
-          <h2 style="font-size: 22px; margin-bottom: 16px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
+          <h2 style="font-size: 24px; margin-bottom: 20px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
           <div class="qr-box">
             <img id="qrImage" src="" alt="QR-код">
           </div>
@@ -183,14 +551,14 @@
 
         <div class="success-card" id="paymentSuccessCard">
           <div class="check-icon-circle">✓</div>
-          <h2 style="font-size: 28px; margin-bottom: 8px; color: #fff;">Оплачено успешно!</h2>
-          <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 24px;">Сумма: <strong id="successAmountText" style="color: #fff;">0 ₽</strong></p>
-          <button class="btn-primary" onclick="resetChargeView()">Новая операция [Enter]</button>
+          <h2 style="font-size: 32px; margin-bottom: 10px; color: #fff;">Оплачено успешно!</h2>
+          <p style="color: var(--text-muted); font-size: 18px; margin-bottom: 28px;">Сумма: <strong id="successAmountText" style="color: #fff;">0 ₽</strong></p>
+          <button class="btn-primary" onclick="resetChargeView()" style="width: 100%;">Новая операция [Enter]</button>
         </div>
       </div>
 
       <div class="tab-content" id="tabTopup">
-        <div style="display: flex; flex-direction: column; height: 100%;">
+        <div style="display: flex; flex-direction: column; gap: 24px;">
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма пополнения</span>
             <div class="amount-input-container">
@@ -229,12 +597,12 @@
 
   <div class="error-overlay" id="errorOverlay">
     <div class="error-circle">✕</div>
-    <h2 style="color: #fff; margin-bottom: 8px;">Ошибка оплаты</h2>
-    <p class="error-subtitle" style="color: var(--text-muted); margin-bottom: 20px;">Недостаточно средств на балансе карты!</p>
-    <div class="error-details" style="color: #fff; margin-bottom: 24px;">
-      <div>Требуется: <span id="errorRequiredAmount" style="color: var(--error); font-weight: 700;">0 ₽</span></div>
+    <h2 style="color: #fff; margin-bottom: 10px; font-size: 28px;">Ошибка оплаты</h2>
+    <p class="error-subtitle" style="color: var(--text-muted); margin-bottom: 20px; font-size: 16px;">Недостаточно средств на балансе карты!</p>
+    <div class="error-details" style="color: #fff; margin-bottom: 30px; font-size: 18px;">
+      <div>Требуется: <span id="errorRequiredAmount" style="color: var(--error); font-weight: 800;">0 ₽</span></div>
     </div>
-    <button class="btn-primary" onclick="closeErrorOverlay()" style="background: var(--error); max-width: 320px;">Закрыть [Enter]</button>
+    <button class="btn-primary" onclick="closeErrorOverlay()" style="background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); max-width: 320px; width: 100%; box-shadow: 0 8px 25px var(--error-glow);">Закрыть [Enter]</button>
   </div>
 
   <script src="/js/audio.js"></script>
