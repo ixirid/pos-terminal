@@ -27,12 +27,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-Memory Хранилище (изменили баланс по умолчанию на 0 вместо 5000)
+// In-Memory Хранилище
 let state = {
   balance: 0, 
   activeTransaction: null,
-  history: [], // [{ id, type, amount, createdAt, paidAt, receiptId, targetDisplayId }]
-  displays: [] // [{ id, name, ip, isBlocked, lastSeen }]
+  history: [], 
+  displays: [] 
 };
 
 function getPayUrl(req, transactionId) {
@@ -78,13 +78,12 @@ app.get('/api/shortcut/pay-active', (req, res) => {
         reason: 'insufficient_funds',
         balance: state.balance
       });
-    } else {
-      io.emit('payment_failed', {
-        transaction: failedTx,
-        reason: 'insufficient_funds',
-        balance: state.balance
-      });
     }
+    io.emit('payment_failed', {
+      transaction: failedTx,
+      reason: 'insufficient_funds',
+      balance: state.balance
+    });
 
     return res.status(400).json({
       success: false,
@@ -104,20 +103,19 @@ app.get('/api/shortcut/pay-active', (req, res) => {
 
   state.activeTransaction = null;
 
-  // Адресное уведомление (чтобы не дублировалось на других экранах)
+  // Рассылаем уведомление об успехе ВСЕМ (и дисплеям, и кассе)
   if (targetId) {
     io.to(targetId).emit('payment_success', {
       transaction: completedTx,
       newBalance: state.balance,
       history: state.history
     });
-  } else {
-    io.emit('payment_success', {
-      transaction: completedTx,
-      newBalance: state.balance,
-      history: state.history
-    });
   }
+  io.emit('payment_success', {
+    transaction: completedTx,
+    newBalance: state.balance,
+    history: state.history
+  });
 
   res.json({
     success: true,
@@ -215,12 +213,10 @@ app.post('/api/create-transaction', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    // Если указан конкретный дисплей, отправляем транзакцию только ему, иначе всем
     if (targetDisplayId) {
       io.to(targetDisplayId).emit('transaction_created', state.activeTransaction);
-    } else {
-      io.emit('transaction_created', state.activeTransaction);
     }
+    io.emit('transaction_created', state.activeTransaction);
 
     res.json({ success: true, transaction: state.activeTransaction });
   } catch (err) {
@@ -278,13 +274,12 @@ app.post('/api/pay/:id', (req, res) => {
         reason: 'insufficient_funds',
         balance: state.balance
       });
-    } else {
-      io.emit('payment_failed', {
-        transaction: failedTx,
-        reason: 'insufficient_funds',
-        balance: state.balance
-      });
     }
+    io.emit('payment_failed', {
+      transaction: failedTx,
+      reason: 'insufficient_funds',
+      balance: state.balance
+    });
 
     return res.status(400).json({
       error: `Недостаточно средств на балансе! Доступно: ${state.balance.toLocaleString('ru-RU')} ₽`
@@ -302,19 +297,19 @@ app.post('/api/pay/:id', (req, res) => {
 
   state.activeTransaction = null;
 
+  // Уведомляем и дисплей, и кассу об успешной оплате
   if (targetId) {
     io.to(targetId).emit('payment_success', {
       transaction: completedTx,
       newBalance: state.balance,
       history: state.history
     });
-  } else {
-    io.emit('payment_success', {
-      transaction: completedTx,
-      newBalance: state.balance,
-      history: state.history
-    });
   }
+  io.emit('payment_success', {
+    transaction: completedTx,
+    newBalance: state.balance,
+    history: state.history
+  });
 
   res.json({
     success: true,
@@ -366,9 +361,8 @@ app.post('/api/cancel-transaction', (req, res) => {
     
     if (targetId) {
       io.to(targetId).emit('transaction_cancelled', { id: state.activeTransaction.id });
-    } else {
-      io.emit('transaction_cancelled', { id: state.activeTransaction.id });
     }
+    io.emit('transaction_cancelled', { id: state.activeTransaction.id });
     
     state.activeTransaction = null;
   }
