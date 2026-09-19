@@ -1,155 +1,665 @@
-/**
- * Управление звуковыми эффектами POS-терминала
- * Адаптировано под iOS / Safari (с автоматической разблокировкой AudioContext)
- */
-class TerminalAudioController {
-  constructor() {
-    this.audioCtx = null;
-    this.isUnlocked = false;
-    this.setupiOSUnlocker();
-  }
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>SberPay POS Terminal Display</title>
+  <script src="/socket.io/socket.io.js"></script>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-  // Настройка автоматической разблокировки при первом касании экрана iOS
-  setupiOSUnlocker() {
-    const unlockEvents = ['touchstart', 'touchend', 'click', 'keydown'];
+    :root {
+      --sber-green: #22c55e;
+      --sber-green-bright: #00e676;
+      --sber-green-glow: rgba(0, 230, 118, 0.4);
+      --sber-red: #ef4444;
+      --sber-red-glow: rgba(239, 68, 68, 0.5);
+      --bg-dark: #020c07;
+      --bg-gradient: radial-gradient(circle at 50% 35%, #083b25 0%, #031c11 60%, #010805 100%);
+      --text-main: #ffffff;
+      --text-muted: #a3c4b5;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      background-image: var(--bg-gradient);
+      color: var(--text-main);
+    }
+
+    .viewport {
+      width: 100vw;
+      height: 100dvh;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Состояния экрана */
+    .state {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 14px 14px 16px 14px;
+      opacity: 0;
+      transform: scale(0.97);
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    .state.active {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+    /* --- 1. ЭКРАН ОЖИДАНИЯ (IDLE) --- */
+    .idle-header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 8px;
+    }
+
+    .sber-pay-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 26px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(12px);
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .sber-pay-badge .check-circle {
+      width: 30px;
+      height: 30px;
+      background: var(--sber-green-bright);
+      border-radius: 50%;
+      color: #010a06;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 900;
+      box-shadow: 0 0 12px var(--sber-green-bright);
+    }
+
+    .idle-main-content {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-left: 8px;
+      margin: auto 0;
+    }
+
+    .idle-title {
+      font-size: clamp(56px, 14vw, 88px);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .idle-title .row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .green-dot-icon {
+      width: clamp(40px, 10vw, 60px);
+      height: clamp(40px, 10vw, 60px);
+      background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 30px rgba(0, 230, 118, 0.8);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .green-check-icon {
+      width: clamp(46px, 11vw, 68px);
+      height: clamp(46px, 11vw, 68px);
+      background: #00e676;
+      border-radius: 16px;
+      color: #02120b;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(30px, 7.5vw, 44px);
+      font-weight: 900;
+      box-shadow: 0 0 25px rgba(0, 230, 118, 0.7);
+      flex-shrink: 0;
+    }
+
+    .idle-footer {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 700;
+      padding-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    /* --- 2. ЭКРАН ОПЛАТЫ (PAYMENT) --- */
+    .pay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      border-radius: 22px;
+      padding: 16px 20px;
+      backdrop-filter: blur(14px);
+      flex-shrink: 0;
+    }
+
+    .pay-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .pay-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+
+    .pay-amount-display {
+      font-size: clamp(36px, 9vw, 52px);
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      line-height: 1;
+    }
+
+    .cancel-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 22px;
+      font-weight: 800;
+      cursor: pointer;
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .cancel-btn:active {
+      transform: scale(0.9);
+      background: rgba(239, 68, 68, 0.5);
+    }
+
+    .pay-body-vertical {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      width: 100%;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    /* Верхний блок: NFC / Карта */
+    .card-nfc-section {
+      flex: 0.85;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      background: rgba(0, 230, 118, 0.08);
+      border: 2px solid rgba(0, 230, 118, 0.4);
+      border-radius: 24px;
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 230, 118, 0.18);
+    }
+
+    .nfc-animation-box {
+      position: relative;
+      width: 110px;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    .nfc-pulse-ring {
+      position: absolute;
+      width: 95px;
+      height: 95px;
+      border-radius: 50%;
+      border: 2.5px solid var(--sber-green-bright);
+      opacity: 0;
+      animation: nfc-pulse 2.2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+    }
+
+    .nfc-pulse-ring:nth-child(2) {
+      animation-delay: 0.7s;
+    }
+
+    .nfc-pulse-ring:nth-child(3) {
+      animation-delay: 1.4s;
+    }
+
+    .animated-card-graphic {
+      width: 88px;
+      height: 54px;
+      background: linear-gradient(135deg, #00e676 0%, #00897b 100%);
+      border-radius: 10px;
+      position: relative;
+      box-shadow: 0 8px 22px rgba(0, 230, 118, 0.5);
+      z-index: 2;
+      animation: card-float 2.5s infinite ease-in-out;
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      padding: 6px;
+    }
+
+    .card-chip {
+      width: 16px;
+      height: 11px;
+      background: #ffd700;
+      border-radius: 3px;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
+    .card-waves-icon {
+      position: absolute;
+      right: 10px;
+      top: 8px;
+      font-size: 14px;
+      color: #ffffff;
+      font-weight: 900;
+      opacity: 0.95;
+    }
+
+    .card-hint-text {
+      font-size: clamp(22px, 5.8vw, 30px);
+      font-weight: 900;
+      color: #ffffff;
+      text-align: center;
+      line-height: 1.15;
+      letter-spacing: -0.4px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    }
+
+    .card-subhint {
+      font-size: clamp(12px, 3.2vw, 15px);
+      color: var(--sber-green-bright);
+      font-weight: 800;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    /* Нижний блок: Крупный QR-код с текстом под ним */
+    .qr-section {
+      flex: 1.5;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: 14px;
+    }
+
+    .qr-frame {
+      position: relative;
+      background: #ffffff;
+      padding: 10px;
+      border-radius: 20px;
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.7);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qr-frame img {
+      width: clamp(190px, 52vw, 290px);
+      height: clamp(190px, 52vw, 290px);
+      display: block;
+      border-radius: 10px;
+      object-fit: contain;
+    }
+
+    .qr-info-side {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .qr-hint-text {
+      font-size: clamp(22px, 5.5vw, 30px);
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1.15;
+      letter-spacing: -0.4px;
+    }
+
+    .qr-subtext {
+      font-size: clamp(12px, 3.2vw, 15px);
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    /* --- 3. ЭКРАН УСПЕХА (SUCCESS) --- */
+    .success-viewport {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .success-icon-box {
+      width: 130px;
+      height: 130px;
+      background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 70px;
+      color: #02120b;
+      margin-bottom: 20px;
+      box-shadow: 0 0 50px rgba(0, 230, 118, 0.7);
+      animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .success-title {
+      font-size: clamp(38px, 9.5vw, 52px);
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 10px;
+      letter-spacing: -1px;
+    }
+
+    .success-subtitle {
+      font-size: clamp(20px, 5vw, 26px);
+      color: var(--sber-green-bright);
+      font-weight: 800;
+    }
+
+    /* --- 4. ЭКРАН ОШИБКИ (FAILED) --- */
+    .failed-viewport {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .failed-icon-box {
+      width: 130px;
+      height: 130px;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 65px;
+      color: #ffffff;
+      margin-bottom: 20px;
+      box-shadow: 0 0 50px var(--sber-red-glow);
+      animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .failed-title {
+      font-size: clamp(34px, 8.5vw, 46px);
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 10px;
+      letter-spacing: -1px;
+    }
+
+    .failed-subtitle {
+      font-size: clamp(18px, 4.5vw, 22px);
+      color: #fca5a5;
+      font-weight: 700;
+      max-width: 90%;
+      line-height: 1.3;
+    }
+
+    @keyframes nfc-pulse {
+      0% { transform: scale(0.6); opacity: 0.9; }
+      100% { transform: scale(1.65); opacity: 0; }
+    }
+
+    @keyframes card-float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-7px) rotate(-3deg); }
+    }
+
+    @keyframes pop-in {
+      0% { transform: scale(0.3); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="viewport">
     
-    const unlock = () => {
-      this.initContext();
-      if (this.audioCtx && this.audioCtx.state === 'suspended') {
-        this.audioCtx.resume().then(() => {
-          this.isUnlocked = true;
-        });
+    <!-- 1. ЭКРАН ОЖИДАНИЯ (IDLE) -->
+    <section id="state-idle" class="state active">
+      <header class="idle-header">
+        <div class="sber-pay-badge">
+          <span class="check-circle">✓</span>
+          <span>Pay</span>
+        </div>
+      </header>
+
+      <div class="idle-main-content">
+        <div class="idle-title">
+          <div>платите</div>
+          <div class="row">
+            <span class="green-dot-icon"></span>
+            <span>как вам</span>
+          </div>
+          <div class="row">
+            <span>удобно</span>
+            <span class="green-check-icon">✓</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="idle-footer">
+        <span>SberPay Terminal • Активен</span>
+      </footer>
+    </section>
+
+    <!-- 2. ЭКРАН ОПЛАТЫ (PAYMENT) -->
+    <section id="state-pay" class="state">
+      <header class="pay-header">
+        <div class="pay-title-group">
+          <span class="pay-subtitle">К оплате</span>
+          <div id="pay-amount" class="pay-amount-display">0,00 ₽</div>
+        </div>
+        <div class="cancel-btn" onclick="cancelPayment()" title="Отменить">✕</div>
+      </header>
+
+      <div class="pay-body-vertical">
+        <div class="card-nfc-section">
+          <div class="nfc-animation-box">
+            <div class="nfc-pulse-ring"></div>
+            <div class="nfc-pulse-ring"></div>
+            <div class="nfc-pulse-ring"></div>
+            <div class="animated-card-graphic">
+              <div class="card-chip"></div>
+              <div class="card-waves-icon">))))</div>
+            </div>
+          </div>
+          <div class="card-hint-text">Приложите карту<br>или телефон</div>
+          <div class="card-subhint">Бесконтактная оплата NFC</div>
+        </div>
+
+        <div class="qr-section">
+          <div class="qr-frame">
+            <img id="qr-image" src="" alt="QR-код оплаты">
+          </div>
+          <div class="qr-info-side">
+            <div class="qr-hint-text">Отсканируйте QR-код</div>
+            <div class="qr-subtext">Камерой смартфона или через СберБанк Онлайн</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ЭКРАН УСПЕХА (SUCCESS) -->
+    <section id="state-success" class="state">
+      <div class="success-viewport">
+        <div class="success-icon-box">✓</div>
+        <h2 class="success-title">Оплачено!</h2>
+        <p class="success-subtitle" id="success-amount-text">Спасибо за покупку</p>
+      </div>
+    </section>
+
+    <!-- 4. ЭКРАН ОШИБКИ (FAILED) -->
+    <section id="state-failed" class="state">
+      <div class="failed-viewport">
+        <div class="failed-icon-box">✕</div>
+        <h2 class="failed-title" id="failed-title-text">Ошибка оплаты</h2>
+        <p class="failed-subtitle" id="failed-subtext">Недостаточно средств на балансе</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const socket = io();
+
+    const stateIdle = document.getElementById('state-idle');
+    const statePay = document.getElementById('state-pay');
+    const stateSuccess = document.getElementById('state-success');
+    const stateFailed = document.getElementById('state-failed');
+    
+    const payAmount = document.getElementById('pay-amount');
+    const qrImage = document.getElementById('qr-image');
+    const successAmountText = document.getElementById('success-amount-text');
+    const failedTitleText = document.getElementById('failed-title-text');
+    const failedSubtext = document.getElementById('failed-subtext');
+
+    let stateTimer = null;
+
+    function switchState(targetState) {
+      if (stateTimer) {
+        clearTimeout(stateTimer);
+        stateTimer = null;
+      }
+      [stateIdle, statePay, stateSuccess, stateFailed].forEach(el => el.classList.remove('active'));
+      targetState.classList.add('active');
+    }
+
+    function formatCurrency(num) {
+      return num.toLocaleString('ru-RU', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }) + ' ₽';
+    }
+
+    socket.on('init_state', (data) => {
+      if (data.activeTransaction && data.activeTransaction.status === 'pending') {
+        renderPayState(data.activeTransaction);
       } else {
-        this.isUnlocked = true;
+        switchState(stateIdle);
       }
-
-      // После первого взаимодействия снимаем слушатели
-      unlockEvents.forEach(evt => document.removeEventListener(evt, unlock));
-    };
-
-    unlockEvents.forEach(evt => {
-      document.addEventListener(evt, unlock, { passive: true });
     });
-  }
 
-  initContext() {
-    if (!this.audioCtx) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) {
-        this.audioCtx = new AudioContextClass();
+    socket.on('transaction_created', (tx) => {
+      renderPayState(tx);
+    });
+
+    function renderPayState(tx) {
+      payAmount.textContent = formatCurrency(parseFloat(tx.amount));
+      qrImage.src = tx.qrCode;
+      switchState(statePay);
+    }
+
+    socket.on('payment_success', (data) => {
+      if (data && data.transaction) {
+        successAmountText.textContent = `${formatCurrency(data.transaction.amount)}`;
       }
+      switchState(stateSuccess);
+      stateTimer = setTimeout(() => {
+        switchState(stateIdle);
+      }, 3200);
+    });
+
+    socket.on('payment_failed', (data) => {
+      if (data && data.reason === 'insufficient_funds') {
+        failedTitleText.textContent = 'Ошибка оплаты';
+        failedSubtext.textContent = 'Недостаточно средств на карте!';
+      } else {
+        failedTitleText.textContent = 'Ошибка оплаты';
+        failedSubtext.textContent = 'Транзакция отклонена';
+      }
+      switchState(stateFailed);
+      stateTimer = setTimeout(() => {
+        switchState(stateIdle);
+      }, 3500);
+    });
+
+    socket.on('transaction_cancelled', () => {
+      switchState(stateIdle);
+    });
+
+    function cancelPayment() {
+      fetch('/api/cancel-transaction', { method: 'POST' })
+        .catch(err => console.error(err));
     }
-  }
-
-  ensureActiveContext() {
-    this.initContext();
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
-    }
-  }
-
-  // 1. Звук нажатия на кнопку (короткий щелчок)
-  playTap() {
-    try {
-      this.ensureActiveContext();
-      if (!this.audioCtx) return;
-
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(600, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(200, this.audioCtx.currentTime + 0.04);
-
-      gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.04);
-
-      osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
-
-      osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.04);
-    } catch (e) {
-      console.warn('Ошибка воспроизведения звука нажатия:', e);
-    }
-  }
-
-  // 2. Звук УСПЕШНОЙ оплаты (Приятный двухтональный дзинь в стиле Сбера)
-  playSuccess() {
-    try {
-      this.ensureActiveContext();
-      if (!this.audioCtx) return;
-
-      const now = this.audioCtx.currentTime;
-
-      // Нота 1: E6 (1318.51 Гц)
-      const osc1 = this.audioCtx.createOscillator();
-      const gain1 = this.audioCtx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(1318.51, now);
-      gain1.gain.setValueAtTime(0.25, now);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-
-      osc1.connect(gain1);
-      gain1.connect(this.audioCtx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.22);
-
-      // Нота 2: B6 (1975.53 Гц) через 100мс
-      const osc2 = this.audioCtx.createOscillator();
-      const gain2 = this.audioCtx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1975.53, now + 0.1);
-      gain2.gain.setValueAtTime(0.3, now + 0.1);
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
-      osc2.connect(gain2);
-      gain2.connect(this.audioCtx.destination);
-      osc2.start(now + 0.1);
-      osc2.stop(now + 0.45);
-    } catch (e) {
-      console.warn('Ошибка воспроизведения звука успеха:', e);
-    }
-  }
-
-  // 3. Звук ОШИБКИ / Отказа (Двойной низкий сигнал)
-  playError() {
-    try {
-      this.ensureActiveContext();
-      if (!this.audioCtx) return;
-
-      const now = this.audioCtx.currentTime;
-
-      // Гудок 1
-      const osc1 = this.audioCtx.createOscillator();
-      const gain1 = this.audioCtx.createGain();
-      osc1.type = 'sawtooth';
-      osc1.frequency.setValueAtTime(220, now);
-      gain1.gain.setValueAtTime(0.2, now);
-      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
-
-      osc1.connect(gain1);
-      gain1.connect(this.audioCtx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.18);
-
-      // Гудок 2
-      const osc2 = this.audioCtx.createOscillator();
-      const gain2 = this.audioCtx.createGain();
-      osc2.type = 'sawtooth';
-      osc2.frequency.setValueAtTime(180, now + 0.22);
-      gain2.gain.setValueAtTime(0.25, now + 0.22);
-      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
-
-      osc2.connect(gain2);
-      gain2.connect(this.audioCtx.destination);
-      osc2.start(now + 0.22);
-      osc2.stop(now + 0.45);
-    } catch (e) {
-      console.warn('Ошибка воспроизведения звука ошибки:', e);
-    }
-  }
-}
-
-// Экспортируем единственный экземпляр
-window.terminalAudio = new TerminalAudioController();
+  </script>
+</body>
+</html>
