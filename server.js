@@ -27,11 +27,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-Memory Хранилище
+// In-Memory Хранилище (изменили баланс по умолчанию на 0 вместо 5000)
 let state = {
-  balance: 5000, // Начальный баланс для тестов
+  balance: 0, 
   activeTransaction: null,
-  history: [], // [{ id, type, amount, createdAt, paidAt, receiptId }]
+  history: [], // [{ id, type, amount, createdAt, paidAt, receiptId, targetDisplayId }]
   displays: [] // [{ id, name, ip, isBlocked, lastSeen }]
 };
 
@@ -57,7 +57,6 @@ app.get('/api/shortcut/pay-active', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
-  // Проверяем, есть ли активная транзакция для оплаты
   if (!state.activeTransaction) {
     return res.status(404).json({
       success: false,
@@ -66,17 +65,26 @@ app.get('/api/shortcut/pay-active', (req, res) => {
   }
 
   const amount = state.activeTransaction.amount;
+  const targetId = state.activeTransaction.targetDisplayId;
 
   // Проверяем баланс
   if (amount > state.balance) {
     const failedTx = { ...state.activeTransaction };
     state.activeTransaction = null;
 
-    io.emit('payment_failed', {
-      transaction: failedTx,
-      reason: 'insufficient_funds',
-      balance: state.balance
-    });
+    if (targetId) {
+      io.to(targetId).emit('payment_failed', {
+        transaction: failedTx,
+        reason: 'insufficient_funds',
+        balance: state.balance
+      });
+    } else {
+      io.emit('payment_failed', {
+        transaction: failedTx,
+        reason: 'insufficient_funds',
+        balance: state.balance
+      });
+    }
 
     return res.status(400).json({
       success: false,
@@ -96,12 +104,20 @@ app.get('/api/shortcut/pay-active', (req, res) => {
 
   state.activeTransaction = null;
 
-  // Уведомляем интерфейс
-  io.emit('payment_success', {
-    transaction: completedTx,
-    newBalance: state.balance,
-    history: state.history
-  });
+  // Адресное уведомление (чтобы не дублировалось на других экранах)
+  if (targetId) {
+    io.to(targetId).emit('payment_success', {
+      transaction: completedTx,
+      newBalance: state.balance,
+      history: state.history
+    });
+  } else {
+    io.emit('payment_success', {
+      transaction: completedTx,
+      newBalance: state.balance,
+      history: state.history
+    });
+  }
 
   res.json({
     success: true,
@@ -199,7 +215,12 @@ app.post('/api/create-transaction', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    io.emit('transaction_created', state.activeTransaction);
+    // Если указан конкретный дисплей, отправляем транзакцию только ему, иначе всем
+    if (targetDisplayId) {
+      io.to(targetDisplayId).emit('transaction_created', state.activeTransaction);
+    } else {
+      io.emit('transaction_created', state.activeTransaction);
+    }
 
     res.json({ success: true, transaction: state.activeTransaction });
   } catch (err) {
@@ -245,16 +266,25 @@ app.post('/api/pay/:id', (req, res) => {
   }
 
   const amount = state.activeTransaction.amount;
+  const targetId = state.activeTransaction.targetDisplayId;
 
   if (amount > state.balance) {
     const failedTx = { ...state.activeTransaction };
     state.activeTransaction = null;
 
-    io.emit('payment_failed', {
-      transaction: failedTx,
-      reason: 'insufficient_funds',
-      balance: state.balance
-    });
+    if (targetId) {
+      io.to(targetId).emit('payment_failed', {
+        transaction: failedTx,
+        reason: 'insufficient_funds',
+        balance: state.balance
+      });
+    } else {
+      io.emit('payment_failed', {
+        transaction: failedTx,
+        reason: 'insufficient_funds',
+        balance: state.balance
+      });
+    }
 
     return res.status(400).json({
       error: `Недостаточно средств на балансе! Доступно: ${state.balance.toLocaleString('ru-RU')} ₽`
@@ -272,11 +302,19 @@ app.post('/api/pay/:id', (req, res) => {
 
   state.activeTransaction = null;
 
-  io.emit('payment_success', {
-    transaction: completedTx,
-    newBalance: state.balance,
-    history: state.history
-  });
+  if (targetId) {
+    io.to(targetId).emit('payment_success', {
+      transaction: completedTx,
+      newBalance: state.balance,
+      history: state.history
+    });
+  } else {
+    io.emit('payment_success', {
+      transaction: completedTx,
+      newBalance: state.balance,
+      history: state.history
+    });
+  }
 
   res.json({
     success: true,
@@ -323,8 +361,15 @@ app.get('/api/receipt/:id', (req, res) => {
 // Отмена транзакции
 app.post('/api/cancel-transaction', (req, res) => {
   if (state.activeTransaction) {
+    const targetId = state.activeTransaction.targetDisplayId;
     state.activeTransaction.status = 'cancelled';
-    io.emit('transaction_cancelled', { id: state.activeTransaction.id });
+    
+    if (targetId) {
+      io.to(targetId).emit('transaction_cancelled', { id: state.activeTransaction.id });
+    } else {
+      io.emit('transaction_cancelled', { id: state.activeTransaction.id });
+    }
+    
     state.activeTransaction = null;
   }
   res.json({ success: true });
@@ -381,16 +426,14 @@ app.get('/client', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  // Отправляем начальные данные любому подключившемуся экрану/терминалу
   socket.emit('init_state', {
     activeTransaction: state.activeTransaction,
     history: state.history,
     displays: state.displays,
-    balance: state.balance, // <--- ДОБАВЬТЕ ЭТУ СТРОКУ
+    balance: state.balance,
     config
   });
 
-  // Регистрируем клиент в списке дисплеев ТОЛЬКО если он сам об этом заявит
   socket.on('register_display', () => {
     socket.isDisplay = true;
     const displayId = socket.id;
@@ -409,7 +452,6 @@ io.on('connection', (socket) => {
     io.emit('displays_updated', { displays: state.displays });
   });
 
-  // При закрытии страницы удаляем из списка ТОЛЬКО если это был дисплей
   socket.on('disconnect', () => {
     if (socket.isDisplay) {
       state.displays = state.displays.filter(d => d.id !== socket.id);
@@ -418,7 +460,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// ВОТ ЭТОГО КУСКА НЕ ХВАТАЛО:
 const PORT = process.env.PORT || config.port || 3000;
 server.listen(PORT, () => {
   console.log(`====================================================`);
