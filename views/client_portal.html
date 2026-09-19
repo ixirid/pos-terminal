@@ -194,18 +194,79 @@
         });
     }
 
-   const socket = io();
+  <script>
+    const socket = io();
+    let html5QrCode = null;
 
-// Когда получаем начальное состояние от сервера при подключении/обновлении страницы
-socket.on('init_state', (data) => {
-  if (data.balance !== undefined) {
-    // Обновляем баланс на экране портала клиента
-    const balanceEl = document.getElementById('balanceDisplay'); // или имя вашего элемента с балансом
-    if (balanceEl) {
-      balanceEl.textContent = formatCurrency(data.balance);
+    // Функция форматирования валюты
+    function formatCurrency(num) {
+      return num.toLocaleString('ru-RU', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }) + ' ₽';
     }
-  }
-});
+
+    // 1. Загрузка начального баланса через тестовый API при входе
+    fetch('/api/shortcut/test')
+      .then(res => res.json())
+      .then(data => {
+        if (data.currentBalance !== undefined) {
+          document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.currentBalance);
+        }
+      })
+      .catch(err => console.error(err));
+
+    // 2. Обработка начального состояния от сервера
+    socket.on('init_state', (data) => {
+      if (data.balance !== undefined) {
+        document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.balance);
+      }
+    });
+
+    // 3. Обновление баланса в реальном времени через сокеты
+    socket.on('balance_updated', (data) => {
+      if (data.newBalance !== undefined) {
+        document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.newBalance);
+      }
+    });
+
+    // 4. Обновление при успешной оплате
+    socket.on('payment_success', (data) => {
+      if (data.newBalance !== undefined) {
+        document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.newBalance);
+      }
+      closeScanner();
+    });
+
+    // Функции сканера камеры
+    function openScanner() {
+      document.getElementById('scannerOverlay').classList.add('active');
+      html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText, decodedResult) => {
+          if (decodedText.includes('/pay/')) {
+            closeScanner();
+            window.location.href = decodedText;
+          }
+        },
+        (errorMessage) => {}
+      ).catch(err => {
+        alert("Не удалось запустить камеру. Проверьте разрешения браузера.");
+        closeScanner();
+      });
+    }
+
+    function closeScanner() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+        }).catch(err => {});
+      }
+      document.getElementById('scannerOverlay').classList.remove('active');
+    }
+  </script>
 
 // Также слушаем событие обновления баланса (например, после пополнения или оплаты)
 socket.on('balance_updated', (data) => {
