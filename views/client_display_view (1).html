@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SberPay Terminal Display</title>
+  <script src="/socket.io/socket.io.js"></script>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    :root {
+      --sber-green: #22c55e;
+      --sber-green-bright: #00e676;
+      --sber-green-glow: rgba(0, 230, 118, 0.35);
+      --bg-dark: #02120b;
+      --card-bg: rgba(6, 30, 20, 0.85);
+      --text-main: #ffffff;
+      --text-muted: #8ea399;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 50% 40%, #063d27 0%, #031e13 55%, #010a06 100%);
+      color: var(--text-main);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .viewport {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Состояния экрана */
+    .state {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 28px;
+      opacity: 0;
+      transform: scale(0.98);
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    .state.active {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+    /* --- 1. ЭКРАН ОЖИДАНИЯ (ТОЧНАЯ КОПИЯ ИЗОБРАЖЕНИЯ 2) --- */
+    .idle-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sber-pay-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .sber-pay-badge .check-circle {
+      width: 20px;
+      height: 20px;
+      background: var(--sber-green-bright);
+      border-radius: 50%;
+      color: #010a06;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .idle-main-content {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-left: 8px;
+    }
+
+    .idle-title {
+      font-size: 52px;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -1.5px;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .idle-title .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .green-dot-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0, 230, 118, 0.6);
+      display: inline-block;
+    }
+
+    .green-check-icon {
+      width: 32px;
+      height: 32px;
+      background: #00e676;
+      border-radius: 8px;
+      color: #02120b;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      box-shadow: 0 0 15px rgba(0, 230, 118, 0.5);
+    }
+
+    .idle-footer {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.4);
+      font-weight: 500;
+    }
+
+    /* --- 2. ЭКРАН ОПЛАТЫ (ТОЧНАЯ КОПИЯ ИЗОБРАЖЕНИЯ 1 БЕЗ УЛЫБКИ) --- */
+    .pay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .pay-title-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pay-subtitle {
+      font-size: 16px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .pay-amount-display {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: #ffffff;
+    }
+
+    .cancel-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 20px;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      transition: background 0.2s;
+    }
+
+    .cancel-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .pay-body-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      flex-grow: 1;
+      align-items: center;
+    }
+
+    /* Левая колонка: QR */
+    .qr-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .qr-frame {
+      position: relative;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 20px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+      margin-bottom: 14px;
+    }
+
+    .qr-frame img {
+      width: 170px;
+      height: 170px;
+      display: block;
+      border-radius: 8px;
+    }
+
+    .qr-corner-brackets {
+      position: absolute;
+      inset: -6px;
+      border: 3px solid #ff4b8b;
+      border-radius: 26px;
+      pointer-events: none;
+    }
+
+    .qr-hint-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.3;
+      max-width: 160px;
+    }
+
+    /* Правая колонка: Оплата Картой */
+    .card-column {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      padding-left: 10px;
+    }
+
+    .card-nfc-icon-wrap {
+      width: 64px;
+      height: 48px;
+      border: 2.5px solid var(--sber-green-bright);
+      border-radius: 10px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      background: rgba(0, 230, 118, 0.08);
+      box-shadow: 0 0 25px rgba(0, 230, 118, 0.2);
+      animation: pulse-card-glow 2.5s infinite ease-in-out;
+    }
+
+    .card-nfc-chip {
+      width: 12px;
+      height: 10px;
+      background: var(--sber-green-bright);
+      border-radius: 2px;
+      position: absolute;
+      left: 10px;
+      top: 10px;
+    }
+
+    .card-hint-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.25;
+      max-width: 180px;
+    }
+
+    /* --- 3. ЭКРАН УСПЕХА --- */
+    .success-viewport {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+    }
+
+    .success-icon-box {
+      width: 110px;
+      height: 110px;
+      background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 60px;
+      color: #02120b;
+      margin-bottom: 20px;
+      box-shadow: 0 0 40px rgba(0, 230, 118, 0.5);
+      animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .success-title {
+      font-size: 36px;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .success-subtitle {
+      font-size: 18px;
+      color: var(--text-muted);
+    }
+
+    /* Анимации */
+    @keyframes pulse-card-glow {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 230, 118, 0.2); }
+      50% { transform: scale(1.05); box-shadow: 0 0 35px rgba(0, 230, 118, 0.45); }
+    }
+
+    @keyframes pop-in {
+      0% { transform: scale(0.4); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="viewport">
+    
+    <!-- 1. ЭКРАН ОЖИДАНИЯ (IDLE) -->
+    <section id="state-idle" class="state active">
+      <header class="idle-header">
+        <div class="sber-pay-badge">
+          <span class="check-circle">✓</span>
+          <span>Pay</span>
+        </div>
+      </header>
+
+      <div class="idle-main-content">
+        <div class="idle-title">
+          <div>платите</div>
+          <div class="row">
+            <span class="green-dot-icon"></span>
+            <span>как вам</span>
+          </div>
+          <div class="row">
+            <span>удобно</span>
+            <span class="green-check-icon">✓</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="idle-footer">
+        <span>Терминал: 28204129</span>
+      </footer>
+    </section>
+
+    <!-- 2. ЭКРАН ОПЛАТЫ (PAYMENT) -->
+    <section id="state-pay" class="state">
+      <header class="pay-header">
+        <div class="pay-title-group">
+          <span class="pay-subtitle">оплата</span>
+          <div id="pay-amount" class="pay-amount-display">0,00 ₽</div>
+        </div>
+        <div class="cancel-btn" onclick="cancelPayment()" title="Отмена">✕</div>
+      </header>
+
+      <div class="pay-body-grid">
+        <!-- Левая колонка: QR-код -->
+        <div class="qr-column">
+          <div class="qr-frame">
+            <div class="qr-corner-brackets"></div>
+            <img id="qr-image" src="" alt="QR-код оплаты">
+          </div>
+          <p class="qr-hint-text">отсканируйте<br>QR-код</p>
+        </div>
+
+        <!-- Правая колонка: Карта / NFC (Без оплаты улыбкой) -->
+        <div class="card-column">
+          <div class="card-nfc-icon-wrap">
+            <div class="card-nfc-chip"></div>
+          </div>
+          <p class="card-hint-text">приложите<br>карту</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ЭКРАН УСПЕХА (SUCCESS) -->
+    <section id="state-success" class="state">
+      <div class="success-viewport">
+        <div class="success-icon-box">✓</div>
+        <h2 class="success-title">Оплачено</h2>
+        <p class="success-subtitle" id="success-amount-text">Спасибо за покупку!</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const socket = io();
+
+    const stateIdle = document.getElementById('state-idle');
+    const statePay = document.getElementById('state-pay');
+    const stateSuccess = document.getElementById('state-success');
+    
+    const payAmount = document.getElementById('pay-amount');
+    const qrImage = document.getElementById('qr-image');
+    const successAmountText = document.getElementById('success-amount-text');
+
+    function switchState(targetState) {
+      [stateIdle, statePay, stateSuccess].forEach(el => el.classList.remove('active'));
+      targetState.classList.add('active');
+    }
+
+    // Форматирование суммы в стиле Сбербанка: 329,00 ₽
+    function formatCurrency(num) {
+      return num.toLocaleString('ru-RU', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }) + ' ₽';
+    }
+
+    // Инициализация при подключении
+    socket.on('init_state', (data) => {
+      if (data.activeTransaction && data.activeTransaction.status === 'pending') {
+        renderPayState(data.activeTransaction);
+      } else {
+        switchState(stateIdle);
+      }
+    });
+
+    // Создание транзакции с терминала
+    socket.on('transaction_created', (tx) => {
+      renderPayState(tx);
+    });
+
+    // Отображение данных оплаты
+    function renderPayState(tx) {
+      payAmount.textContent = formatCurrency(parseFloat(tx.amount));
+      qrImage.src = tx.qrCode;
+      switchState(statePay);
+    }
+
+    // Успешная оплата
+    socket.on('payment_success', (data) => {
+      if (data && data.transaction) {
+        successAmountText.textContent = `Сумма: ${formatCurrency(data.transaction.amount)}`;
+      }
+      switchState(stateSuccess);
+      setTimeout(() => {
+        switchState(stateIdle);
+      }, 3000);
+    });
+
+    // Отмена или сброс
+    socket.on('transaction_cancelled', () => {
+      switchState(stateIdle);
+    });
+
+    socket.on('payment_failed', () => {
+      switchState(stateIdle);
+    });
+
+    // Ручная отмена нажатием на крестик
+    function cancelPayment() {
+      fetch('/api/cancel-transaction', { method: 'POST' })
+        .catch(err => console.error(err));
+    }
+  </script>
+</body>
+</html>
