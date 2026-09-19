@@ -6,10 +6,107 @@
   <title>POS Терминал Кассы</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --primary: #22c55e;
+      --primary-dark: #16a34a;
+      --error: #ef4444;
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --text-muted: #94a3b8;
+    }
+    .qr-display-panel, .success-card {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 24px;
+    }
+    .qr-display-panel.active, .success-card.active {
+      display: flex !important;
+    }
+    .error-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.92);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: container;
+    }
+    .error-overlay.active {
+      display: flex !important;
+    }
+    .qr-box {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 16px;
+      margin: 20px 0;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .qr-box img {
+      width: 220px;
+      height: 220px;
+      display: block;
+    }
+    .check-icon-circle {
+      width: 80px;
+      height: 80px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+    }
+    .error-circle {
+      width: 80px;
+      height: 80px;
+      background: var(--error);
+      color: #fff;
+      font-size: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+    }
+    .qr-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(34, 197, 94, 0.15);
+      padding: 8px 16px;
+      border-radius: 20px;
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- Верхняя панель кассира без показа баланса -->
   <header class="pos-header">
     <div class="brand-title">
       <div class="brand-icon">Б</div>
@@ -77,7 +174,7 @@
             <span class="pulse-dot"></span>
             <span>Ожидание оплаты клиентом...</span>
           </div>
-          <h2 style="font-size: 22px; margin-bottom: 16px;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
+          <h2 style="font-size: 22px; margin-bottom: 16px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
           <div class="qr-box">
             <img id="qrImage" src="" alt="QR-код">
           </div>
@@ -86,7 +183,7 @@
 
         <div class="success-card" id="paymentSuccessCard">
           <div class="check-icon-circle">✓</div>
-          <h2 style="font-size: 28px; margin-bottom: 8px;">Оплачено успешно!</h2>
+          <h2 style="font-size: 28px; margin-bottom: 8px; color: #fff;">Оплачено успешно!</h2>
           <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 24px;">Сумма: <strong id="successAmountText" style="color: #fff;">0 ₽</strong></p>
           <button class="btn-primary" onclick="resetChargeView()">Новая операция [Enter]</button>
         </div>
@@ -132,9 +229,9 @@
 
   <div class="error-overlay" id="errorOverlay">
     <div class="error-circle">✕</div>
-    <h2>Ошибка оплаты</h2>
-    <p class="error-subtitle">Недостаточно средств на балансе карты!</p>
-    <div class="error-details">
+    <h2 style="color: #fff; margin-bottom: 8px;">Ошибка оплаты</h2>
+    <p class="error-subtitle" style="color: var(--text-muted); margin-bottom: 20px;">Недостаточно средств на балансе карты!</p>
+    <div class="error-details" style="color: #fff; margin-bottom: 24px;">
       <div>Требуется: <span id="errorRequiredAmount" style="color: var(--error); font-weight: 700;">0 ₽</span></div>
     </div>
     <button class="btn-primary" onclick="closeErrorOverlay()" style="background: var(--error); max-width: 320px;">Закрыть [Enter]</button>
