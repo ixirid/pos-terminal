@@ -332,11 +332,36 @@ app.get('/client', (req, res) => {
 });
 
 io.on('connection', (socket) => {
+  const displayId = socket.id;
+  const clientIp = socket.handshake.address;
+
+  // Автоматически регистрируем подключенный сокет как дисплей
+  let display = state.displays.find(d => d.id === displayId);
+  if (!display) {
+    state.displays.push({
+      id: displayId,
+      name: `Дисплей ${displayId.slice(0, 4)}`,
+      ip: clientIp,
+      isBlocked: false,
+      lastSeen: Date.now()
+    });
+  }
+
+  // Отправляем начальное состояние подключившемуся клиенту
   socket.emit('init_state', {
     activeTransaction: state.activeTransaction,
     history: state.history,
     displays: state.displays,
     config
+  });
+
+  // Уведомляем все терминалы об обновлении списка дисплеев
+  io.emit('displays_updated', { displays: state.displays });
+
+  // При закрытии страницы дисплея удаляем его из списка
+  socket.on('disconnect', () => {
+    state.displays = state.displays.filter(d => d.id !== displayId);
+    io.emit('displays_updated', { displays: state.displays });
   });
 });
 
