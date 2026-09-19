@@ -98,7 +98,7 @@ app.post('/api/create-transaction', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    // Оповещаем терминал о создании транзакции
+    // Оповещаем терминал и дисплей о создании транзакции
     io.emit('transaction_created', state.activeTransaction);
 
     res.json({
@@ -156,7 +156,7 @@ app.post('/api/pay/:id', (req, res) => {
     const failedTx = { ...state.activeTransaction };
     state.activeTransaction = null; // Сбрасываем активную транзакцию
 
-    // Оповещаем терминал о неудачной оплате
+    // Оповещаем терминал и дисплей о неудачной оплате
     io.emit('payment_failed', {
       transaction: failedTx,
       reason: 'insufficient_funds',
@@ -181,7 +181,7 @@ app.post('/api/pay/:id', (req, res) => {
 
   state.activeTransaction = null;
 
-  // Оповещаем терминал
+  // Оповещаем терминал и дисплей
   io.emit('payment_success', {
     transaction: completedTx,
     newBalance: state.balance,
@@ -222,7 +222,7 @@ const handleShortcutPay = (req, res) => {
     const failedTx = { ...state.activeTransaction };
     state.activeTransaction = null; // Сбрасываем активную транзакцию
 
-    // Оповещаем терминал о неудачной оплате
+    // Оповещаем терминал и дисплей о неудачной оплате
     io.emit('payment_failed', {
       transaction: failedTx,
       reason: 'insufficient_funds',
@@ -248,7 +248,7 @@ const handleShortcutPay = (req, res) => {
 
   state.activeTransaction = null;
 
-  // Оповещаем терминал по WebSockets
+  // Оповещаем терминал и дисплей по WebSockets
   io.emit('payment_success', {
     transaction: completedTx,
     newBalance: state.balance,
@@ -321,6 +321,11 @@ app.get('/pay/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'pay.html'));
 });
 
+// Новый маршрут для клиентского дисплея
+app.get('/display', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'display.html'));
+});
+
 // Socket.io соединения
 io.on('connection', (socket) => {
   socket.emit('init_state', {
@@ -336,7 +341,8 @@ const PORT = process.env.PORT || config.port || 3000;
 server.listen(PORT, () => {
   console.log(`====================================================`);
   console.log(`🚀 POS Терминал запущен!`);
-  console.log(`🖥  Панель Терминала (ПК): http://localhost:${PORT}`);
+  console.log(`🖥  Панель Терминала (Касса): http://localhost:${PORT}`);
+  console.log(`📺 Клиентский Дисплей: http://localhost:${PORT}/display`);
   console.log(`🌐 Внешний адрес: http://${config.serverIp}:${PORT}`);
   console.log(`====================================================`);
 });
