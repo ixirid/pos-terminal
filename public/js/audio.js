@@ -48,30 +48,9 @@ class TerminalAudioController {
     }
   }
 
-  // 1. Звук нажатия на кнопку (короткий щелчок)
+  // 1. Звук нажатия на кнопку (отключен по запросу)
   playTap() {
-    try {
-      this.ensureActiveContext();
-      if (!this.audioCtx) return;
-
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(600, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(200, this.audioCtx.currentTime + 0.04);
-
-      gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.04);
-
-      osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
-
-      osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.04);
-    } catch (e) {
-      console.warn('Ошибка воспроизведения звука нажатия:', e);
-    }
+    // Звук нажатия клавиш отключен
   }
 
   // 2. Звук УСПЕШНОЙ оплаты (Приятный двухтональный дзинь в стиле Сбера)
