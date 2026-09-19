@@ -1209,6 +1209,20 @@
       resetChargeView();
     });
 
+    // Слушаем обновление списка подключенных дисплеев
+    socket.on('update_displays', (displays) => {
+      const displaySelect = document.getElementById('displaySelect'); 
+      if (!displaySelect) return;
+      
+      displaySelect.innerHTML = '<option value="">Выберите дисплей</option>';
+      displays.forEach(display => {
+        const option = document.createElement('option');
+        option.value = display.id;
+        option.textContent = display.name;
+        displaySelect.appendChild(option);
+      });
+    });
+
     // Клавиатурные сокращения
     document.addEventListener('keydown', (e) => {
       const errModal = document.getElementById('errorFullscreenModal');
@@ -1234,19 +1248,6 @@
       } else if (e.key === 'Backspace' && currentTab !== 'history' && currentTab !== 'settings') {
         backspace(currentTab);
       }
-    });
-      // Ищем <select> на странице терминала
-      const displaySelect = document.getElementById('displaySelect'); 
-      if (!displaySelect) return;
-      
-      // Очищаем и заново заполняем список
-      displaySelect.innerHTML = '<option value="">Выберите дисплей</option>';
-      displays.forEach(display => {
-        const option = document.createElement('option');
-        option.value = display.id;
-        option.textContent = display.name;
-        displaySelect.appendChild(option);
-      });
     });
   </script>
 </body>
