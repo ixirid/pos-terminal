@@ -6,12 +6,18 @@ class TerminalAudio {
   }
 
   initAudio() {
+    // Принудительно переводим аудиосессию на медиа-канал (обход ограничений iOS)
+    if ('audioSession' in navigator) {
+      try {
+        navigator.audioSession.type = 'playback';
+      } catch (e) {}
+    }
+
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (AudioContext) {
       this.ctx = new AudioContext();
     }
 
-    // Функция разблокировки звука для iOS Safari
     const unlockAudio = () => {
       if (!this.ctx) return;
 
@@ -19,7 +25,6 @@ class TerminalAudio {
         this.ctx.resume();
       }
 
-      // Проигрываем короткий пустой звук для полного снятия блокировки iOS
       try {
         const buffer = this.ctx.createBuffer(1, 1, 22050);
         const source = this.ctx.createBufferSource();
@@ -30,7 +35,6 @@ class TerminalAudio {
 
       this.isUnlocked = true;
 
-      // Удаляем слушатели после первой разблокировки
       document.removeEventListener('touchstart', unlockAudio);
       document.removeEventListener('click', unlockAudio);
       document.removeEventListener('keydown', unlockAudio);
@@ -73,14 +77,19 @@ class TerminalAudio {
 
   playSuccess() {
     if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-    setTimeout(() => this.playTone(523.25, 'triangle', 0.1, 0.15), 0);    // До
-    setTimeout(() => this.playTone(659.25, 'triangle', 0.1, 0.15), 100);  // Ми
-    setTimeout(() => this.playTone(783.99, 'triangle', 0.2, 0.2), 200);   // Соль
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    setTimeout(() => this.playTone(523.25, 'triangle', 0.1, 0.15), 0);
+    setTimeout(() => this.playTone(659.25, 'triangle', 0.1, 0.15), 100);
+    setTimeout(() => this.playTone(783.99, 'triangle', 0.2, 0.2), 200);
   }
 
   playError() {
     if (!this.ctx) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
     setTimeout(() => this.playTone(300, 'sawtooth', 0.15, 0.15), 0);
     setTimeout(() => this.playTone(200, 'sawtooth', 0.25, 0.2), 120);
   }
