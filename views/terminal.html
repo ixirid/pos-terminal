@@ -43,43 +43,60 @@
       overflow-x: hidden;
     }
 
-    /* АДАПТИВНАЯ ШАПКА */
+    /* Исправленная шапка для мобильных и ПК */
     .pos-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 20px;
-      background: rgba(17, 24, 39, 0.9);
+      flex-direction: column;
+      padding: 10px 14px;
+      background: rgba(17, 24, 39, 0.95);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border-color);
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
       flex-shrink: 0;
-      gap: 12px;
+      gap: 8px;
     }
 
-    .header-left {
+    .header-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .header-links-row {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .header-links-row a {
+      flex: 1;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .brand-title {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .brand-icon {
-      width: 40px;
-      height: 40px;
+      width: 34px;
+      height: 34px;
       background: linear-gradient(135deg, var(--primary) 0%, #047857 100%);
       color: #fff;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 800;
-      border-radius: 12px;
+      border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 15px var(--primary-glow);
-      flex-shrink: 0;
+      box-shadow: 0 0 12px var(--primary-glow);
     }
 
     .brand-text h1 {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       letter-spacing: -0.5px;
       color: #fff;
@@ -92,38 +109,32 @@
       margin-top: 1px;
     }
 
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
     .client-link-btn {
-      padding: 7px 12px;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 6px 10px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
       color: var(--primary);
-      border-radius: 10px;
+      border-radius: 8px;
       text-decoration: none;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       white-space: nowrap;
     }
 
     .status-badge-online {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       background: rgba(16, 185, 129, 0.1);
-      padding: 7px 10px;
+      padding: 5px 10px;
       border-radius: 20px;
       border: 1px solid rgba(16, 185, 129, 0.2);
       color: var(--primary);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       white-space: nowrap;
     }
@@ -137,40 +148,13 @@
       animation: pulse 1.5s infinite;
     }
 
-    /* Мобильная адаптация шапки */
-    @media (max-width: 768px) {
-      .pos-header {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 10px 14px;
-        gap: 10px;
-      }
-      .header-top-mobile {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-      }
-      .header-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        width: 100%;
-      }
-      .client-link-btn {
-        justify-content: center;
-        text-align: center;
-        padding: 8px 6px;
-      }
-    }
-
     .pos-container {
       flex: 1;
       display: flex;
       justify-content: center;
       align-items: stretch;
-      padding: 12px 14px;
-      max-width: 640px;
+      padding: 8px;
+      max-width: 500px;
       margin: 0 auto;
       width: 100%;
     }
@@ -179,8 +163,8 @@
       width: 100%;
       background: var(--surface);
       border: 1px solid var(--border-color);
-      border-radius: 20px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      border-radius: 16px;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -201,16 +185,17 @@
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 10px 4px;
-      font-size: 12px;
+      padding: 8px 2px;
+      font-size: 11px;
       font-weight: 700;
-      border-radius: 12px;
+      border-radius: 9px;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 3px;
+      white-space: nowrap;
     }
 
     .tab-btn.active {
@@ -222,9 +207,9 @@
 
     .tab-content {
       display: none;
-      padding: 16px;
+      padding: 10px;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
       flex: 1;
       justify-content: space-between;
     }
@@ -236,17 +221,17 @@
     .amount-display-wrapper {
       background: rgba(0, 0, 0, 0.3);
       border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 12px 16px;
+      border-radius: 12px;
+      padding: 8px 12px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+      gap: 1px;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
       flex-shrink: 0;
     }
 
     .amount-label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
@@ -257,24 +242,23 @@
       display: flex;
       align-items: baseline;
       justify-content: flex-end;
-      gap: 6px;
+      gap: 4px;
     }
 
     .amount-input {
       background: transparent;
       border: none;
       color: #fff;
-      font-size: 38px;
+      font-size: 30px;
       font-weight: 900;
       text-align: right;
       width: 100%;
       outline: none;
       letter-spacing: -1px;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     }
 
     .amount-currency {
-      font-size: 28px;
+      font-size: 22px;
       font-weight: 800;
       color: var(--primary);
     }
@@ -282,7 +266,7 @@
     .quick-presets {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      gap: 6px;
       flex-shrink: 0;
     }
 
@@ -290,13 +274,12 @@
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       color: #fff;
-      padding: 10px 4px;
-      font-size: 13px;
+      padding: 8px 2px;
+      font-size: 12px;
       font-weight: 700;
-      border-radius: 12px;
+      border-radius: 9px;
       cursor: pointer;
       transition: all 0.15s ease;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
       text-align: center;
     }
 
@@ -308,7 +291,7 @@
     .numpad-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      gap: 6px;
       flex: 1;
     }
 
@@ -317,16 +300,15 @@
       border: 1px solid var(--border-color);
       color: #fff;
       height: 100%;
-      min-height: 52px;
-      font-size: 24px;
+      min-height: 42px;
+      font-size: 19px;
       font-weight: 700;
-      border-radius: 14px;
+      border-radius: 11px;
       cursor: pointer;
       transition: all 0.1s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .num-btn:active {
@@ -350,34 +332,33 @@
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       border: none;
       color: #fff;
-      padding: 14px;
-      font-size: 15px;
+      padding: 11px;
+      font-size: 13px;
       font-weight: 800;
-      border-radius: 14px;
+      border-radius: 11px;
       cursor: pointer;
-      box-shadow: 0 8px 20px var(--primary-glow);
+      box-shadow: 0 4px 14px var(--primary-glow);
       transition: all 0.15s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       flex-shrink: 0;
       width: 100%;
     }
 
     .btn-primary:active {
       transform: scale(0.98);
-      filter: brightness(0.95);
     }
 
     .btn-secondary {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       color: var(--text-muted);
-      padding: 12px;
-      font-size: 14px;
+      padding: 9px;
+      font-size: 12px;
       font-weight: 700;
-      border-radius: 14px;
+      border-radius: 11px;
       cursor: pointer;
       transition: all 0.2s ease;
       width: 100%;
@@ -393,46 +374,40 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 20px;
       text-align: center;
-      animation: fadeInOverlay 0.2s ease-out;
     }
 
     .fullscreen-overlay.active {
       display: flex !important;
     }
 
-    @keyframes fadeInOverlay {
-      from { opacity: 0; transform: scale(1.03); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
     .check-icon-circle {
-      width: 90px;
-      height: 90px;
+      width: 75px;
+      height: 75px;
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: #fff;
-      font-size: 45px;
+      font-size: 38px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
-      box-shadow: 0 0 40px var(--primary-glow);
+      margin-bottom: 14px;
+      box-shadow: 0 0 30px var(--primary-glow);
     }
 
     .error-circle {
-      width: 90px;
-      height: 90px;
+      width: 75px;
+      height: 75px;
       background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
       color: #fff;
-      font-size: 45px;
+      font-size: 38px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
-      box-shadow: 0 0 40px var(--error-glow);
+      margin-bottom: 14px;
+      box-shadow: 0 0 30px var(--error-glow);
     }
 
     .qr-display-panel {
@@ -441,7 +416,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 10px 0;
+      padding: 4px 0;
       flex: 1;
     }
 
@@ -451,35 +426,35 @@
 
     .qr-box {
       background: #ffffff;
-      padding: 16px;
-      border-radius: 20px;
-      margin: 16px 0;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 14px;
+      margin: 8px 0;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     }
 
     .qr-box img {
-      width: 200px;
-      height: 200px;
+      width: 160px;
+      height: 160px;
       display: block;
     }
 
     .qr-status-badge {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background: rgba(16, 185, 129, 0.12);
-      padding: 8px 16px;
+      padding: 5px 10px;
       border-radius: 30px;
       border: 1px solid rgba(16, 185, 129, 0.3);
       color: var(--primary);
       font-weight: 700;
-      font-size: 14px;
-      margin-bottom: 12px;
+      font-size: 12px;
+      margin-bottom: 6px;
     }
 
     .pulse-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       background: var(--primary);
       border-radius: 50%;
       box-shadow: 0 0 8px var(--primary);
@@ -495,41 +470,36 @@
     .history-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       overflow-y: auto;
       flex: 1;
-      max-height: 420px;
-      padding-right: 4px;
+      max-height: 340px;
     }
 
     .history-item {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 12px 16px;
+      border-radius: 10px;
+      padding: 8px 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
     }
 
     .history-info h4 {
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 700;
       color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
 
     .history-info p {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
-      margin-top: 2px;
     }
 
     .history-amount {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 800;
       color: var(--primary);
       text-align: right;
@@ -543,41 +513,40 @@
       background: rgba(59, 130, 246, 0.15);
       border: 1px solid rgba(59, 130, 246, 0.3);
       color: #60a5fa;
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 5px;
+      font-size: 10px;
       font-weight: 700;
       cursor: pointer;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      margin-top: 4px;
+      gap: 2px;
+      margin-top: 2px;
     }
 
     .displays-list {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 6px;
       overflow-y: auto;
       flex: 1;
-      max-height: 380px;
+      max-height: 340px;
     }
 
     .display-card {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 12px 16px;
+      border-radius: 10px;
+      padding: 8px 10px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 6px;
     }
 
     .display-card.blocked {
       opacity: 0.6;
       border-color: rgba(239, 68, 68, 0.3);
-      background: rgba(31, 41, 55, 0.5);
     }
 
     .display-card-top {
@@ -589,39 +558,33 @@
     .display-name-group {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .display-title-input {
       background: rgba(0, 0, 0, 0.3);
       border: 1px solid var(--border-color);
       color: #fff;
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-size: 14px;
+      padding: 4px 6px;
+      border-radius: 5px;
+      font-size: 12px;
       font-weight: 700;
       outline: none;
-      width: 160px;
-    }
-
-    .display-actions-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      width: 130px;
     }
 
     .icon-btn {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid var(--border-color);
       color: #fff;
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 12px;
     }
 
     .icon-btn.danger {
@@ -634,10 +597,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 13px;
+      font-size: 11px;
       color: var(--text-muted);
       border-top: 1px solid var(--border-color);
-      padding-top: 8px;
+      padding-top: 4px;
     }
 
     .select-terminal-modal {
@@ -649,7 +612,7 @@
       z-index: 1100;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 16px;
     }
 
     .select-terminal-modal.active {
@@ -659,66 +622,88 @@
     .terminal-selector-card {
       background: var(--surface);
       border: 1px solid var(--border-color);
-      border-radius: 20px;
+      border-radius: 16px;
       width: 100%;
-      max-width: 420px;
-      padding: 24px;
+      max-width: 360px;
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
+      gap: 10px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
     }
 
     .terminal-option-item {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 14px 16px;
+      border-radius: 10px;
+      padding: 10px 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .terminal-option-item:hover {
-      border-color: var(--primary);
     }
 
     .terminal-option-item.blocked {
       opacity: 0.5;
       cursor: not-allowed;
-      border-color: rgba(239, 68, 68, 0.3);
     }
 
     .checkbox-label {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-size: 13px;
+      gap: 8px;
+      font-size: 11px;
       font-weight: 700;
       cursor: pointer;
       color: var(--text-main);
       background: var(--surface-card);
-      padding: 10px 14px;
-      border-radius: 12px;
+      padding: 7px 10px;
+      border-radius: 9px;
       border: 1px solid var(--border-color);
     }
 
     .checkbox-label input {
       accent-color: var(--primary);
-      width: 18px;
-      height: 18px;
+      width: 15px;
+      height: 15px;
       cursor: pointer;
+    }
+
+    /* Адаптивность для ПК */
+    @media (min-width: 768px) {
+      .pos-container {
+        max-width: 540px;
+        padding: 16px;
+      }
+      .pos-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 20px;
+      }
+      .header-links-row {
+        width: auto;
+        gap: 8px;
+      }
+      .header-links-row a {
+        flex: unset;
+      }
+      .tab-content {
+        padding: 14px;
+        gap: 10px;
+      }
+      .num-btn {
+        min-height: 52px;
+        font-size: 22px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Адаптивная шапка с разбивкой для телефонов -->
   <header class="pos-header">
-    <div class="header-top-mobile">
-      <div class="header-left">
+    <div class="header-top-row">
+      <div class="brand-title">
         <div class="brand-icon">₽</div>
         <div class="brand-text">
           <h1>POS Терминал</h1>
@@ -730,14 +715,9 @@
         <span>Онлайн</span>
       </div>
     </div>
-
-    <div class="header-actions">
-      <a href="/client" target="_blank" class="client-link-btn">
-        👤 Портал клиента
-      </a>
-      <a href="/display" target="_blank" class="client-link-btn">
-        📺 Дисплей
-      </a>
+    <div class="header-links-row">
+      <a href="/client" target="_blank" class="client-link-btn">👤 Портал клиента</a>
+      <a href="/display" target="_blank" class="client-link-btn">📺 Дисплей</a>
     </div>
   </header>
 
@@ -752,7 +732,7 @@
 
       <!-- ВКЛАДКА 1: ОПЛАТА -->
       <div class="tab-content active" id="tabCharge">
-        <div id="chargeFormView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+        <div id="chargeFormView" style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма к оплате</span>
             <div class="amount-input-container">
@@ -796,7 +776,7 @@
             <span class="pulse-dot"></span>
             <span>Ожидание оплаты клиентом...</span>
           </div>
-          <h2 style="font-size: 20px; margin-bottom: 12px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
+          <h2 style="font-size: 16px; margin-bottom: 4px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
           <div class="qr-box">
             <img id="qrImage" src="" alt="QR-код">
           </div>
@@ -806,7 +786,7 @@
 
       <!-- ВКЛАДКА 2: ПОПОЛНЕНИЕ -->
       <div class="tab-content" id="tabTopup">
-        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+        <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма пополнения счета</span>
             <div class="amount-input-container">
@@ -843,9 +823,9 @@
 
       <!-- ВКЛАДКА 3: ИСТОРИЯ ЧЕКОВ -->
       <div class="tab-content" id="tabHistory">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">История операций и чеков</h3>
-          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="loadHistory()">Обновить</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <h3 style="font-size: 13px; font-weight: 800; color: #fff;">История операций</h3>
+          <button class="btn-secondary" style="width: auto; padding: 3px 8px; font-size: 10px;" onclick="loadHistory()">Обновить</button>
         </div>
         <div class="history-list" id="historyListContainer">
           <p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка истории...</p>
@@ -854,12 +834,12 @@
 
       <!-- ВКЛАДКА 4: НАСТРОЙКИ ДИСПЛЕЕВ -->
       <div class="tab-content" id="tabSettings">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">Управление дисплеями / терминалами</h3>
-          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="loadDisplays()">Обновить</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <h3 style="font-size: 13px; font-weight: 800; color: #fff;">Управление дисплеями</h3>
+          <button class="btn-secondary" style="width: auto; padding: 3px 8px; font-size: 10px;" onclick="loadDisplays()">Обновить</button>
         </div>
         <div class="displays-list" id="displaysListContainer">
-          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Поиск активных дисплеев...</p>
+          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Поиск дисплеев...</p>
         </div>
       </div>
     </section>
@@ -868,28 +848,26 @@
   <!-- ПОЛНОЭКРАННОЕ ОКНО УСПЕХА -->
   <div class="fullscreen-overlay" id="successFullscreenModal">
     <div class="check-icon-circle">✓</div>
-    <h2 style="font-size: 32px; margin-bottom: 8px; color: #fff;">Оплата успешно завершена!</h2>
-    <p style="color: var(--text-muted); font-size: 18px; margin-bottom: 8px;">Сумма: <strong id="successOverlayAmount" style="color: #fff;">0 ₽</strong></p>
-    <p style="color: var(--primary); font-size: 16px; font-weight: 700; margin-bottom: 24px;" id="successOverlayRemaining">Остаток на карте: 0 ₽</p>
-    <button class="btn-primary" onclick="closeSuccessOverlay()" style="max-width: 280px;">Новая операция [Enter]</button>
+    <h2 style="font-size: 24px; margin-bottom: 4px; color: #fff;">Оплата успешно завершена!</h2>
+    <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 4px;">Сумма: <strong id="successOverlayAmount" style="color: #fff;">0 ₽</strong></p>
+    <p style="color: var(--primary); font-size: 14px; font-weight: 700; margin-bottom: 16px;" id="successOverlayRemaining">Остаток на карте: 0 ₽</p>
+    <button class="btn-primary" onclick="closeSuccessOverlay()" style="max-width: 240px;">Новая операция [Enter]</button>
   </div>
 
   <!-- ПОЛНОЭКРАННОЕ ОКНО ОШИБКИ -->
   <div class="fullscreen-overlay" id="errorFullscreenModal">
     <div class="error-circle">✕</div>
-    <h2 style="font-size: 32px; margin-bottom: 8px; color: #fff;">Ошибка оплаты</h2>
-    <p style="color: #fca5a5; font-size: 18px; margin-bottom: 24px;" id="errorOverlaySubtitle">Недостаточно средств на балансе карты!</p>
-    <button class="btn-primary" onclick="closeErrorOverlay()" style="max-width: 280px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
+    <h2 style="font-size: 24px; margin-bottom: 4px; color: #fff;">Ошибка оплаты</h2>
+    <p style="color: #fca5a5; font-size: 15px; margin-bottom: 16px;" id="errorOverlaySubtitle">Недостаточно средств на балансе!</p>
+    <button class="btn-primary" onclick="closeErrorOverlay()" style="max-width: 240px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 4px 14px var(--error-glow);">Закрыть [Enter]</button>
   </div>
 
   <!-- МОДАЛКА ВЫБОРА ДИСПЛЕЯ -->
   <div class="select-terminal-modal" id="selectTerminalModal">
     <div class="terminal-selector-card">
-      <h3 style="font-size: 18px; font-weight: 800; color: #fff;">Выберите дисплей для отправки</h3>
-      <p style="font-size: 13px; color: var(--text-muted);">Куда отправить QR-код оплаты?</p>
-      <div id="terminalSelectorList" style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto;">
-        <!-- Динамический рендер -->
-      </div>
+      <h3 style="font-size: 15px; font-weight: 800; color: #fff;">Выберите дисплей</h3>
+      <p style="font-size: 11px; color: var(--text-muted);">Куда отправить QR-код оплаты?</p>
+      <div id="terminalSelectorList" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;"></div>
       <button class="btn-secondary" onclick="closeTerminalSelector()">Отмена</button>
     </div>
   </div>
@@ -1014,11 +992,11 @@
     function renderTerminalSelector(displays) {
       const container = document.getElementById('terminalSelectorList');
       if (!displays || displays.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 10px;">Нет активных дисплеев. QR откроется на главном экране.</p>`;
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 10px;">Нет дисплеев.</p>`;
         setTimeout(() => {
           closeTerminalSelector();
           createQrTransaction(null);
-        }, 1000);
+        }, 800);
         return;
       }
 
@@ -1027,10 +1005,10 @@
         return `
           <div class="terminal-option-item ${isBlocked ? 'blocked' : ''}" data-id="${d.id}" data-blocked="${isBlocked}">
             <div>
-              <div style="font-weight: 700; color: #fff; font-size: 14px;">${d.name} ${isBlocked ? '🔒 (Заблокирован)' : ''}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">IP: ${d.ip || 'Неизвестно'}</div>
+              <div style="font-weight: 700; color: #fff; font-size: 12px;">${d.name} ${isBlocked ? '🔒' : ''}</div>
+              <div style="font-size: 10px; color: var(--text-muted);">IP: ${d.ip || 'Неизвестно'}</div>
             </div>
-            <div style="font-size: 12px; color: var(--primary); font-weight: 700;">${isBlocked ? 'Заблокирован' : 'Выбрать →'}</div>
+            <div style="font-size: 10px; color: var(--primary); font-weight: 700;">${isBlocked ? 'Заблокирован' : 'Выбрать →'}</div>
           </div>
         `;
       }).join('');
@@ -1132,7 +1110,7 @@
     function renderHistory(history) {
       const container = document.getElementById('historyListContainer');
       if (!history || history.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">История чеков пуста</p>`;
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">История пуста</p>`;
         return;
       }
 
@@ -1142,9 +1120,9 @@
         return `
           <div class="history-item">
             <div class="history-info">
-              <h4>${isTopup ? '➕ Пополнение счета' : '🧾 Чек оплаты'} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">#${item.id}</span></h4>
-              <p>${dateStr} • ${isTopup ? 'Пополнение' : 'Безналичный расчет'}</p>
-              ${!isTopup ? `<a href="/api/receipt/${item.id}" target="_blank" class="receipt-download-btn">📥 Скачать чек</a>` : ''}
+              <h4>${isTopup ? '➕ Пополнение' : '🧾 Оплата'} <span style="font-size: 9px; color: var(--text-muted);">#${item.id}</span></h4>
+              <p>${dateStr}</p>
+              ${!isTopup ? `<a href="/api/receipt/${item.id}" target="_blank" class="receipt-download-btn">📥 Чек</a>` : ''}
             </div>
             <div class="history-amount ${isTopup ? 'topup' : ''}">
               ${isTopup ? '+' : ''}${item.amount.toLocaleString('ru-RU')} ₽
@@ -1166,7 +1144,7 @@
     function renderDisplays(displays) {
       const container = document.getElementById('displaysListContainer');
       if (!displays || displays.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет подключенных дисплеев. Откройте /display в браузере.</p>`;
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет дисплеев</p>`;
         return;
       }
 
@@ -1175,7 +1153,7 @@
           <div class="display-card-top">
             <div class="display-name-group">
               <input type="text" class="display-title-input" value="${d.name}" id="input_name_${d.id}" onchange="updateDisplayName('${d.id}')">
-              ${d.isBlocked ? '<span style="font-size: 11px; background: rgba(239,68,68,0.2); color: #f87171; padding: 2px 8px; border-radius: 6px; font-weight: 700;">🔒 Заблокирован</span>' : '<span style="font-size: 11px; background: rgba(16,185,129,0.2); color: var(--primary); padding: 2px 8px; border-radius: 6px; font-weight: 700;">Активен</span>'}
+              ${d.isBlocked ? '<span style="font-size: 9px; background: rgba(239,68,68,0.2); color: #f87171; padding: 2px 5px; border-radius: 4px; font-weight: 700;">Блок</span>' : '<span style="font-size: 9px; background: rgba(16,185,129,0.2); color: var(--primary); padding: 2px 5px; border-radius: 4px; font-weight: 700;">Активен</span>'}
             </div>
             <div class="display-actions-group">
               <button class="icon-btn ${d.isBlocked ? '' : 'danger'}" title="${d.isBlocked ? 'Разблокировать' : 'Заблокировать'}" onclick="toggleBlockDisplay('${d.id}', ${!d.isBlocked})">
@@ -1208,9 +1186,7 @@
       })
       .then(res => res.json())
       .then(data => {
-        if (data.success) {
-          loadDisplays();
-        }
+        if (data.success) loadDisplays();
       }).catch(e => {});
     }
 
@@ -1237,25 +1213,12 @@
       errorModal.classList.add('active');
       
       if (data.reason === 'insufficient_funds') {
-        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств на балансе! Требуется: ${data.transaction.amount.toLocaleString('ru-RU')} ₽`;
+        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств! Требуется: ${data.transaction.amount.toLocaleString('ru-RU')} ₽`;
       }
     });
 
     socket.on('transaction_cancelled', () => {
       resetChargeView();
-    });
-
-    socket.on('update_displays', (displays) => {
-      const displaySelect = document.getElementById('displaySelect'); 
-      if (!displaySelect) return;
-      
-      displaySelect.innerHTML = '<option value="">Выберите дисплей</option>';
-      displays.forEach(display => {
-        const option = document.createElement('option');
-        option.value = display.id;
-        option.textContent = display.name;
-        displaySelect.appendChild(option);
-      });
     });
 
     document.addEventListener('keydown', (e) => {
@@ -1264,13 +1227,10 @@
       const qrPanel = document.getElementById('qrDisplayPanel');
 
       if (e.key === 'Enter') {
-        if (errModal.classList.contains('active')) {
-          closeErrorOverlay();
-        } else if (succModal.classList.contains('active')) {
-          closeSuccessOverlay();
-        } else if (qrPanel.classList.contains('active')) {
-          // Ожидание
-        } else {
+        if (errModal.classList.contains('active')) closeErrorOverlay();
+        else if (succModal.classList.contains('active')) closeSuccessOverlay();
+        else if (qrPanel.classList.contains('active')) {}
+        else {
           if (currentTab === 'charge') initiateTransactionFlow();
           else if (currentTab === 'topup') submitTopup();
         }
