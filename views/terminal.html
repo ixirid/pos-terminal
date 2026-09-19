@@ -989,7 +989,6 @@
       }
 
       container.innerHTML = displays.map(d => {
-        // Использование безопасной привязки через обработчики событий или экранированные строки
         const isBlocked = d.isBlocked;
         return `
           <div class="terminal-option-item ${isBlocked ? 'blocked' : ''}" data-id="${d.id}" data-blocked="${isBlocked}">
@@ -1002,7 +1001,6 @@
         `;
       }).join('');
 
-      // Навешиваем безопасные обработчики кликов вместо запекания в строки
       container.querySelectorAll('.terminal-option-item').forEach(item => {
         const isBlocked = item.getAttribute('data-blocked') === 'true';
         if (!isBlocked) {
