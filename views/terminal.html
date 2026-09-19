@@ -43,19 +43,21 @@
       overflow-x: hidden;
     }
 
+    /* АДАПТИВНАЯ ШАПКА */
     .pos-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 20px;
-      background: rgba(17, 24, 39, 0.85);
+      padding: 12px 20px;
+      background: rgba(17, 24, 39, 0.9);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border-color);
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
       flex-shrink: 0;
+      gap: 12px;
     }
 
-    .brand-title {
+    .header-left {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -66,17 +68,18 @@
       height: 40px;
       background: linear-gradient(135deg, var(--primary) 0%, #047857 100%);
       color: #fff;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 800;
       border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       box-shadow: 0 0 15px var(--primary-glow);
+      flex-shrink: 0;
     }
 
     .brand-text h1 {
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 800;
       letter-spacing: -0.5px;
       color: #fff;
@@ -92,11 +95,11 @@
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .client-link-btn {
-      padding: 8px 12px;
+      padding: 7px 12px;
       background: rgba(16, 185, 129, 0.12);
       border: 1px solid rgba(16, 185, 129, 0.3);
       color: var(--primary);
@@ -116,12 +119,13 @@
       align-items: center;
       gap: 6px;
       background: rgba(16, 185, 129, 0.1);
-      padding: 8px 10px;
+      padding: 7px 10px;
       border-radius: 20px;
       border: 1px solid rgba(16, 185, 129, 0.2);
       color: var(--primary);
       font-size: 12px;
       font-weight: 700;
+      white-space: nowrap;
     }
 
     .pulse-dot-green {
@@ -131,6 +135,33 @@
       border-radius: 50%;
       box-shadow: 0 0 8px var(--primary);
       animation: pulse 1.5s infinite;
+    }
+
+    /* Мобильная адаптация шапки */
+    @media (max-width: 768px) {
+      .pos-header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px 14px;
+        gap: 10px;
+      }
+      .header-top-mobile {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+      .header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        width: 100%;
+      }
+      .client-link-btn {
+        justify-content: center;
+        text-align: center;
+        padding: 8px 6px;
+      }
     }
 
     .pos-container {
@@ -286,7 +317,7 @@
       border: 1px solid var(--border-color);
       color: #fff;
       height: 100%;
-      min-height: 54px;
+      min-height: 52px;
       font-size: 24px;
       font-weight: 700;
       border-radius: 14px;
@@ -684,12 +715,19 @@
 </head>
 <body>
 
+  <!-- Адаптивная шапка с разбивкой для телефонов -->
   <header class="pos-header">
-    <div class="brand-title">
-      <div class="brand-icon">₽</div>
-      <div class="brand-text">
-        <h1>POS Терминал</h1>
-        <p id="serverInfoText">Подключение...</p>
+    <div class="header-top-mobile">
+      <div class="header-left">
+        <div class="brand-icon">₽</div>
+        <div class="brand-text">
+          <h1>POS Терминал</h1>
+          <p id="serverInfoText">Подключение...</p>
+        </div>
+      </div>
+      <div class="status-badge-online">
+        <span class="pulse-dot-green"></span>
+        <span>Онлайн</span>
       </div>
     </div>
 
@@ -700,10 +738,6 @@
       <a href="/display" target="_blank" class="client-link-btn">
         📺 Дисплей
       </a>
-      <div class="status-badge-online">
-        <span class="pulse-dot-green"></span>
-        <span>Онлайн</span>
-      </div>
     </div>
   </header>
 
