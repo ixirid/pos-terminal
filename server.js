@@ -1,351 +1,206 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const QRCode = require('qrcode');
 const path = require('path');
-const fs = require('fs');
-const cors = require('cors');
-
-let config = { serverIp: 'localhost', port: 3000, askTerminal: true };
-try {
-  const configPath = path.join(__dirname, 'config.json');
-  if (fs.existsSync(configPath)) {
-    const rawConfig = fs.readFileSync(configPath, 'utf8');
-    config = { ...config, ...JSON.parse(rawConfig) };
-  }
-} catch (err) {
-  console.error('Ошибка чтения config.json:', err.message);
-}
+const QRCode = require('qrcode');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] }
-});
+const io = new Server(server);
 
-app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-Memory Хранилище
-let state = {
-  balance: 5000, // Начальный баланс для тестов
-  activeTransaction: null,
-  history: [], // [{ id, type, amount, createdAt, paidAt, receiptId }]
-  displays: [] // [{ id, name, ip, isBlocked, lastSeen }]
+// База данных в памяти
+let clientBalance = 5000; // Начальный баланс клиента
+const activeDisplays = new Map(); // Хранилище активных дисплеев
+const receipts = []; // История чеков
+let currentTransaction = null;
+
+let settings = {
+  askEveryTime: false,
+  defaultDisplayId: null
 };
 
-function getPayUrl(req, transactionId) {
-  const protocol = req.protocol;
-  const host = req.get('host');
-  return `${protocol}://${host}/pay/${transactionId}`;
-}
+// Маршруты страниц
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'views', 'terminal.html')));
+app.get('/display', (req, res) => res.sendFile(path.join(__dirname, 'views', 'display.html')));
+app.get('/client', (req, res) => res.sendFile(path.join(__dirname, 'views', 'client.html')));
+app.get('/pay', (req, res) => res.sendFile(path.join(__dirname, 'views', 'payment.html')));
 
-// REST API
+// API
 app.get('/api/info', (req, res) => {
   res.json({
-    config,
-    balance: state.balance,
-    activeTransaction: state.activeTransaction,
-    history: state.history,
-    displays: state.displays
+    balance: clientBalance,
+    displays: Array.from(activeDisplays.values()),
+    settings: settings
   });
 });
 
-app.get('/api/shortcut/test', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.json({
-    success: true,
-    message: "Связь с сервером установлена!",
-    currentBalance: state.balance
-  });
+app.get('/api/receipts', (req, res) => {
+  res.json(receipts);
 });
 
-// Настройка "спрашивать каждый раз"
-app.post('/api/settings', (req, res) => {
-  if (req.body.askTerminal !== undefined) {
-    config.askTerminal = !!req.body.askTerminal;
-  }
-  res.json({ success: true, config });
-});
-
-// Управление дисплеями
-app.get('/api/displays', (req, res) => {
-  res.json({ displays: state.displays });
-});
-
-app.post('/api/displays/register', (req, res) => {
-  const { id, name } = req.body;
-  if (!id) return res.status(400).json({ error: 'ID дисплея обязателен' });
-
-  const clientIp = req.ip || req.connection.remoteAddress;
-  let display = state.displays.find(d => d.id === id);
-
-  if (display) {
-    display.ip = clientIp;
-    display.lastSeen = Date.now();
-  } else {
-    state.displays.push({
-      id,
-      name: name || `Дисплей ${id.slice(0, 4)}`,
-      ip: clientIp,
-      isBlocked: false,
-      lastSeen: Date.now()
-    });
-  }
-  io.emit('displays_updated', { displays: state.displays });
-  res.json({ success: true });
-});
-
-app.post('/api/displays/:id/update', (req, res) => {
-  const { id } = req.params;
-  const { name } = req.body;
-  const display = state.displays.find(d => d.id === id);
-  if (display && name) {
-    display.name = name;
-    io.emit('displays_updated', { displays: state.displays });
-  }
-  res.json({ success: true });
-});
-
-app.post('/api/displays/:id/block', (req, res) => {
-  const { id } = req.params;
-  const { isBlocked } = req.body;
-  const display = state.displays.find(d => d.id === id);
-  if (display) {
-    display.isBlocked = !!isBlocked;
-    io.emit('display_block_status', { id, isBlocked: display.isBlocked });
-    io.emit('displays_updated', { displays: state.displays });
-  }
-  res.json({ success: true });
-});
-
-// Создание транзакции
-app.post('/api/create-transaction', async (req, res) => {
-  try {
-    const amount = parseFloat(req.body.amount);
-    const targetDisplayId = req.body.targetDisplayId || null;
-
-    if (isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ error: 'Укажите корректную сумму' });
-    }
-
-    const transactionId = 'tx_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-    const payUrl = getPayUrl(req, transactionId);
-
-    const qrCodeDataUrl = await QRCode.toDataURL(payUrl, {
-      margin: 1,
-      color: { dark: '#171717', light: '#FFFFFF' },
-      width: 320
-    });
-
-    state.activeTransaction = {
-      id: transactionId,
-      amount,
-      status: 'pending',
-      payUrl,
-      qrCode: qrCodeDataUrl,
-      targetDisplayId,
-      createdAt: new Date().toISOString()
-    };
-
-    io.emit('transaction_created', state.activeTransaction);
-
-    res.json({ success: true, transaction: state.activeTransaction });
-  } catch (err) {
-    res.status(500).json({ error: 'Ошибка сервера при создании QR-кода' });
-  }
-});
-
-// Данные транзакции для страницы оплаты
-app.get('/api/transaction/:id', (req, res) => {
-  const { id } = req.params;
-  if (state.activeTransaction && state.activeTransaction.id === id) {
-    return res.json({
-      found: true,
-      transaction: state.activeTransaction,
-      clientBalance: state.balance,
-      balanceAvailable: state.balance >= state.activeTransaction.amount
-    });
-  }
-  
-  const historical = state.history.find(t => t.id === id);
-  if (historical) {
-    return res.json({
-      found: true,
-      transaction: historical,
-      clientBalance: state.balance,
-      balanceAvailable: false
-    });
-  }
-
-  res.status(404).json({ error: 'Транзакция не найдена или истекла' });
-});
-
-// Подтверждение оплаты
-app.post('/api/pay/:id', (req, res) => {
-  const { id } = req.params;
-
-  if (!state.activeTransaction || state.activeTransaction.id !== id) {
-    return res.status(404).json({ error: 'Активная транзакция не найдена' });
-  }
-
-  if (state.activeTransaction.status === 'paid') {
-    return res.status(400).json({ error: 'Транзакция уже оплачена' });
-  }
-
-  const amount = state.activeTransaction.amount;
-
-  if (amount > state.balance) {
-    const failedTx = { ...state.activeTransaction };
-    state.activeTransaction = null;
-
-    io.emit('payment_failed', {
-      transaction: failedTx,
-      reason: 'insufficient_funds',
-      balance: state.balance
-    });
-
-    return res.status(400).json({
-      error: `Недостаточно средств на балансе! Доступно: ${state.balance.toLocaleString('ru-RU')} ₽`
-    });
-  }
-
-  state.balance -= amount;
-  state.activeTransaction.status = 'paid';
-  state.activeTransaction.paidAt = new Date().toISOString();
-
-  const completedTx = { ...state.activeTransaction, type: 'payment' };
-
-  state.history.unshift(completedTx);
-  if (state.history.length > 50) state.history.pop();
-
-  state.activeTransaction = null;
-
-  io.emit('payment_success', {
-    transaction: completedTx,
-    newBalance: state.balance,
-    history: state.history
-  });
-
-  res.json({
-    success: true,
-    message: 'Оплата успешно произведена!',
-    transaction: completedTx,
-    newBalance: state.balance
-  });
-});
-
-// История чеков
-app.get('/api/history', (req, res) => {
-  res.json({ history: state.history });
-});
-
-// Скачивание уникального чека в текстовом формате
-app.get('/api/receipt/:id', (req, res) => {
-  const { id } = req.params;
-  const tx = state.history.find(t => t.id === id);
-  if (!tx) {
+app.get('/api/receipts/:id/download', (req, res) => {
+  const receipt = receipts.find(r => r.id === req.params.id);
+  if (!receipt) {
     return res.status(404).send('Чек не найден');
   }
-
+  
   const receiptText = `
 ========================================
-           ОФИЦИАЛЬНЫЙ ЧЕК SberPay
+           ЧЕК ОПЛАТЫ #${receipt.id}
 ========================================
-Идентификатор (ID): ${tx.id}
-Тип операции: Безналичная оплата
-Сумма: ${tx.amount.toLocaleString('ru-RU')} ₽
-Дата создания: ${tx.createdAt}
-Дата оплаты: ${tx.paidAt || tx.createdAt}
-Статус: Успешно оплачено
-Остаток на карте после оплаты: ${state.balance.toLocaleString('ru-RU')} ₽
+Дата: ${new Date(receipt.date).toLocaleString('ru-RU')}
+Тип операции: ${receipt.type === 'charge' ? 'Списание' : 'Пополнение'}
+Сумма: ${receipt.amount.toLocaleString('ru-RU')} ₽
+Остаток на карте: ${receipt.cardRemaining.toLocaleString('ru-RU')} ₽
+Статус: УСПЕШНО
 ========================================
-      Спасибо за использование SberPay!
-========================================
-  `.trim();
-
+Спасибо за покупку!
+`;
+  
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="receipt_${tx.id}.txt"`);
+  res.setHeader('Content-Disposition', `attachment; filename=receipt_${receipt.id}.txt`);
   res.send(receiptText);
 });
 
-// Отмена транзакции
-app.post('/api/cancel-transaction', (req, res) => {
-  if (state.activeTransaction) {
-    state.activeTransaction.status = 'cancelled';
-    io.emit('transaction_cancelled', { id: state.activeTransaction.id });
-    state.activeTransaction = null;
+app.post('/api/create-transaction', async (req, res) => {
+  const { amount, displayId } = req.body;
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: 'Некорректная сумма' });
   }
+
+  const txId = 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+  const payUrl = `${req.protocol}://${req.get('host')}/pay?tx=${txId}`;
+  
+  let qrCodeDataUri = '';
+  try {
+    qrCodeDataUri = await QRCode.toDataURL(payUrl);
+  } catch (err) {
+    qrCodeDataUri = '';
+  }
+
+  currentTransaction = {
+    id: txId,
+    amount: parseInt(amount, 10),
+    displayId: displayId || settings.defaultDisplayId,
+    qrCode: qrCodeDataUri,
+    status: 'pending'
+  };
+
+  // Отправляем транзакцию на дисплей
+  io.emit('new_transaction', currentTransaction);
+
+  res.json({ success: true, transaction: currentTransaction });
+});
+
+app.post('/api/pay-qr', (req, res) => {
+  const { txId } = req.body;
+  if (!currentTransaction || currentTransaction.id !== txId) {
+    return res.status(400).json({ success: false, message: 'Транзакция не найдена или истекла' });
+  }
+
+  const amount = currentTransaction.amount;
+  if (clientBalance < amount) {
+    io.emit('payment_failed', {
+      transaction: currentTransaction,
+      message: 'Недостаточно средств'
+    });
+    return res.status(400).json({ success: false, message: 'Недостаточно средств на карте' });
+  }
+
+  // Списание средств
+  clientBalance -= amount;
+  currentTransaction.status = 'success';
+
+  const receipt = {
+    id: 'REC-' + Math.floor(100000 + Math.random() * 900000),
+    amount: amount,
+    type: 'charge',
+    date: new Date().toISOString(),
+    cardRemaining: clientBalance
+  };
+  receipts.unshift(receipt);
+
+  io.emit('payment_success', {
+    transaction: currentTransaction,
+    receipt: receipt,
+    cardRemaining: clientBalance
+  });
+
+  const completedTx = currentTransaction;
+  currentTransaction = null;
+
+  res.json({ success: true, receipt: receipt, cardRemaining: clientBalance });
+});
+
+app.post('/api/topup', (req, res) => {
+  const amount = parseInt(req.body.amount, 10);
+  if (!amount || amount <= 0) return res.status(400).json({ error: 'Некорректная сумма' });
+
+  clientBalance += amount;
+  const receipt = {
+    id: 'REC-' + Math.floor(100000 + Math.random() * 900000),
+    amount: amount,
+    type: 'topup',
+    date: new Date().toISOString(),
+    cardRemaining: clientBalance
+  };
+  receipts.unshift(receipt);
+
+  io.emit('balance_updated', { balance: clientBalance });
+  res.json({ success: true, balance: clientBalance, receipt: receipt });
+});
+
+app.post('/api/cancel-transaction', (req, res) => {
+  currentTransaction = null;
+  io.emit('transaction_cancelled');
   res.json({ success: true });
 });
 
-// Пополнение баланса
-app.post('/api/topup', (req, res) => {
-  const amount = parseFloat(req.body.amount);
-
-  if (isNaN(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'Укажите корректную сумму' });
-  }
-
-  state.balance += amount;
-
-  const topupRecord = {
-    id: 'topup_' + Date.now(),
-    type: 'topup',
-    amount: amount,
-    createdAt: new Date().toISOString()
-  };
-
-  state.history.unshift(topupRecord);
-  if (state.history.length > 50) state.history.pop();
-
-  io.emit('balance_updated', {
-    newBalance: state.balance,
-    addedAmount: amount,
-    history: state.history
-  });
-
-  res.json({
-    success: true,
-    newBalance: state.balance,
-    message: `Баланс успешно пополнен на ${amount.toLocaleString('ru-RU')} ₽`
-  });
+app.post('/api/terminal/settings', (req, res) => {
+  settings = { ...settings, ...req.body };
+  io.emit('settings_updated', settings);
+  res.json({ success: true, settings });
 });
 
-// Страницы
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'terminal.html'));
-});
-
-app.get('/pay/:id', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'pay.html'));
-});
-
-app.get('/display', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'display.html'));
-});
-
-app.get('/client', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'client_portal.html'));
-});
-
+// Socket.io обработка дисплеев и терминалов
 io.on('connection', (socket) => {
-  socket.emit('init_state', {
-    activeTransaction: state.activeTransaction,
-    history: state.history,
-    displays: state.displays,
-    config
+  socket.on('register_display', (data) => {
+    activeDisplays.set(socket.id, {
+      id: socket.id,
+      name: data.name || 'Дисплей ' + socket.id.substring(0, 4),
+      isLocked: false
+    });
+    io.emit('update_displays', Array.from(activeDisplays.values()));
+  });
+
+  socket.on('rename_display', ({ id, name }) => {
+    if (activeDisplays.has(id)) {
+      activeDisplays.get(id).name = name;
+      io.emit('update_displays', Array.from(activeDisplays.values()));
+    }
+  });
+
+  socket.on('toggle_lock_display', ({ id }) => {
+    if (activeDisplays.has(id)) {
+      const disp = activeDisplays.get(id);
+      disp.isLocked = !disp.isLocked;
+      io.to(id).emit(disp.isLocked ? 'terminal_locked' : 'terminal_unlocked');
+      io.emit('update_displays', Array.from(activeDisplays.values()));
+    }
+  });
+
+  socket.on('disconnect', () => {
+    if (activeDisplays.has(socket.id)) {
+      activeDisplays.delete(socket.id);
+      io.emit('update_displays', Array.from(activeDisplays.values()));
+    }
   });
 });
 
-const PORT = process.env.PORT || config.port || 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`🚀 POS Терминал обновлен и запущен!`);
-  console.log(`🖥  Панель Терминала: http://localhost:${PORT}`);
-  console.log(`📺 Клиентский Дисплей: http://localhost:${PORT}/display`);
-  console.log(`👤 Портал Клиента: http://localhost:${PORT}/client`);
-  console.log(`====================================================`);
+  console.log(`Сервер запущен на порту ${PORT}`);
 });
