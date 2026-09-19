@@ -1,121 +1,89 @@
-/**
- * Управление звуковыми эффектами POS-терминала и Дисплея
- * Поддерживает успешную оплату и звуки ошибки на всех экранах.
- */
-class TerminalAudioController {
+class TerminalAudio {
   constructor() {
-    this.audioCtx = null;
+    this.ctx = null;
     this.isUnlocked = false;
-    this.setupiOSUnlocker();
+    this.initAudio();
   }
 
-  setupiOSUnlocker() {
-    const unlockEvents = ['touchstart', 'touchend', 'click', 'keydown'];
-    
-    const unlock = () => {
-      this.initContext();
-      if (this.audioCtx && this.audioCtx.state === 'suspended') {
-        this.audioCtx.resume().then(() => {
-          this.isUnlocked = true;
-        });
-      } else {
-        this.isUnlocked = true;
+  initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      this.ctx = new AudioContext();
+    }
+
+    // Функция разблокировки звука для iOS Safari
+    const unlockAudio = () => {
+      if (!this.ctx) return;
+
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume();
       }
-      unlockEvents.forEach(evt => document.removeEventListener(evt, unlock));
+
+      // Проигрываем короткий пустой звук для полного снятия блокировки iOS
+      try {
+        const buffer = this.ctx.createBuffer(1, 1, 22050);
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(this.ctx.destination);
+        source.start(0);
+      } catch (e) {}
+
+      this.isUnlocked = true;
+
+      // Удаляем слушатели после первой разблокировки
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
     };
 
-    unlockEvents.forEach(evt => {
-      document.addEventListener(evt, unlock, { passive: true });
-    });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
   }
 
-  initContext() {
-    if (!this.audioCtx) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) {
-        this.audioCtx = new AudioContextClass();
-      }
+  playTone(frequency, type, duration, gainValue = 0.1) {
+    if (!this.ctx) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(frequency, this.ctx.currentTime);
+
+      gain.gain.setValueAtTime(gainValue, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch (e) {
+      console.error('Audio play error:', e);
     }
   }
 
-  ensureActiveContext() {
-    this.initContext();
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
-    }
+  playTap() {
+    this.playTone(600, 'sine', 0.05, 0.05);
   }
-
-  playTap() {}
 
   playSuccess() {
-    try {
-      this.ensureActiveContext();
-      if (!this.audioCtx) return;
-
-      const now = this.audioCtx.currentTime;
-
-      const osc1 = this.audioCtx.createOscillator();
-      const gain1 = this.audioCtx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(1318.51, now);
-      gain1.gain.setValueAtTime(0.25, now);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-
-      osc1.connect(gain1);
-      gain1.connect(this.audioCtx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.22);
-
-      const osc2 = this.audioCtx.createOscillator();
-      const gain2 = this.audioCtx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1975.53, now + 0.1);
-      gain2.gain.setValueAtTime(0.3, now + 0.1);
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-
-      osc2.connect(gain2);
-      gain2.connect(this.audioCtx.destination);
-      osc2.start(now + 0.1);
-      osc2.stop(now + 0.45);
-    } catch (e) {
-      console.warn('Ошибка звука успеха:', e);
-    }
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    setTimeout(() => this.playTone(523.25, 'triangle', 0.1, 0.15), 0);    // До
+    setTimeout(() => this.playTone(659.25, 'triangle', 0.1, 0.15), 100);  // Ми
+    setTimeout(() => this.playTone(783.99, 'triangle', 0.2, 0.2), 200);   // Соль
   }
 
   playError() {
-    try {
-      this.ensureActiveContext();
-      if (!this.audioCtx) return;
-
-      const now = this.audioCtx.currentTime;
-
-      const osc1 = this.audioCtx.createOscillator();
-      const gain1 = this.audioCtx.createGain();
-      osc1.type = 'sawtooth';
-      osc1.frequency.setValueAtTime(220, now);
-      gain1.gain.setValueAtTime(0.2, now);
-      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
-
-      osc1.connect(gain1);
-      gain1.connect(this.audioCtx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.18);
-
-      const osc2 = this.audioCtx.createOscillator();
-      const gain2 = this.audioCtx.createGain();
-      osc2.type, osc2.type = 'sawtooth';
-      osc2.frequency.setValueAtTime(180, now + 0.22);
-      gain2.gain.setValueAtTime(0.25, now + 0.22);
-      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
-
-      osc2.connect(gain2);
-      gain2.connect(this.audioCtx.destination);
-      osc2.start(now + 0.22);
-      osc2.stop(now + 0.45);
-    } catch (e) {
-      console.warn('Ошибка звука ошибки:', e);
-    }
+    if (!this.ctx) return;
+    setTimeout(() => this.playTone(300, 'sawtooth', 0.15, 0.15), 0);
+    setTimeout(() => this.playTone(200, 'sawtooth', 0.25, 0.2), 120);
   }
 }
 
-window.terminalAudio = new TerminalAudioController();
+window.terminalAudio = new TerminalAudio();
