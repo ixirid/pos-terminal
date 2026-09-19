@@ -1235,6 +1235,27 @@
         backspace(currentTab);
       }
     });
+<!-- Ваш HTML-код терминала выше -->
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // Слушаем обновление списка подключенных дисплеев
+    socket.on('update_displays', (displays) => {
+      // Ищем <select> на странице терминала
+      const displaySelect = document.getElementById('displaySelect'); 
+      if (!displaySelect) return;
+      
+      // Очищаем и заново заполняем список
+      displaySelect.innerHTML = '<option value="">Выберите дисплей</option>';
+      displays.forEach(display => {
+        const option = document.createElement('option');
+        option.value = display.id;
+        option.textContent = display.name;
+        displaySelect.appendChild(option);
+      });
+    });
   </script>
 </body>
 </html>
