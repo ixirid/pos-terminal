@@ -29,6 +29,7 @@
       padding: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
@@ -36,6 +37,7 @@
       background-image: radial-gradient(circle at 50% 0%, #111e38 0%, var(--bg-base) 70%);
       color: var(--text-main);
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
@@ -45,91 +47,89 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 36px;
-      background: rgba(17, 24, 39, 0.75);
+      padding: 14px 20px;
+      background: rgba(17, 24, 39, 0.85);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border-color);
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
     }
 
     .brand-title {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
     }
 
     .brand-icon {
-      width: 48px;
-      height: 48px;
+      width: 40px;
+      height: 40px;
       background: linear-gradient(135deg, var(--primary) 0%, #047857 100%);
       color: #fff;
-      font-size: 26px;
+      font-size: 22px;
       font-weight: 800;
-      border-radius: 14px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 20px var(--primary-glow);
+      box-shadow: 0 0 15px var(--primary-glow);
     }
 
     .brand-text h1 {
-      font-size: 20px;
+      font-size: 17px;
       font-weight: 800;
       letter-spacing: -0.5px;
       color: #fff;
+      line-height: 1.2;
     }
 
     .brand-text p {
-      font-size: 13px;
+      font-size: 11px;
       color: var(--text-muted);
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 10px;
     }
 
     .client-link-btn {
-      padding: 10px 18px;
+      padding: 8px 12px;
       background: rgba(16, 185, 129, 0.12);
       border: 1px solid rgba(16, 185, 129, 0.3);
       color: var(--primary);
       border-radius: 10px;
       text-decoration: none;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 700;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      gap: 8px;
-    }
-
-    .client-link-btn:hover {
-      background: rgba(16, 185, 129, 0.22);
-      transform: translateY(-1px);
+      gap: 6px;
+      white-space: nowrap;
     }
 
     .status-badge-online {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background: rgba(16, 185, 129, 0.1);
-      padding: 8px 14px;
+      padding: 8px 10px;
       border-radius: 20px;
       border: 1px solid rgba(16, 185, 129, 0.2);
       color: var(--primary);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
     }
 
     .pulse-dot-green {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
       background: var(--primary);
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--primary);
+      box-shadow: 0 0 8px var(--primary);
       animation: pulse 1.5s infinite;
     }
 
@@ -137,16 +137,18 @@
       flex: 1;
       display: flex;
       justify-content: center;
-      align-items: center;
-      padding: 32px 20px;
+      align-items: stretch;
+      padding: 12px 14px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
     }
 
     .pos-main-panel {
       width: 100%;
-      max-width: 580px;
       background: var(--surface);
       border: 1px solid var(--border-color);
-      border-radius: 24px;
+      border-radius: 20px;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
       overflow: hidden;
       display: flex;
@@ -158,24 +160,25 @@
       grid-template-columns: 1fr 1fr;
       background: rgba(0, 0, 0, 0.25);
       border-bottom: 1px solid var(--border-color);
-      padding: 6px;
-      gap: 6px;
+      padding: 4px;
+      gap: 4px;
+      flex-shrink: 0;
     }
 
     .tab-btn {
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 14px;
-      font-size: 15px;
+      padding: 10px;
+      font-size: 14px;
       font-weight: 700;
-      border-radius: 14px;
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .tab-btn.active {
@@ -187,9 +190,11 @@
 
     .tab-content {
       display: none;
-      padding: 32px;
+      padding: 16px;
       flex-direction: column;
-      gap: 24px;
+      gap: 12px;
+      flex: 1;
+      justify-content: space-between;
     }
 
     .tab-content.active {
@@ -199,16 +204,17 @@
     .amount-display-wrapper {
       background: rgba(0, 0, 0, 0.3);
       border: 1px solid var(--border-color);
-      border-radius: 18px;
-      padding: 20px 24px;
+      border-radius: 16px;
+      padding: 12px 16px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 4px;
       box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+      flex-shrink: 0;
     }
 
     .amount-label {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
@@ -219,14 +225,14 @@
       display: flex;
       align-items: baseline;
       justify-content: flex-end;
-      gap: 8px;
+      gap: 6px;
     }
 
     .amount-input {
       background: transparent;
       border: none;
       color: #fff;
-      font-size: 48px;
+      font-size: 38px;
       font-weight: 900;
       text-align: right;
       width: 100%;
@@ -236,7 +242,7 @@
     }
 
     .amount-currency {
-      font-size: 36px;
+      font-size: 28px;
       font-weight: 800;
       color: var(--primary);
     }
@@ -244,130 +250,105 @@
     .quick-presets {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+      gap: 8px;
+      flex-shrink: 0;
     }
 
     .preset-btn {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       color: #fff;
-      padding: 12px 8px;
-      font-size: 15px;
+      padding: 10px 4px;
+      font-size: 13px;
       font-weight: 700;
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.15s ease;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-    }
-
-    .preset-btn:hover {
-      background: var(--surface-hover);
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
+      text-align: center;
     }
 
     .preset-btn:active {
-      transform: translateY(0);
+      transform: scale(0.95);
+      background: var(--surface-hover);
     }
 
     .numpad-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 8px;
+      flex: 1;
     }
 
     .num-btn {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       color: #fff;
-      height: 68px;
+      height: 100%;
+      min-height: 58px;
       font-size: 26px;
       font-weight: 700;
-      border-radius: 16px;
+      border-radius: 14px;
       cursor: pointer;
-      transition: all 0.12s ease;
+      transition: all 0.1s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-    }
-
-    .num-btn:hover {
-      background: var(--surface-hover);
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: scale(1.02);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .num-btn:active {
-      transform: scale(0.96);
+      transform: scale(0.93);
       background: #4b5563;
     }
 
     .num-btn.clear {
       color: #f87171;
-      background: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.2);
-    }
-
-    .num-btn.clear:hover {
-      background: rgba(239, 68, 68, 0.2);
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.25);
     }
 
     .num-btn.action {
       color: #60a5fa;
-      background: rgba(59, 130, 246, 0.1);
-      border-color: rgba(59, 130, 246, 0.2);
-    }
-
-    .num-btn.action:hover {
-      background: rgba(59, 130, 246, 0.2);
+      background: rgba(59, 130, 246, 0.12);
+      border-color: rgba(59, 130, 246, 0.25);
     }
 
     .btn-primary {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       border: none;
       color: #fff;
-      padding: 18px;
-      font-size: 18px;
+      padding: 15px;
+      font-size: 16px;
       font-weight: 800;
-      border-radius: 16px;
+      border-radius: 14px;
       cursor: pointer;
-      box-shadow: 0 8px 25px var(--primary-glow);
-      transition: all 0.2s ease;
+      box-shadow: 0 8px 20px var(--primary-glow);
+      transition: all 0.15s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 30px var(--primary-glow);
-      filter: brightness(1.08);
+      gap: 8px;
+      flex-shrink: 0;
+      width: 100%;
     }
 
     .btn-primary:active {
-      transform: translateY(0);
+      transform: scale(0.98);
+      filter: brightness(0.95);
     }
 
     .btn-secondary {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       color: var(--text-muted);
-      padding: 14px;
-      font-size: 16px;
+      padding: 12px;
+      font-size: 15px;
       font-weight: 700;
-      border-radius: 16px;
+      border-radius: 14px;
       cursor: pointer;
       transition: all 0.2s ease;
       width: 100%;
-    }
-
-    .btn-secondary:hover {
-      background: var(--surface-hover);
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .qr-display-panel, .success-card {
@@ -376,7 +357,8 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 12px 0;
+      padding: 10px 0;
+      flex: 1;
     }
 
     .qr-display-panel.active, .success-card.active {
@@ -387,7 +369,7 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(9, 13, 22, 0.92);
+      background: rgba(9, 13, 22, 0.95);
       backdrop-filter: blur(12px);
       z-index: 100;
       flex-direction: column;
@@ -403,66 +385,66 @@
 
     .qr-box {
       background: #ffffff;
-      padding: 20px;
-      border-radius: 24px;
-      margin: 24px 0;
+      padding: 16px;
+      border-radius: 20px;
+      margin: 16px 0;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
     }
 
     .qr-box img {
-      width: 240px;
-      height: 240px;
+      width: 210px;
+      height: 210px;
       display: block;
     }
 
     .check-icon-circle {
-      width: 90px;
-      height: 90px;
+      width: 80px;
+      height: 80px;
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: #fff;
-      font-size: 46px;
+      font-size: 40px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 24px;
-      box-shadow: 0 0 40px var(--primary-glow);
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px var(--primary-glow);
     }
 
     .error-circle {
-      width: 90px;
-      height: 90px;
+      width: 80px;
+      height: 80px;
       background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
       color: #fff;
-      font-size: 46px;
+      font-size: 40px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 24px;
-      box-shadow: 0 0 40px var(--error-glow);
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px var(--error-glow);
     }
 
     .qr-status-badge {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       background: rgba(16, 185, 129, 0.12);
-      padding: 10px 20px;
+      padding: 8px 16px;
       border-radius: 30px;
       border: 1px solid rgba(16, 185, 129, 0.3);
       color: var(--primary);
       font-weight: 700;
-      font-size: 15px;
-      margin-bottom: 16px;
+      font-size: 14px;
+      margin-bottom: 12px;
     }
 
     .pulse-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       background: var(--primary);
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--primary);
+      box-shadow: 0 0 8px var(--primary);
       animation: pulse 1.5s infinite;
     }
 
@@ -470,63 +452,6 @@
       0% { transform: scale(0.95); opacity: 0.8; }
       50% { transform: scale(1.35); opacity: 1; }
       100% { transform: scale(0.95); opacity: 0.8; }
-    }
-
-    /* Мобильная адаптация (сохраняет полный десктопный вид без поломок) */
-    @media (max-width: 640px) {
-      body {
-        overflow-y: auto;
-      }
-      .pos-header {
-        padding: 12px 16px;
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start;
-      }
-      .header-actions {
-        width: 100%;
-        justify-content: space-between;
-      }
-      .pos-container {
-        padding: 12px 8px;
-        align-items: flex-start;
-      }
-      .pos-main-panel {
-        border-radius: 16px;
-        max-width: 100%;
-      }
-      .tab-content {
-        padding: 16px;
-        gap: 14px;
-      }
-      .amount-display-wrapper {
-        padding: 12px 16px;
-      }
-      .amount-input {
-        font-size: 36px;
-      }
-      .amount-currency {
-        font-size: 28px;
-      }
-      .num-btn {
-        height: 52px;
-        font-size: 22px;
-      }
-      .quick-presets {
-        gap: 6px;
-      }
-      .preset-btn {
-        padding: 10px 4px;
-        font-size: 13px;
-      }
-      .btn-primary {
-        padding: 14px;
-        font-size: 16px;
-      }
-      .qr-box img {
-        width: 190px;
-        height: 190px;
-      }
     }
   </style>
 </head>
@@ -537,13 +462,13 @@
       <div class="brand-icon">₽</div>
       <div class="brand-text">
         <h1>POS Терминал</h1>
-        <p id="serverInfoText">Подключение к кассе...</p>
+        <p id="serverInfoText">Подключение...</p>
       </div>
     </div>
 
     <div class="header-actions">
       <a href="/display" target="_blank" class="client-link-btn">
-        📺 Экран клиента
+        📺 Дисплей
       </a>
       <div class="status-badge-online">
         <span class="pulse-dot-green"></span>
@@ -560,7 +485,7 @@
       </nav>
 
       <div class="tab-content active" id="tabCharge">
-        <div id="chargeFormView" style="display: flex; flex-direction: column; gap: 24px;">
+        <div id="chargeFormView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма к оплате</span>
             <div class="amount-input-container">
@@ -570,10 +495,10 @@
           </div>
 
           <div class="quick-presets">
-            <button class="preset-btn" onclick="addPreset('charge', 100)">+100 ₽</button>
-            <button class="preset-btn" onclick="addPreset('charge', 500)">+500 ₽</button>
-            <button class="preset-btn" onclick="addPreset('charge', 1000)">+1 000 ₽</button>
-            <button class="preset-btn" onclick="addPreset('charge', 5000)">+5 000 ₽</button>
+            <button class="preset-btn" onclick="addPreset('charge', 100)">+100</button>
+            <button class="preset-btn" onclick="addPreset('charge', 500)">+500</button>
+            <button class="preset-btn" onclick="addPreset('charge', 1000)">+1 000</button>
+            <button class="preset-btn" onclick="addPreset('charge', 5000)">+5 000</button>
           </div>
 
           <div class="numpad-grid">
@@ -599,7 +524,7 @@
             <span class="pulse-dot"></span>
             <span>Ожидание оплаты клиентом...</span>
           </div>
-          <h2 style="font-size: 24px; margin-bottom: 20px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
+          <h2 style="font-size: 20px; margin-bottom: 12px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
           <div class="qr-box">
             <img id="qrImage" src="" alt="QR-код">
           </div>
@@ -608,14 +533,14 @@
 
         <div class="success-card" id="paymentSuccessCard">
           <div class="check-icon-circle">✓</div>
-          <h2 style="font-size: 32px; margin-bottom: 10px; color: #fff;">Оплачено успешно!</h2>
-          <p style="color: var(--text-muted); font-size: 18px; margin-bottom: 28px;">Сумма: <strong id="successAmountText" style="color: #fff;">0 ₽</strong></p>
-          <button class="btn-primary" onclick="resetChargeView()" style="width: 100%;">Новая операция [Enter]</button>
+          <h2 style="font-size: 26px; margin-bottom: 8px; color: #fff;">Оплачено успешно!</h2>
+          <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 20px;">Сумма: <strong id="successAmountText" style="color: #fff;">0 ₽</strong></p>
+          <button class="btn-primary" onclick="resetChargeView()">Новая операция [Enter]</button>
         </div>
       </div>
 
       <div class="tab-content" id="tabTopup">
-        <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма пополнения</span>
             <div class="amount-input-container">
@@ -625,10 +550,10 @@
           </div>
 
           <div class="quick-presets">
-            <button class="preset-btn" onclick="addPreset('topup', 100)">+100 ₽</button>
-            <button class="preset-btn" onclick="addPreset('topup', 500)">+500 ₽</button>
-            <button class="preset-btn" onclick="addPreset('topup', 1000)">+1 000 ₽</button>
-            <button class="preset-btn" onclick="addPreset('topup', 5000)">+5 000 ₽</button>
+            <button class="preset-btn" onclick="addPreset('topup', 100)">+100</button>
+            <button class="preset-btn" onclick="addPreset('topup', 500)">+500</button>
+            <button class="preset-btn" onclick="addPreset('topup', 1000)">+1 000</button>
+            <button class="preset-btn" onclick="addPreset('topup', 5000)">+5 000</button>
           </div>
 
           <div class="numpad-grid">
@@ -654,12 +579,12 @@
 
   <div class="error-overlay" id="errorOverlay">
     <div class="error-circle">✕</div>
-    <h2 style="color: #fff; margin-bottom: 10px; font-size: 28px;">Ошибка оплаты</h2>
-    <p class="error-subtitle" style="color: var(--text-muted); margin-bottom: 20px; font-size: 16px;">Недостаточно средств на балансе карты!</p>
-    <div class="error-details" style="color: #fff; margin-bottom: 30px; font-size: 18px;">
+    <h2 style="color: #fff; margin-bottom: 8px; font-size: 24px;">Ошибка оплаты</h2>
+    <p class="error-subtitle" style="color: var(--text-muted); margin-bottom: 16px; font-size: 15px;">Недостаточно средств на балансе карты!</p>
+    <div class="error-details" style="color: #fff; margin-bottom: 24px; font-size: 16px;">
       <div>Требуется: <span id="errorRequiredAmount" style="color: var(--error); font-weight: 800;">0 ₽</span></div>
     </div>
-    <button class="btn-primary" onclick="closeErrorOverlay()" style="background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); max-width: 320px; width: 100%; box-shadow: 0 8px 25px var(--error-glow);">Закрыть [Enter]</button>
+    <button class="btn-primary" onclick="closeErrorOverlay()" style="background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
   </div>
 
   <script src="/js/audio.js"></script>
