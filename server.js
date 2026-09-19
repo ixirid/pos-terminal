@@ -52,13 +52,62 @@ app.get('/api/info', (req, res) => {
   });
 });
 
-app.get('/api/shortcut/test', (req, res) => {
+// Обработка оплаты активной транзакции через Быстрые команды iOS (NFC)
+app.get('/api/shortcut/pay-active', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+
+  // Проверяем, есть ли активная транзакция для оплаты
+  if (!state.activeTransaction) {
+    return res.status(404).json({
+      success: false,
+      error: 'Нет активной транзакции для оплаты'
+    });
+  }
+
+  const amount = state.activeTransaction.amount;
+
+  // Проверяем баланс
+  if (amount > state.balance) {
+    const failedTx = { ...state.activeTransaction };
+    state.activeTransaction = null;
+
+    io.emit('payment_failed', {
+      transaction: failedTx,
+      reason: 'insufficient_funds',
+      balance: state.balance
+    });
+
+    return res.status(400).json({
+      success: false,
+      error: 'Недостаточно средств на балансе'
+    });
+  }
+
+  // Проводим оплату
+  state.balance -= amount;
+  state.activeTransaction.status = 'paid';
+  state.activeTransaction.paidAt = new Date().toISOString();
+
+  const completedTx = { ...state.activeTransaction, type: 'payment' };
+
+  state.history.unshift(completedTx);
+  if (state.history.length > 50) state.history.pop();
+
+  state.activeTransaction = null;
+
+  // Уведомляем интерфейс
+  io.emit('payment_success', {
+    transaction: completedTx,
+    newBalance: state.balance,
+    history: state.history
+  });
+
   res.json({
     success: true,
-    message: "Связь с сервером установлена!",
-    currentBalance: state.balance
+    message: 'Успешно оплачено через Быструю команду!',
+    transaction: completedTx,
+    newBalance: state.balance
   });
 });
 
