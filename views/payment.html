@@ -2,169 +2,47 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Оплата по QR-коду — SberPay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Подтверждение оплаты</title>
   <style>
-    :root {
-      --primary: #10b981;
-      --primary-glow: rgba(16, 185, 129, 0.35);
-      --primary-dark: #059669;
-      --error: #ef4444;
-      --bg-base: #090d16;
-      --surface: #111827;
-      --surface-card: #1f2937;
-      --border-color: rgba(255, 255, 255, 0.08);
-      --text-main: #f9fafb;
-      --text-muted: #9ca3af;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      background-color: var(--bg-base);
-      background-image: radial-gradient(circle at 50% 0%, #111e38 0%, var(--bg-base) 70%);
-      color: var(--text-main);
-      min-height: 100vh;
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .pay-card {
-      background: var(--surface);
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      padding: 28px;
-      width: 100%;
-      max-width: 400px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
-    }
-
-    .amount-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 6px;
-    }
-
-    .amount-value {
-      font-size: 38px;
-      font-weight: 900;
-      color: #fff;
-      margin-bottom: 20px;
-    }
-
-    .btn-pay {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      border: none;
-      color: #fff;
-      padding: 16px;
-      font-size: 16px;
-      font-weight: 800;
-      border-radius: 16px;
-      cursor: pointer;
-      width: 100%;
-      box-shadow: 0 10px 25px var(--primary-glow);
-      transition: all 0.2s;
-      margin-bottom: 12px;
-    }
-
-    .btn-pay:active {
-      transform: scale(0.98);
-    }
-
-    .back-home-btn {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
-      padding: 12px;
-      font-size: 14px;
-      font-weight: 700;
-      border-radius: 14px;
-      cursor: pointer;
-      width: 100%;
-      text-decoration: none;
-      display: block;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: #090d16; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+    .box { background: #111827; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 32px; width: 100%; max-width: 400px; text-align: center; }
+    .btn { background: linear-gradient(135deg, #10b981, #059669); border: none; color: #fff; width: 100%; padding: 16px; border-radius: 14px; font-size: 18px; font-weight: 800; margin-top: 20px; cursor: pointer; }
+    .btn-sec { background: #374151; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <div class="pay-card" id="payCardContainer">
-    <div class="amount-title">Сумма к оплате</div>
-    <div class="amount-value" id="txAmount">0 ₽</div>
-    
-    <div id="clientBalanceInfo" style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
-      Баланс на карте: <strong id="clientBalanceVal" style="color: #fff;">0 ₽</strong>
-    </div>
+  <div class="box" id="payBox">
+    <h2>Оплата счета</h2>
+    <p style="color: #9ca3af; margin-top: 8px;">Код транзакции: <span id="txIdText">...</span></p>
+    <button class="btn" onclick="processPay()">Подтвердить и оплатить</button>
+  </div>
 
-    <button class="btn-pay" id="payBtn" onclick="confirmPayment()">Подтвердить оплату</button>
-    <a href="/client" class="back-home-btn">← Вернуться на главную портала</a>
+  <div class="box" id="resultBox" style="display: none;">
+    <div style="font-size: 60px; color: #10b981;">✓</div>
+    <h2>Успешно оплачено!</h2>
+    <button class="btn btn-sec" onclick="window.location.href='/client'">Вернуться в кабинет</button>
   </div>
 
   <script>
-    const txId = window.location.pathname.split('/').pop();
+    const urlParams = new URLSearchParams(window.location.search);
+    const txId = urlParams.get('tx');
+    document.getElementById('txIdText').textContent = txId || 'Не указан';
 
-    fetch(`/api/transaction/${txId}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.found && data.transaction) {
-          document.getElementById('txAmount').textContent = data.transaction.amount.toLocaleString('ru-RU') + ' ₽';
-          if (data.clientBalance !== undefined) {
-            document.getElementById('clientBalanceVal').textContent = data.clientBalance.toLocaleString('ru-RU') + ' ₽';
-          }
-        } else {
-          document.getElementById('payCardContainer').innerHTML = `<h2 style="color: #fff; font-size: 20px;">Транзакция не найдена или уже завершена</h2><br><a href="/client" class="back-home-btn">На главную</a>`;
-        }
-      })
-      .catch(e => {
-        document.getElementById('payCardContainer').innerHTML = `<h2 style="color: #fff; font-size: 20px;">Ошибка загрузки транзакции</h2>`;
-      });
-
-    function confirmPayment() {
-      const btn = document.getElementById('payBtn');
-      btn.disabled = true;
-      btn.textContent = 'Обработка...';
-
-      fetch(`/api/pay/${txId}`, {
+    function processPay() {
+      fetch('/api/pay-qr', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      })
-      .then(res => res.json())
-      .then(data => {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ txId })
+      }).then(r => r.json()).then(data => {
         if (data.success) {
-          document.getElementById('payCardContainer').innerHTML = `
-            <div style="font-size: 50px; color: var(--primary); margin-bottom: 12px;">✓</div>
-            <h2 style="font-size: 24px; color: #fff; margin-bottom: 8px;">Оплата успешна!</h2>
-            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Остаток на карте: <strong style="color: var(--primary);">${data.newBalance.toLocaleString('ru-RU')} ₽</strong></p>
-            <a href="/client" class="back-home-btn" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: #fff;">Вернуться на главную</a>
-          `;
+          document.getElementById('payBox').style.display = 'none';
+          document.getElementById('resultBox').style.display = 'block';
         } else {
-          alert(data.error || 'Ошибка оплаты');
-          btn.disabled = false;
-          btn.textContent = 'Подтвердить оплату';
+          alert(data.message || 'Ошибка оплаты');
         }
-      })
-      .catch(err => {
-        alert('Ошибка связи с сервером');
-        btn.disabled = false;
-        btn.textContent = 'Подтвердить оплату';
       });
     }
   </script>
