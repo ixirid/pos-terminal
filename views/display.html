@@ -616,13 +616,16 @@
 
   </main>
 
- <script src="/js/audio.js"></script>
+<script src="/js/audio.js"></script>
   <script>
     const socket = io();
+    socket.emit('register_display'); // <--- ВСТАВЬТЕ ЭТУ СТРОКУ СЮДА
+
     let displayId = null;
 
     socket.on('connect', () => {
       displayId = socket.id;
+      socket.emit('register_display'); // <--- И ДЛЯ НАДЕЖНОСТИ СЮДА
     });
 
     const stateIdle = document.getElementById('state-idle');
