@@ -386,6 +386,7 @@ io.on('connection', (socket) => {
     activeTransaction: state.activeTransaction,
     history: state.history,
     displays: state.displays,
+    balance: state.balance, // <--- ДОБАВЬТЕ ЭТУ СТРОКУ
     config
   });
 
