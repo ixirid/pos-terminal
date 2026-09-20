@@ -3,19 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>POS Терминал — Облачная и Автономная версия</title>
+  <title>POS Терминал Кассы — Облачная Версия</title>
   
-  <!-- Подключение Supabase SDK -->
+  <!-- Supabase JS Client library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+  
   <style>
     :root {
       --primary: #10b981;
       --primary-glow: rgba(16, 185, 129, 0.35);
       --primary-dark: #059669;
       --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.35);
-      --warning: #f59e0b;
       --error: #ef4444;
       --error-glow: rgba(239, 68, 68, 0.35);
       --bg-base: #090d16;
@@ -27,19 +25,12 @@
       --text-muted: #9ca3af;
     }
 
-    html, body {
-      touch-action: manipulation;
-      -webkit-text-size-adjust: 100%;
-    }
-
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -51,16 +42,15 @@
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-      overscroll-behavior-y: none;
+      overflow-x: hidden;
     }
 
     .pos-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 18px;
-      background: rgba(17, 24, 39, 0.9);
+      padding: 14px 20px;
+      background: rgba(17, 24, 39, 0.85);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border-color);
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -88,9 +78,9 @@
     }
 
     .brand-text h1 {
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 800;
-      letter-spacing: -0.3px;
+      letter-spacing: -0.5px;
       color: #fff;
       line-height: 1.2;
     }
@@ -107,58 +97,40 @@
       gap: 10px;
     }
 
-    .status-badge {
+    .status-badge-online {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       background: rgba(16, 185, 129, 0.1);
-      padding: 6px 12px;
+      padding: 8px 12px;
       border-radius: 20px;
       border: 1px solid rgba(16, 185, 129, 0.25);
       color: var(--primary);
       font-size: 12px;
       font-weight: 700;
-      transition: all 0.3s ease;
     }
 
-    .status-badge.offline {
+    .status-badge-offline {
       background: rgba(245, 158, 11, 0.1);
-      border-color: rgba(245, 158, 11, 0.3);
-      color: var(--warning);
+      border-color: rgba(245, 158, 11, 0.25);
+      color: #f59e0b;
     }
 
-    .pulse-dot {
-      width: 7px;
-      height: 7px;
+    .pulse-dot-green {
+      width: 6px;
+      height: 6px;
       background: var(--primary);
       border-radius: 50%;
       box-shadow: 0 0 8px var(--primary);
       animation: pulse 1.5s infinite;
     }
 
-    .status-badge.offline .pulse-dot {
-      background: var(--warning);
-      box-shadow: 0 0 8px var(--warning);
-    }
-
-    .btn-header-icon {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      color: #fff;
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 16px;
-      transition: all 0.2s ease;
-    }
-
-    .btn-header-icon:active {
-      transform: scale(0.92);
-      background: var(--surface-hover);
+    .pulse-dot-amber {
+      width: 6px;
+      height: 6px;
+      background: #f59e0b;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #f59e0b;
     }
 
     .pos-container {
@@ -167,7 +139,7 @@
       justify-content: center;
       align-items: stretch;
       padding: 12px 14px;
-      max-width: 520px;
+      max-width: 640px;
       margin: 0 auto;
       width: 100%;
     }
@@ -184,6 +156,39 @@
       position: relative;
     }
 
+    .balance-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .balance-info label {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .balance-value {
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .cloud-sync-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      background: rgba(16, 185, 129, 0.15);
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
     .tabs-header {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -198,16 +203,16 @@
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 10px 2px;
+      padding: 10px 4px;
       font-size: 12px;
       font-weight: 700;
-      border-radius: 10px;
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 3px;
+      gap: 4px;
     }
 
     .tab-btn.active {
@@ -224,35 +229,10 @@
       gap: 12px;
       flex: 1;
       justify-content: space-between;
-      overflow-y: auto;
-      touch-action: pan-y;
-      overscroll-behavior-y: contain;
     }
 
     .tab-content.active {
       display: flex;
-    }
-
-    .balance-card {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 10px 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .balance-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
-    .balance-val {
-      font-size: 18px;
-      font-weight: 800;
-      color: #fff;
     }
 
     .amount-display-wrapper {
@@ -268,7 +248,7 @@
     }
 
     .amount-label {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
@@ -286,7 +266,7 @@
       background: transparent;
       border: none;
       color: #fff;
-      font-size: 36px;
+      font-size: 38px;
       font-weight: 900;
       text-align: right;
       width: 100%;
@@ -296,7 +276,7 @@
     }
 
     .amount-currency {
-      font-size: 26px;
+      font-size: 28px;
       font-weight: 800;
       color: var(--primary);
     }
@@ -304,7 +284,7 @@
     .quick-presets {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
+      gap: 8px;
       flex-shrink: 0;
     }
 
@@ -312,12 +292,13 @@
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       color: #fff;
-      padding: 8px 4px;
-      font-size: 12px;
+      padding: 10px 4px;
+      font-size: 13px;
       font-weight: 700;
-      border-radius: 10px;
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.15s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
       text-align: center;
     }
 
@@ -338,10 +319,10 @@
       border: 1px solid var(--border-color);
       color: #fff;
       height: 100%;
-      min-height: 48px;
-      font-size: 22px;
+      min-height: 54px;
+      font-size: 24px;
       font-weight: 700;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
       transition: all 0.1s ease;
       display: flex;
@@ -367,29 +348,23 @@
       border-color: rgba(59, 130, 246, 0.25);
     }
 
-    .action-button-group {
-      display: flex;
-      gap: 8px;
-      flex-shrink: 0;
-      width: 100%;
-    }
-
     .btn-primary {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       border: none;
       color: #fff;
       padding: 14px;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 800;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
       box-shadow: 0 8px 20px var(--primary-glow);
       transition: all 0.15s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      flex: 1;
+      gap: 8px;
+      flex-shrink: 0;
+      width: 100%;
     }
 
     .btn-primary:active {
@@ -397,178 +372,17 @@
       filter: brightness(0.95);
     }
 
-    .btn-ask-display {
-      background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
-      border: none;
-      color: #fff;
-      padding: 14px;
-      font-size: 14px;
-      font-weight: 800;
-      border-radius: 12px;
-      cursor: pointer;
-      box-shadow: 0 8px 20px var(--accent-glow);
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      flex: 1;
-    }
-
-    .btn-ask-display:active {
-      transform: scale(0.98);
-    }
-
     .btn-secondary {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 10px 14px;
-      font-size: 13px;
+      color: var(--text-muted);
+      padding: 12px;
+      font-size: 14px;
       font-weight: 700;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
       transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    .btn-secondary:active {
-      background: var(--surface-hover);
-    }
-
-    .settings-section {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .settings-section h3 {
-      font-size: 14px;
-      font-weight: 800;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .setting-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .setting-item:last-child {
-      border-bottom: none;
-    }
-
-    .setting-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .setting-desc {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    /* Tumbler Switch */
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 24px;
-    }
-
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #374151;
-      transition: .2s;
-      border-radius: 24px;
-      border: 1px solid var(--border-color);
-    }
-
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 2px;
-      bottom: 2px;
-      background-color: white;
-      transition: .2s;
-      border-radius: 50%;
-    }
-
-    input:checked + .slider {
-      background-color: var(--primary);
-    }
-
-    input:checked + .slider:before {
-      transform: translateX(20px);
-    }
-
-    .history-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      overflow-y: auto;
-      flex: 1;
-      max-height: 400px;
-      padding-right: 4px;
-      touch-action: pan-y;
-      overscroll-behavior-y: contain;
-    }
-
-    .history-item {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 10px 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .history-info h4 {
-      font-size: 13px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .history-info p {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .history-amount {
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--primary);
-    }
-
-    .history-amount.topup {
-      color: var(--accent);
+      width: 100%;
     }
 
     .fullscreen-overlay {
@@ -584,12 +398,10 @@
       padding: 24px;
       text-align: center;
       animation: fadeInOverlay 0.2s ease-out;
-      pointer-events: none;
     }
 
     .fullscreen-overlay.active {
       display: flex !important;
-      pointer-events: auto;
     }
 
     @keyframes fadeInOverlay {
@@ -598,97 +410,95 @@
     }
 
     .check-icon-circle {
-      width: 80px;
-      height: 80px;
+      width: 90px;
+      height: 90px;
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: #fff;
-      font-size: 40px;
+      font-size: 45px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 16px;
-      box-shadow: 0 0 35px var(--primary-glow);
+      margin-bottom: 20px;
+      box-shadow: 0 0 40px var(--primary-glow);
     }
 
     .error-circle {
-      width: 80px;
-      height: 80px;
+      width: 90px;
+      height: 90px;
       background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
       color: #fff;
-      font-size: 40px;
+      font-size: 45px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 16px;
-      box-shadow: 0 0 35px var(--error-glow);
+      margin-bottom: 20px;
+      box-shadow: 0 0 40px var(--error-glow);
     }
 
-    .display-wait-circle {
-      width: 80px;
-      height: 80px;
-      background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
-      color: #fff;
-      font-size: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-      box-shadow: 0 0 35px var(--accent-glow);
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(0.95); opacity: 0.85; }
-      50% { transform: scale(1.08); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.85; }
-    }
-
-    /* Toast Notification */
-    .toast-container {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 2000;
+    .history-list {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      pointer-events: none;
+      overflow-y: auto;
+      flex: 1;
+      max-height: 420px;
+      padding-right: 4px;
     }
 
-    .toast-msg {
+    .history-item {
       background: var(--surface-card);
-      border: 1px solid var(--accent);
-      color: #fff;
-      padding: 10px 18px;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: 700;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-      animation: toastIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Interactive Customer Display Simulator Modal */
-    .customer-sim-card {
-      background: #111827;
-      border: 2px solid var(--accent);
-      border-radius: 20px;
-      padding: 24px;
-      max-width: 360px;
-      width: 100%;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 12px 16px;
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
       align-items: center;
-      gap: 16px;
-      box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+      gap: 12px;
+    }
+
+    .history-info h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .history-info p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .history-amount {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--primary);
+      text-align: right;
+    }
+
+    .history-amount.topup {
+      color: var(--accent);
+    }
+
+    .config-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      width: 100%;
+      outline: none;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.35); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
     }
   </style>
 </head>
@@ -699,263 +509,169 @@
       <div class="brand-icon">₽</div>
       <div class="brand-text">
         <h1>POS Терминал</h1>
-        <p id="terminalIdSubtitle">Терминал #1</p>
+        <p id="cloudSyncSubtext">Синхронизация баланса...</p>
       </div>
     </div>
 
     <div class="header-actions">
-      <div class="status-badge" id="statusBadge">
-        <span class="pulse-dot"></span>
-        <span id="statusText">Проверка связи...</span>
+      <div id="statusBadge" class="status-badge-online">
+        <span id="statusBadgeDot" class="pulse-dot-green"></span>
+        <span id="statusBadgeText">Облако</span>
       </div>
-      <button class="btn-header-icon" title="Настройки Терминала и Дисплея" onclick="switchTab('settings')">⚙️</button>
     </div>
   </header>
 
   <main class="pos-container">
     <section class="pos-main-panel">
+
+      <!-- BALANCE STATUS BANNER -->
+      <div class="balance-banner">
+        <div class="balance-info">
+          <label>Баланс клиента</label>
+          <div class="balance-value" id="currentBalanceDisplay">0 ₽</div>
+        </div>
+        <div class="cloud-sync-badge" id="cloudStateBadge">☁️ Supabase Sync</div>
+      </div>
+
+      <!-- TABS NAVIGATION -->
       <nav class="tabs-header">
-        <button class="tab-btn active" id="tabBtnCharge" onclick="switchTab('charge')">💸 Оплата</button>
-        <button class="tab-btn" id="tabBtnTopup" onclick="switchTab('topup')">➕ Баланс</button>
+        <button class="tab-btn active" id="tabBtnCharge" onclick="switchTab('charge')">💸 Списание</button>
+        <button class="tab-btn" id="tabBtnTopup" onclick="switchTab('topup')">➕ Пополнение</button>
         <button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">📜 Чеки</button>
-        <button class="tab-btn" id="tabBtnSettings" onclick="switchTab('settings')">🖥️ Дисплеи</button>
+        <button class="tab-btn" id="tabBtnSettings" onclick="switchTab('settings')">⚙️ Облако</button>
       </nav>
 
-      <!-- ВКЛАДКА 1: ОПЛАТА -->
       <div class="tab-content active" id="tabCharge">
-        <div class="balance-card">
-          <span class="balance-label">Остаток на счете:</span>
-          <span class="balance-val" id="chargeBalanceDisplay">0 ₽</span>
-        </div>
-
-        <div class="amount-display-wrapper">
-          <span class="amount-label">Сумма к оплате</span>
-          <div class="amount-input-container">
-            <input type="text" id="chargeAmount" class="amount-input" value="0" readonly>
-            <span class="amount-currency">₽</span>
+        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          <div class="amount-display-wrapper">
+            <span class="amount-label">Сумма к оплате</span>
+            <div class="amount-input-container">
+              <input type="text" id="chargeAmount" class="amount-input" value="0" readonly>
+              <span class="amount-currency">₽</span>
+            </div>
           </div>
-        </div>
 
-        <div class="quick-presets">
-          <button class="preset-btn" onclick="addPreset('charge', 100)">+100</button>
-          <button class="preset-btn" onclick="addPreset('charge', 500)">+500</button>
-          <button class="preset-btn" onclick="addPreset('charge', 1000)">+1 000</button>
-          <button class="preset-btn" onclick="addPreset('charge', 5000)">+5 000</button>
-        </div>
+          <div class="quick-presets">
+            <button class="preset-btn" onclick="addPreset('charge', 100)">+100</button>
+            <button class="preset-btn" onclick="addPreset('charge', 500)">+500</button>
+            <button class="preset-btn" onclick="addPreset('charge', 1000)">+1 000</button>
+            <button class="preset-btn" onclick="addPreset('charge', 5000)">+5 000</button>
+          </div>
 
-        <div class="numpad-grid">
-          <button class="num-btn" onclick="appendDigit('charge', '1')">1</button>
-          <button class="num-btn" onclick="appendDigit('charge', '2')">2</button>
-          <button class="num-btn" onclick="appendDigit('charge', '3')">3</button>
-          <button class="num-btn" onclick="appendDigit('charge', '4')">4</button>
-          <button class="num-btn" onclick="appendDigit('charge', '5')">5</button>
-          <button class="num-btn" onclick="appendDigit('charge', '6')">6</button>
-          <button class="num-btn" onclick="appendDigit('charge', '7')">7</button>
-          <button class="num-btn" onclick="appendDigit('charge', '8')">8</button>
-          <button class="num-btn" onclick="appendDigit('charge', '9')">9</button>
-          <button class="num-btn clear" onclick="clearInput('charge')">C</button>
-          <button class="num-btn" onclick="appendDigit('charge', '0')">0</button>
-          <button class="num-btn action" onclick="backspace('charge')">⌫</button>
-        </div>
+          <div class="numpad-grid">
+            <button class="num-btn" onclick="appendDigit('charge', '1')">1</button>
+            <button class="num-btn" onclick="appendDigit('charge', '2')">2</button>
+            <button class="num-btn" onclick="appendDigit('charge', '3')">3</button>
+            <button class="num-btn" onclick="appendDigit('charge', '4')">4</button>
+            <button class="num-btn" onclick="appendDigit('charge', '5')">5</button>
+            <button class="num-btn" onclick="appendDigit('charge', '6')">6</button>
+            <button class="num-btn" onclick="appendDigit('charge', '7')">7</button>
+            <button class="num-btn" onclick="appendDigit('charge', '8')">8</button>
+            <button class="num-btn" onclick="appendDigit('charge', '9')">9</button>
+            <button class="num-btn clear" onclick="clearInput('charge')">C</button>
+            <button class="num-btn" onclick="appendDigit('charge', '0')">0</button>
+            <button class="num-btn action" onclick="backspace('charge')">⌫</button>
+          </div>
 
-        <div class="action-button-group">
-          <button class="btn-primary" onclick="submitCharge()">Списать</button>
-          <button class="btn-ask-display" id="btnAskDisplay" onclick="requestCustomerDisplayPayment()">📲 Спросить Дисплей</button>
+          <button class="btn-primary" onclick="executeChargeTransaction()">⚡ Списать с баланса [Enter]</button>
         </div>
       </div>
 
-      <!-- ВКЛАДКА 2: ПОПОЛНЕНИЕ -->
       <div class="tab-content" id="tabTopup">
-        <div class="balance-card">
-          <span class="balance-label">Остаток на счете:</span>
-          <span class="balance-val" id="topupBalanceDisplay">0 ₽</span>
-        </div>
-
-        <div class="amount-display-wrapper">
-          <span class="amount-label">Сумма пополнения счета</span>
-          <div class="amount-input-container">
-            <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
-            <span class="amount-currency">₽</span>
+        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          <div class="amount-display-wrapper">
+            <span class="amount-label">Сумма пополнения счета</span>
+            <div class="amount-input-container">
+              <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
+              <span class="amount-currency" style="color: var(--accent);">₽</span>
+            </div>
           </div>
-        </div>
 
-        <div class="quick-presets">
-          <button class="preset-btn" onclick="addPreset('topup', 100)">+100</button>
-          <button class="preset-btn" onclick="addPreset('topup', 500)">+500</button>
-          <button class="preset-btn" onclick="addPreset('topup', 1000)">+1 000</button>
-          <button class="preset-btn" onclick="addPreset('topup', 5000)">+5 000</button>
-        </div>
+          <div class="quick-presets">
+            <button class="preset-btn" onclick="addPreset('topup', 100)">+100</button>
+            <button class="preset-btn" onclick="addPreset('topup', 500)">+500</button>
+            <button class="preset-btn" onclick="addPreset('topup', 1000)">+1 000</button>
+            <button class="preset-btn" onclick="addPreset('topup', 5000)">+5 000</button>
+          </div>
 
-        <div class="numpad-grid">
-          <button class="num-btn" onclick="appendDigit('topup', '1')">1</button>
-          <button class="num-btn" onclick="appendDigit('topup', '2')">2</button>
-          <button class="num-btn" onclick="appendDigit('topup', '3')">3</button>
-          <button class="num-btn" onclick="appendDigit('topup', '4')">4</button>
-          <button class="num-btn" onclick="appendDigit('topup', '5')">5</button>
-          <button class="num-btn" onclick="appendDigit('topup', '6')">6</button>
-          <button class="num-btn" onclick="appendDigit('topup', '7')">7</button>
-          <button class="num-btn" onclick="appendDigit('topup', '8')">8</button>
-          <button class="num-btn" onclick="appendDigit('topup', '9')">9</button>
-          <button class="num-btn clear" onclick="clearInput('topup')">C</button>
-          <button class="num-btn" onclick="appendDigit('topup', '0')">0</button>
-          <button class="num-btn action" onclick="backspace('topup')">⌫</button>
-        </div>
+          <div class="numpad-grid">
+            <button class="num-btn" onclick="appendDigit('topup', '1')">1</button>
+            <button class="num-btn" onclick="appendDigit('topup', '2')">2</button>
+            <button class="num-btn" onclick="appendDigit('topup', '3')">3</button>
+            <button class="num-btn" onclick="appendDigit('topup', '4')">4</button>
+            <button class="num-btn" onclick="appendDigit('topup', '5')">5</button>
+            <button class="num-btn" onclick="appendDigit('topup', '6')">6</button>
+            <button class="num-btn" onclick="appendDigit('topup', '7')">7</button>
+            <button class="num-btn" onclick="appendDigit('topup', '8')">8</button>
+            <button class="num-btn" onclick="appendDigit('topup', '9')">9</button>
+            <button class="num-btn clear" onclick="clearInput('topup')">C</button>
+            <button class="num-btn" onclick="appendDigit('topup', '0')">0</button>
+            <button class="num-btn action" onclick="backspace('topup')">⌫</button>
+          </div>
 
-        <button class="btn-primary" onclick="submitTopup()">Внести на счет [Enter]</button>
+          <button class="btn-primary" style="background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);" onclick="executeTopupTransaction()">➕ Внести на счет [Enter]</button>
+        </div>
       </div>
 
-      <!-- ВКЛАДКА 3: ИСТОРИЯ ЧЕКОВ -->
       <div class="tab-content" id="tabHistory">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <h3 style="font-size: 14px; font-weight: 800; color: #fff;">История операций</h3>
-          <button class="btn-secondary" style="padding: 6px 12px; font-size: 11px;" onclick="loadReceipts()">Обновить</button>
+          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">История операций и чеков</h3>
+          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="renderHistory()">Обновить</button>
         </div>
         <div class="history-list" id="historyListContainer">
-          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка чеков...</p>
+          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка истории...</p>
         </div>
       </div>
 
-      <!-- ВКЛАДКА 4: НАСТРОЙКА ДИСПЛЕЕВ И ТЕРМИНАЛА -->
       <div class="tab-content" id="tabSettings">
-        <div class="settings-section">
-          <h3>🖥️ Управление Дисплеем Покупателя</h3>
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">Настройки Supabase Облака</h3>
           
-          <div class="setting-item">
-            <div>
-              <div class="setting-title">Дисплей покупателя</div>
-              <div class="setting-desc">Дублировать сумму на второй экран</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="toggleCustomerDisplay" checked onchange="toggleDisplayMode()">
-              <span class="slider"></span>
-            </label>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+            Укажите данные вашей Supabase БД. При обновлении баланса данные будут сохраняться в облако и синхронизироваться локально.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted);">SUPABASE URL</label>
+            <input type="text" id="supabaseUrlInput" class="config-input" placeholder="https://xyzcompany.supabase.co">
           </div>
 
-          <div class="setting-item">
-            <div>
-              <div class="setting-title">Автоматический запрос</div>
-              <div class="setting-desc">Спрашивать подтверждение покупателя при списании</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="toggleAutoAskDisplay" checked>
-              <span class="slider"></span>
-            </label>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted);">SUPABASE ANON KEY</label>
+            <input type="password" id="supabaseKeyInput" class="config-input" placeholder="eyJhbGciOiJIUzI1NiI...">
           </div>
 
-          <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
-            <button class="btn-secondary" style="flex: 1;" onclick="openSimulatedDisplayModal()">📱 Дисплей покупателя (Симулятор)</button>
-            <button class="btn-secondary" onclick="testDisplayPing()">📡 Тест</button>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h3>⚙️ Параметры Терминала</h3>
+          <button class="btn-primary" onclick="saveSupabaseCredentials()">💾 Сохранить и Синхронизировать</button>
           
-          <div class="setting-item">
-            <div>
-              <div class="setting-title">Идентификатор терминала</div>
-              <div class="setting-desc">Номер этого кассового узла</div>
-            </div>
-            <select id="terminalSelect" onchange="changeTerminalId()" style="background: var(--surface); color: #fff; border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 8px; font-weight: 700; outline: none;">
-              <option value="1">Терминал #1</option>
-              <option value="2">Терминал #2</option>
-              <option value="3">Касса Express</option>
-            </select>
-          </div>
-
-          <div class="setting-item">
-            <div>
-              <div class="setting-title">Звуковое сопровождение</div>
-              <div class="setting-desc">Сигналы нажатий и успешной оплаты</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="toggleSoundFX" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <button class="btn-secondary" style="color: #60a5fa;" onclick="loadUserAccount()">🔄 Синхронизировать данные</button>
+          <button class="btn-secondary" onclick="resetLocalBalance()" style="color: #f87171; border-color: rgba(239,68,68,0.3);">
+            🗑 Сбросить локальный баланс (10 000 ₽)
+          </button>
         </div>
       </div>
+
     </section>
   </main>
 
-  <!-- ПОЛНОЭКРАННОЕ ОКНО ОЖИДАНИЯ ОТВЕТА ОТ ДИСПЛЕЯ -->
-  <div class="fullscreen-overlay" id="waitDisplayFullscreenModal">
-    <div class="display-wait-circle">📲</div>
-    <h2 style="font-size: 24px; margin-bottom: 8px; color: #fff;">Ожидание от покупателя</h2>
-    <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 8px;">Запрос отправлен на Дисплей Покупателя</p>
-    <p style="color: var(--accent); font-size: 24px; font-weight: 900; margin-bottom: 24px;" id="waitOverlayAmount">0 ₽</p>
-    <button class="btn-secondary" onclick="cancelDisplayRequest()" style="max-width: 260px;">Отмена операции</button>
-  </div>
-
-  <!-- ПОЛНОЭКРАННОЕ ОКНО УСПЕХА -->
   <div class="fullscreen-overlay" id="successFullscreenModal">
     <div class="check-icon-circle">✓</div>
-    <h2 style="font-size: 26px; margin-bottom: 8px; color: #fff;" id="successTitle">Операция выполнена!</h2>
-    <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 6px;">Сумма: <strong id="successOverlayAmount" style="color: #fff;">0 ₽</strong></p>
-    <p style="color: var(--primary); font-size: 15px; font-weight: 700; margin-bottom: 24px;" id="successOverlayRemaining">Новый баланс: 0 ₽</p>
-    <button class="btn-primary" onclick="closeSuccessOverlay()" style="max-width: 260px;">Готово [Enter]</button>
+    <h2 style="font-size: 28px; margin-bottom: 8px; color: #fff;" id="successModalTitle">Оплата успешно завершена!</h2>
+    <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 8px;">Сумма: <strong id="successOverlayAmount" style="color: #fff;">0 ₽</strong></p>
+    <p style="color: var(--primary); font-size: 16px; font-weight: 700; margin-bottom: 24px;" id="successOverlayRemaining">Новый остаток: 0 ₽</p>
+    <button class="btn-primary" onclick="closeSuccessOverlay()" style="max-width: 280px;">Готово [Enter]</button>
   </div>
 
-  <!-- ПОЛНОЭКРАННОЕ ОКНО ОШИБКИ -->
   <div class="fullscreen-overlay" id="errorFullscreenModal">
     <div class="error-circle">✕</div>
-    <h2 style="font-size: 26px; margin-bottom: 8px; color: #fff;">Ошибка операции</h2>
+    <h2 style="font-size: 28px; margin-bottom: 8px; color: #fff;">Ошибка оплаты</h2>
     <p style="color: #fca5a5; font-size: 16px; margin-bottom: 24px;" id="errorOverlaySubtitle">Недостаточно средств на балансе!</p>
-    <button class="btn-primary" onclick="closeErrorOverlay()" style="max-width: 260px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
+    <button class="btn-primary" onclick="closeErrorOverlay()" style="max-width: 280px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
   </div>
-
-  <!-- МОДАЛЬНОЕ ОКНО ИНТЕРАКТИВНОГО ДИСПЛЕЯ ПОКУПАТЕЛЯ -->
-  <div class="fullscreen-overlay" id="customerSimModal">
-    <div class="customer-sim-card">
-      <div style="font-size: 12px; font-weight: 800; color: var(--accent); text-transform: uppercase;">ЭКРАН ПОКУПАТЕЛЯ</div>
-      <div style="font-size: 32px; font-weight: 900; color: #fff;" id="simDisplayAmount">0 ₽</div>
-      <p style="font-size: 13px; color: var(--text-muted); text-align: center;" id="simDisplayStatus">Подтвердите списание с вашей карты</p>
-      
-      <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
-        <button class="btn-primary" onclick="customerSimConfirm()" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);">✓ Оплатить</button>
-        <button class="btn-secondary" onclick="customerSimReject()" style="color: #f87171;">✕ Отмена</button>
-      </div>
-
-      <button class="btn-secondary" onclick="closeSimulatedDisplayModal()" style="font-size: 11px; padding: 6px 12px; margin-top: 4px;">Скрыть экран</button>
-    </div>
-  </div>
-
-  <!-- TOAST NOTIFICATION CONTAINER -->
-  <div class="toast-container" id="toastContainer"></div>
 
   <script>
-    let currentTab = 'charge';
-    let currentUserId = null;
-    let currentBalance = 10000; // По умолчанию для офлайн режима
-    let pendingDisplayAmount = 0;
-    let isCloudConnected = false;
-    let supabase = null;
-    let displayChannel = { postMessage: () => {} };
-
-    // Toast Notice helper (No alert/confirm used)
-    function showToast(msg) {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = 'toast-msg';
-      toast.textContent = msg;
-      container.appendChild(toast);
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-      }, 2500);
-    }
-
-    // Audio Synth Controller
     class TerminalAudioController {
       constructor() {
         this.ctx = null;
       }
-
       initCtx() {
         if (!this.ctx) {
           const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -965,14 +681,7 @@
           this.ctx.resume();
         }
       }
-
-      isSoundEnabled() {
-        const toggle = document.getElementById('toggleSoundFX');
-        return toggle ? toggle.checked : true;
-      }
-
       playTap() {
-        if (!this.isSoundEnabled()) return;
         try {
           this.initCtx();
           if (!this.ctx) return;
@@ -980,388 +689,191 @@
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(600, now);
-          gain.gain.setValueAtTime(0.08, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.frequency.setValueAtTime(650, now);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
           osc.start(now);
-          osc.stop(now + 0.08);
-        } catch(e) {}
+          osc.stop(now + 0.05);
+        } catch (e) {}
       }
-
       playSuccess() {
-        if (!this.isSoundEnabled()) return;
         try {
           this.initCtx();
           if (!this.ctx) return;
           const now = this.ctx.currentTime;
-
-          const osc1 = this.ctx.createOscillator();
-          const gain1 = this.ctx.createGain();
-          osc1.frequency.setValueAtTime(1318.51, now);
-          gain1.gain.setValueAtTime(0.2, now);
+          const osc1 = this.ctx.createOscillator(), gain1 = this.ctx.createGain();
+          osc1.frequency.setValueAtTime(1318.51, now); gain1.gain.setValueAtTime(0.2, now);
           gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-          osc1.connect(gain1);
-          gain1.connect(this.ctx.destination);
-          osc1.start(now);
-          osc1.stop(now + 0.2);
+          osc1.connect(gain1); gain1.connect(this.ctx.destination);
+          osc1.start(now); osc1.stop(now + 0.2);
 
-          const osc2 = this.ctx.createOscillator();
-          const gain2 = this.ctx.createGain();
-          osc2.frequency.setValueAtTime(1975.53, now + 0.1);
-          gain2.gain.setValueAtTime(0.25, now + 0.1);
+          const osc2 = this.ctx.createOscillator(), gain2 = this.ctx.createGain();
+          osc2.frequency.setValueAtTime(1975.53, now + 0.1); gain2.gain.setValueAtTime(0.25, now + 0.1);
           gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-          osc2.connect(gain2);
-          gain2.connect(this.ctx.destination);
-          osc2.start(now + 0.1);
-          osc2.stop(now + 0.35);
-        } catch(e) {}
+          osc2.connect(gain2); gain2.connect(this.ctx.destination);
+          osc2.start(now + 0.1); osc2.stop(now + 0.35);
+        } catch (e) {}
       }
-
       playError() {
-        if (!this.isSoundEnabled()) return;
         try {
           this.initCtx();
           if (!this.ctx) return;
           const now = this.ctx.currentTime;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(220, now);
+          const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+          osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now);
           gain.gain.setValueAtTime(0.2, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(now);
-          osc.stop(now + 0.3);
-        } catch(e) {}
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now); osc.stop(now + 0.25);
+        } catch (e) {}
       }
     }
 
     const terminalAudio = new TerminalAudioController();
+  </script>
 
-    try {
-      const SUPABASE_URL = 'https://kaaooeeblogssqdmnvqr.supabase.co';
-      const SUPABASE_KEY = 'EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYW9vZWVibG9nc3NxZG1udnFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NjIzODAsImV4cCI6MjEwNTQzODM4MH0.dloUMX2qqGVXVmbPKfxOwiT4Da8DagUdAfkZm0WkG1c';
+  <script>
+    // Config values for Supabase (Anon Key is safe for public client code)
+    let SUPABASE_URL = localStorage.getItem('supabase_url') || 'https://kaaooeeblogssqdmnvqr.supabase.co';
+    let SUPABASE_ANON_KEY = localStorage.getItem('supabase_key') || 'EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYW9vZWVibG9nc3NxZG1udnFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NjIzODAsImV4cCI6MjEwNTQzODM4MH0.dloUMX2qqGVXVmbPKfxOwiT4Da8DagUdAfkZm0WkG1c';
 
-      if (window.supabase) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      }
-    } catch (e) {
-      console.warn("Supabase SDK не инициализирован. Переход в автономный режим.");
-    }
-
-    // BroadcastChannel sync
-    try {
-      if (window.BroadcastChannel) {
-        displayChannel = new BroadcastChannel('pos_display_channel');
-
-        displayChannel.onmessage = (event) => {
-          const data = event.data;
-          if (data.type === 'CUSTOMER_CONFIRMED') {
-            document.getElementById('waitDisplayFullscreenModal').classList.remove('active');
-            closeSimulatedDisplayModal();
-            executeChargeTransaction(data.amount);
-          } else if (data.type === 'CUSTOMER_REJECTED') {
-            document.getElementById('waitDisplayFullscreenModal').classList.remove('active');
-            closeSimulatedDisplayModal();
-            terminalAudio.playError();
-            document.getElementById('errorOverlaySubtitle').textContent = 'Покупатель отклонил оплату на дисплее!';
-            document.getElementById('errorFullscreenModal').classList.add('active');
-          } else if (data.type === 'AMOUNT_PREVIEW') {
-            document.getElementById('simDisplayAmount').textContent = (data.amount || 0).toLocaleString('ru-RU') + ' ₽';
-          }
-        };
-      }
-    } catch(e) {
-      console.warn("BroadcastChannel недоступен:", e);
-    }
+    let supabase = null;
+    let isCloudConnected = false;
+    let currentBalance = 10000;
+    let userId = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
-      // Load saved local balance if present
-      const savedBalance = localStorage.getItem('pos_local_balance');
+      // Audio unlockers
+      document.addEventListener('click', () => terminalAudio.initCtx(), { once: true });
+      document.addEventListener('touchstart', () => terminalAudio.initCtx(), { once: true });
+
+      // Populate input settings
+      document.getElementById('supabaseUrlInput').value = SUPABASE_URL;
+      document.getElementById('supabaseKeyInput').value = SUPABASE_ANON_KEY;
+
+      // Load balance from local cache first
+      const savedBalance = localStorage.getItem('pos_terminal_balance');
       if (savedBalance !== null) {
         currentBalance = Number(savedBalance);
       }
+      updateBalanceDisplay();
 
-      await loadUserAccount();
-      document.addEventListener('click', () => terminalAudio.initCtx(), { once: true });
-      document.addEventListener('touchstart', () => terminalAudio.initCtx(), { once: true });
+      // Connect Cloud
+      await initCloudConnection();
+      renderHistory();
     });
 
-    async function loadUserAccount() {
-      const badge = document.getElementById('statusBadge');
-      const text = document.getElementById('statusText');
-
-      if (!supabase) {
-        setOfflineMode(badge, text, 'Офлайн (Локально)');
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .limit(1)
-          .single();
-
-        if (error || !data) {
-          setOfflineMode(badge, text, 'Локальный режим');
-          return;
+    async function initCloudConnection() {
+      if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+        try {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          // Try fetching balance from 'users' table
+          const { data, error } = await supabase.from('users').select('*').limit(1).single();
+          if (!error && data) {
+            userId = data.id;
+            currentBalance = Number(data.balance);
+            localStorage.setItem('pos_terminal_balance', currentBalance);
+            setCloudStatus(true, 'Облако Онлайн');
+          } else {
+            setCloudStatus(false, 'Локально (Нет данных БД)');
+          }
+        } catch (e) {
+          setCloudStatus(false, 'Офлайн Режим');
         }
-
-        currentUserId = data.id;
-        currentBalance = Number(data.balance);
-        localStorage.setItem('pos_local_balance', currentBalance);
-        
-        isCloudConnected = true;
-        badge.classList.remove('offline');
-        text.textContent = 'Облако Онлайн';
-        updateBalanceDisplays();
-      } catch (e) {
-        setOfflineMode(badge, text, 'Локальный режим');
-      }
-    }
-
-    function setOfflineMode(badge, text, label) {
-      isCloudConnected = false;
-      badge.classList.add('offline');
-      text.textContent = label;
-      updateBalanceDisplays();
-    }
-
-    function updateBalanceDisplays() {
-      const formatted = currentBalance.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('chargeBalanceDisplay').textContent = formatted;
-      document.getElementById('topupBalanceDisplay').textContent = formatted;
-    }
-
-    function switchTab(tab) {
-      terminalAudio.playTap();
-      currentTab = tab;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      
-      if (tab === 'charge') {
-        document.getElementById('tabBtnCharge').classList.add('active');
-        document.getElementById('tabCharge').classList.add('active');
-      } else if (tab === 'topup') {
-        document.getElementById('tabBtnTopup').classList.add('active');
-        document.getElementById('tabTopup').classList.add('active');
-      } else if (tab === 'history') {
-        document.getElementById('tabBtnHistory').classList.add('active');
-        document.getElementById('tabHistory').classList.add('active');
-        loadReceipts();
-      } else if (tab === 'settings') {
-        document.getElementById('tabBtnSettings').classList.add('active');
-        document.getElementById('tabSettings').classList.add('active');
-      }
-    }
-
-    function appendDigit(type, digit) {
-      terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
-      let val = input.value.replace(/\D/g, '');
-      if (val === '0' || val === '') {
-        val = digit;
       } else {
-        if (val.length < 7) val += digit;
+        setCloudStatus(false, 'Автономный');
       }
-      const parsedVal = parseInt(val, 10);
-      input.value = parsedVal.toLocaleString('ru-RU');
-
-      if (type === 'charge' && document.getElementById('toggleCustomerDisplay').checked) {
-        displayChannel.postMessage({
-          type: 'AMOUNT_PREVIEW',
-          amount: parsedVal
-        });
-        document.getElementById('simDisplayAmount').textContent = parsedVal.toLocaleString('ru-RU') + ' ₽';
-      }
+      updateBalanceDisplay();
     }
 
-    function backspace(type) {
-      terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
-      let val = input.value.replace(/\D/g, '');
-      val = val.slice(0, -1);
-      const parsed = val === '' ? 0 : parseInt(val, 10);
-      input.value = parsed.toLocaleString('ru-RU');
+    function setCloudStatus(online, label) {
+      isCloudConnected = online;
+      const badge = document.getElementById('statusBadge');
+      const dot = document.getElementById('statusBadgeDot');
+      const text = document.getElementById('statusBadgeText');
+      const subtext = document.getElementById('cloudSyncSubtext');
+      const stateBadge = document.getElementById('cloudStateBadge');
 
-      if (type === 'charge' && document.getElementById('toggleCustomerDisplay').checked) {
-        displayChannel.postMessage({
-          type: 'AMOUNT_PREVIEW',
-          amount: parsed
-        });
-        document.getElementById('simDisplayAmount').textContent = parsed.toLocaleString('ru-RU') + ' ₽';
-      }
-    }
-
-    function clearInput(type) {
-      terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      document.getElementById(inputId).value = '0';
-
-      if (type === 'charge' && document.getElementById('toggleCustomerDisplay').checked) {
-        displayChannel.postMessage({
-          type: 'AMOUNT_PREVIEW',
-          amount: 0
-        });
-        document.getElementById('simDisplayAmount').textContent = '0 ₽';
-      }
-    }
-
-    function addPreset(type, amount) {
-      terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
-      let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
-      current += amount;
-      input.value = current.toLocaleString('ru-RU');
-
-      if (type === 'charge' && document.getElementById('toggleCustomerDisplay').checked) {
-        displayChannel.postMessage({
-          type: 'AMOUNT_PREVIEW',
-          amount: current
-        });
-        document.getElementById('simDisplayAmount').textContent = current.toLocaleString('ru-RU') + ' ₽';
-      }
-    }
-
-    async function submitCharge() {
-      const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) {
-        showToast('Введите сумму для списания!');
-        return;
-      }
-
-      const autoAsk = document.getElementById('toggleAutoAskDisplay').checked;
-      if (autoAsk) {
-        requestCustomerDisplayPayment();
+      if (online) {
+        badge.className = 'status-badge-online';
+        dot.className = 'pulse-dot-green';
+        text.textContent = 'Облако';
+        subtext.textContent = 'Синхронизировано с Supabase';
+        stateBadge.textContent = '☁️ Облако Подключено';
       } else {
-        executeChargeTransaction(amount);
+        badge.className = 'status-badge-online status-badge-offline';
+        dot.className = 'pulse-dot-amber';
+        text.textContent = 'Офлайн';
+        subtext.textContent = 'Автономное хранилище (localStorage)';
+        stateBadge.textContent = '💾 Локальное Сохранение';
       }
     }
 
-    function requestCustomerDisplayPayment() {
+    function updateBalanceDisplay() {
+      document.getElementById('currentBalanceDisplay').textContent = currentBalance.toLocaleString('ru-RU') + ' ₽';
+    }
+
+    async function executeChargeTransaction() {
+      terminalAudio.playTap();
       const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
       if (amount <= 0) return;
 
       if (amount > currentBalance) {
         terminalAudio.playError();
         document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств на балансе! Доступно: ${currentBalance.toLocaleString('ru-RU')} ₽`;
-        document.getElementById('errorFullscreenModal').classList.add('active');
-        return;
-      }
-
-      pendingDisplayAmount = amount;
-      document.getElementById('waitOverlayAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('waitDisplayFullscreenModal').classList.add('active');
-
-      // Update simulator as well
-      document.getElementById('simDisplayAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
-
-      displayChannel.postMessage({
-        type: 'PAYMENT_REQUEST',
-        amount: amount
-      });
-    }
-
-    function cancelDisplayRequest() {
-      terminalAudio.playTap();
-      document.getElementById('waitDisplayFullscreenModal').classList.remove('active');
-      displayChannel.postMessage({ type: 'PAYMENT_CANCELLED' });
-    }
-
-    async function executeChargeTransaction(amount) {
-      if (amount > currentBalance) {
-        terminalAudio.playError();
-        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств на балансе! Доступно: ${currentBalance.toLocaleString('ru-RU')} ₽`;
-        document.getElementById('errorFullscreenModal').classList.add('active');
+        openModal('errorFullscreenModal');
         return;
       }
 
       const newBalance = currentBalance - amount;
+      await updateCloudAndLocalBalance(newBalance, 'charge', amount);
 
-      // Cloud attempt with seamless offline fallback
-      if (supabase && currentUserId) {
-        try {
-          await supabase
-            .from('users')
-            .update({ balance: newBalance, updated_at: new Date() })
-            .eq('id', currentUserId);
-
-          await supabase
-            .from('receipts')
-            .insert([{ type: 'charge', amount: amount, user_id: currentUserId }]);
-        } catch(e) {
-          console.warn('Ошибка облака, запись сделана локально.');
-        }
-      }
-
-      // Save local state
-      saveLocalReceipt('charge', amount);
-      currentBalance = newBalance;
-      localStorage.setItem('pos_local_balance', currentBalance);
-      
-      updateBalanceDisplays();
       clearInput('charge');
-
       terminalAudio.playSuccess();
-      document.getElementById('successTitle').textContent = 'Оплата успешно завершена!';
+      document.getElementById('successModalTitle').textContent = 'Списание выполнено!';
       document.getElementById('successOverlayAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
       document.getElementById('successOverlayRemaining').textContent = 'Остаток на карте: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successFullscreenModal').classList.add('active');
-
-      displayChannel.postMessage({
-        type: 'PAYMENT_SUCCESS',
-        amount: amount,
-        newBalance: newBalance
-      });
+      openModal('successFullscreenModal');
     }
 
-    async function submitTopup() {
+    async function executeTopupTransaction() {
       terminalAudio.playTap();
       const amount = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) {
-        showToast('Введите сумму пополнения!');
-        return;
-      }
+      if (amount <= 0) return;
 
       const newBalance = currentBalance + amount;
+      await updateCloudAndLocalBalance(newBalance, 'topup', amount);
 
-      if (supabase && currentUserId) {
-        try {
-          await supabase
-            .from('users')
-            .update({ balance: newBalance, updated_at: new Date() })
-            .eq('id', currentUserId);
-
-          await supabase
-            .from('receipts')
-            .insert([{ type: 'topup', amount: amount, user_id: currentUserId }]);
-        } catch(e) {
-          console.warn('Облачное пополнение недоступно, выполнено локально.');
-        }
-      }
-
-      saveLocalReceipt('topup', amount);
-      currentBalance = newBalance;
-      localStorage.setItem('pos_local_balance', currentBalance);
-
-      updateBalanceDisplays();
       clearInput('topup');
-
       terminalAudio.playSuccess();
-      document.getElementById('successTitle').textContent = 'Баланс успешно пополнен!';
+      document.getElementById('successModalTitle').textContent = 'Баланс пополнен!';
       document.getElementById('successOverlayAmount').textContent = '+' + amount.toLocaleString('ru-RU') + ' ₽';
       document.getElementById('successOverlayRemaining').textContent = 'Новый баланс: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successFullscreenModal').classList.add('active');
+      openModal('successFullscreenModal');
     }
 
-    function saveLocalReceipt(type, amount) {
+    async function updateCloudAndLocalBalance(newBalance, type, amount) {
+      currentBalance = newBalance;
+      localStorage.setItem('pos_terminal_balance', currentBalance);
+      updateBalanceDisplay();
+
+      // Save receipt locally
+      saveReceiptLocally(type, amount);
+
+      // Save to Supabase Cloud if connected
+      if (isCloudConnected && supabase && userId) {
+        try {
+          await supabase.from('users').update({ balance: newBalance, updated_at: new Date() }).eq('id', userId);
+          await supabase.from('receipts').insert([{ type: type, amount: amount, user_id: userId }]);
+        } catch (e) {
+          console.warn('Ошибка облачной синхронизации, сохранено локально:', e);
+        }
+      }
+    }
+
+    function saveReceiptLocally(type, amount) {
       try {
         const history = JSON.parse(localStorage.getItem('pos_local_receipts') || '[]');
         history.unshift({
@@ -1374,30 +886,9 @@
       } catch(e) {}
     }
 
-    async function loadReceipts() {
+    function renderHistory() {
       const container = document.getElementById('historyListContainer');
-      container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка чеков...</p>';
-
-      let receipts = [];
-
-      if (supabase && isCloudConnected) {
-        try {
-          const { data, error } = await supabase
-            .from('receipts')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-          if (!error && data && data.length > 0) {
-            receipts = data;
-          }
-        } catch(e) {}
-      }
-
-      if (receipts.length === 0) {
-        try {
-          receipts = JSON.parse(localStorage.getItem('pos_local_receipts') || '[]');
-        } catch(e) {}
-      }
+      const receipts = JSON.parse(localStorage.getItem('pos_local_receipts') || '[]');
 
       if (receipts.length === 0) {
         container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">История операций пуста</p>';
@@ -1406,13 +897,11 @@
 
       container.innerHTML = receipts.map(item => {
         const isTopup = item.type === 'topup';
-        const dateStr = new Date(item.created_at).toLocaleString('ru-RU', {
-          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-        });
+        const dateStr = new Date(item.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
         return `
           <div class="history-item">
             <div class="history-info">
-              <h4>${isTopup ? '➕ Пополнение' : '🧾 Чек оплаты'}</h4>
+              <h4>${isTopup ? '➕ Пополнение' : '💸 Списание'}</h4>
               <p>${dateStr}</p>
             </div>
             <div class="history-amount ${isTopup ? 'topup' : ''}">
@@ -1423,56 +912,86 @@
       }).join('');
     }
 
-    function closeSuccessOverlay() {
+    function appendDigit(type, digit) {
       terminalAudio.playTap();
-      document.getElementById('successFullscreenModal').classList.remove('active');
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const input = document.getElementById(inputId);
+      let val = input.value.replace(/\D/g, '');
+      if (val === '0' || val === '') val = digit;
+      else if (val.length < 7) val += digit;
+
+      input.value = parseInt(val, 10).toLocaleString('ru-RU');
     }
 
-    function closeErrorOverlay() {
+    function backspace(type) {
       terminalAudio.playTap();
-      document.getElementById('errorFullscreenModal').classList.remove('active');
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const input = document.getElementById(inputId);
+      let val = input.value.replace(/\D/g, '').slice(0, -1);
+      input.value = (val === '' ? '0' : parseInt(val, 10)).toLocaleString('ru-RU');
     }
 
-    function openSimulatedDisplayModal() {
+    function clearInput(type) {
       terminalAudio.playTap();
-      const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
-      document.getElementById('simDisplayAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('customerSimModal').classList.add('active');
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      document.getElementById(inputId).value = '0';
     }
 
-    function closeSimulatedDisplayModal() {
-      document.getElementById('customerSimModal').classList.remove('active');
-    }
-
-    function customerSimConfirm() {
-      const amountText = document.getElementById('simDisplayAmount').textContent.replace(/\D/g, '');
-      const amount = parseInt(amountText || '0', 10);
-      displayChannel.postMessage({ type: 'CUSTOMER_CONFIRMED', amount: amount });
-      closeSimulatedDisplayModal();
-    }
-
-    function customerSimReject() {
-      displayChannel.postMessage({ type: 'CUSTOMER_REJECTED' });
-      closeSimulatedDisplayModal();
-    }
-
-    function testDisplayPing() {
+    function addPreset(type, amount) {
       terminalAudio.playTap();
-      displayChannel.postMessage({ type: 'TEST_PING' });
-      showToast('📡 Тестовый сигнал отправлен на экран!');
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const input = document.getElementById(inputId);
+      let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
+      current += amount;
+      input.value = current.toLocaleString('ru-RU');
     }
 
-    function changeTerminalId() {
-      const select = document.getElementById('terminalSelect');
-      document.getElementById('terminalIdSubtitle').textContent = select.options[select.selectedIndex].text;
-      showToast('Терминал переключен: ' + select.options[select.selectedIndex].text);
+    function switchTab(tab) {
+      terminalAudio.playTap();
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      if (tab === 'charge') {
+        document.getElementById('tabBtnCharge').classList.add('active');
+        document.getElementById('tabCharge').classList.add('active');
+      } else if (tab === 'topup') {
+        document.getElementById('tabBtnTopup').classList.add('active');
+        document.getElementById('tabTopup').classList.add('active');
+      } else if (tab === 'history') {
+        document.getElementById('tabBtnHistory').classList.add('active');
+        document.getElementById('tabHistory').classList.add('active');
+        renderHistory();
+      } else if (tab === 'settings') {
+        document.getElementById('tabBtnSettings').classList.add('active');
+        document.getElementById('tabSettings').classList.add('active');
+      }
     }
 
-    function toggleDisplayMode() {
-      const enabled = document.getElementById('toggleCustomerDisplay').checked;
-      document.getElementById('btnAskDisplay').style.display = enabled ? 'flex' : 'none';
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function closeSuccessOverlay() { terminalAudio.playTap(); closeModal('successFullscreenModal'); }
+    function closeErrorOverlay() { terminalAudio.playTap(); closeModal('errorFullscreenModal'); }
+
+    function saveSupabaseCredentials() {
+      terminalAudio.playTap();
+      SUPABASE_URL = document.getElementById('supabaseUrlInput').value.trim();
+      SUPABASE_ANON_KEY = document.getElementById('supabaseKeyInput').value.trim();
+
+      localStorage.setItem('supabase_url', SUPABASE_URL);
+      localStorage.setItem('supabase_key', SUPABASE_ANON_KEY);
+
+      initCloudConnection();
     }
 
+    function resetLocalBalance() {
+      terminalAudio.playTap();
+      currentBalance = 10000;
+      localStorage.setItem('pos_terminal_balance', currentBalance);
+      updateBalanceDisplay();
+    }
+
+    // Keyboard Hotkeys support
     document.addEventListener('keydown', (e) => {
       const errModal = document.getElementById('errorFullscreenModal');
       const succModal = document.getElementById('successFullscreenModal');
@@ -1481,18 +1000,21 @@
         if (errModal.classList.contains('active')) closeErrorOverlay();
         else if (succModal.classList.contains('active')) closeSuccessOverlay();
         else {
-          if (currentTab === 'charge') submitCharge();
-          else if (currentTab === 'topup') submitTopup();
+          const activeTab = document.querySelector('.tab-btn.active').id;
+          if (activeTab === 'tabBtnCharge') executeChargeTransaction();
+          else if (activeTab === 'tabBtnTopup') executeTopupTransaction();
         }
       } else if (e.key === 'Escape') {
         closeSuccessOverlay();
         closeErrorOverlay();
-        cancelDisplayRequest();
-        closeSimulatedDisplayModal();
-      } else if (!isNaN(e.key) && currentTab !== 'history' && currentTab !== 'settings') {
-        appendDigit(currentTab, e.key);
-      } else if (e.key === 'Backspace' && currentTab !== 'history' && currentTab !== 'settings') {
-        backspace(currentTab);
+      } else if (!isNaN(e.key) && document.activeElement.tagName !== 'INPUT') {
+        const activeTab = document.querySelector('.tab-btn.active').id;
+        const type = activeTab === 'tabBtnCharge' ? 'charge' : 'topup';
+        appendDigit(type, e.key);
+      } else if (e.key === 'Backspace' && document.activeElement.tagName !== 'INPUT') {
+        const activeTab = document.querySelector('.tab-btn.active').id;
+        const type = activeTab === 'tabBtnCharge' ? 'charge' : 'topup';
+        backspace(type);
       }
     });
   </script>
