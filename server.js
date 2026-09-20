@@ -163,26 +163,25 @@ app.post('/api/cancel-transaction', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  // Автоматический fallback: если данные или id не пришли, используем socket.id
   socket.on('register_display', (data) => {
-    const displayId = (data && data.id) ? data.id : socket.id;
-    const displayName = (data && data.name) ? data.name : `Дисплей ${clientDisplays.length + 1}`;
+    if (!data || !data.id) return;
 
-    const existing = clientDisplays.find(d => d.id === displayId || d.socketId === socket.id);
+    let existing = clientDisplays.find(d => d.id === data.id);
     if (existing) {
       existing.socketId = socket.id;
       existing.ip = socket.handshake.address;
-      existing.name = displayName;
+      existing.name = data.name || existing.name;
     } else {
       clientDisplays.push({
-        id: displayId,
+        id: data.id,
         socketId: socket.id,
-        name: displayName,
+        name: data.name || `Дисплей ${clientDisplays.length + 1}`,
         ip: socket.handshake.address,
         locked: false
       });
     }
-    socket.join(displayId);
+    
+    socket.join(data.id);
     io.emit('update_displays', clientDisplays);
   });
 
@@ -195,6 +194,4 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`POS сервер запущен на порту ${PORT}`);
-  console.log(`Терминал: http://localhost:${PORT}`);
-  console.log(`Дисплей покупателя: http://localhost:${PORT}/display`);
 });
