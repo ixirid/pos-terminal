@@ -24,7 +24,7 @@ let clientBalance = 0; // Баланс счета клиента
 
 // Загрузка конфигурационного файла (если есть)
 const CONFIG_PATH = path.join(__dirname, 'config.json');
-let config = { serverIp: 'localhost' };
+let config = { serverIp: 'localhost', askTerminal: true };
 if (fs.existsSync(CONFIG_PATH)) {
   try {
     config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
@@ -68,7 +68,53 @@ app.get('/api/displays', (req, res) => {
   res.json({ displays: clientDisplays });
 });
 
-// Создание новой транзакции (генерация QR-кода и отправка на дисплей)
+// Обновление настроек
+app.post('/api/settings', (req, res) => {
+  if (req.body.askTerminal !== undefined) {
+    config.askTerminal = req.body.askTerminal;
+  }
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+  res.json({ success: true, config });
+});
+
+// Обновление имени дисплея через REST
+app.post('/api/displays/:id/update', (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  const display = clientDisplays.find(d => d.id === id);
+  if (display) {
+    if (name) display.name = name;
+    io.emit('update_displays', clientDisplays);
+    return res.json({ success: true, displays: clientDisplays });
+  }
+  res.status(404).json({ success: false, error: 'Display not found' });
+});
+
+// Блокировка дисплея через REST
+app.post('/api/displays/:id/block', (req, res) => {
+  const { id } = req.params;
+  const { isBlocked } = req.body;
+  const display = clientDisplays.find(d => d.id === id);
+  if (display) {
+    display.isBlocked = !!isBlocked;
+    io.emit('update_displays', clientDisplays);
+    io.to(display.socketId || id).emit('display_block_status', { isBlocked: display.isBlocked });
+    return res.json({ success: true, displays: clientDisplays });
+  }
+  res.status(404).json({ success: false, error: 'Display not found' });
+});
+
+// Получение чека
+app.get('/api/receipt/:id', (req, res) => {
+  const txId = req.params.id;
+  const item = history.find(h => h.id === txId);
+  if (!item) {
+    return res.status(404).send('Чек не найден');
+  }
+  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Чек #${item.id}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Кассовый чек #${item.id}</h2><p>Тип операции: ${item.type === 'charge' ? 'Оплата' : 'Пополнение'}</p><p>Сумма: <b>${item.amount} ₽</b></p><p>Дата: ${new Date(item.createdAt).toLocaleString()}</p></body></html>`);
+});
+
+// Создание новой транзакции
 app.post('/api/create-transaction', (req, res) => {
   const { amount, targetDisplayId } = req.body;
   
@@ -83,7 +129,6 @@ app.post('/api/create-transaction', (req, res) => {
   const protocol = req.headers['x-forwarded-proto'] || 'http';
   const payUrl = `${protocol}://${host}/pay?amount=${parsedAmount}&tx=${txId}`;
   
-  // Генерация ссылки на QR-код через сторонний генератор
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payUrl)}`;
 
   const transaction = {
@@ -98,10 +143,8 @@ app.post('/api/create-transaction', (req, res) => {
 
   pendingTransactions[txId] = transaction;
 
-  // Адресная доставка события QR-кода на конкретный дисплей или массовая рассылка
   if (targetDisplayId) {
     io.to(targetDisplayId).emit('show_qr', transaction);
-    // Дублируем для обратной совместимости со старыми клиентами
     io.to(targetDisplayId).emit('transaction_created', transaction);
   } else {
     io.emit('show_qr', transaction);
@@ -111,7 +154,7 @@ app.post('/api/create-transaction', (req, res) => {
   res.json({ success: true, transaction });
 });
 
-// Получение статуса конкретной транзакции
+// Получение статуса транзакции
 app.get('/api/transaction/:txId', (req, res) => {
   const tx = pendingTransactions[req.params.txId];
   if (!tx) {
@@ -129,7 +172,6 @@ app.post('/api/process-payment', (req, res) => {
     return res.status(400).json({ success: false, error: 'Invalid or expired transaction' });
   }
 
-  // Проверка достаточности средств на балансе клиента
   if (clientBalance < tx.amount) {
     tx.status = 'failed';
     
@@ -143,7 +185,6 @@ app.post('/api/process-payment', (req, res) => {
     return res.json({ success: false, error: 'insufficient_funds' });
   }
 
-  // Списание средств и успешное завершение транзакции
   clientBalance -= tx.amount;
   tx.status = 'success';
 
@@ -161,7 +202,6 @@ app.post('/api/process-payment', (req, res) => {
     io.emit('payment_success', successPayload);
   }
 
-  // Рассылаем обновление баланса всем клиентам и терминалам
   io.emit('client_balance_updated', { balance: clientBalance });
 
   res.json({ success: true, newBalance: clientBalance });
@@ -207,43 +247,44 @@ app.post('/api/cancel-transaction', (req, res) => {
 io.on('connection', (socket) => {
   console.log(`Клиент подключился через WebSocket: ${socket.id}`);
 
-  // Регистрация дисплея строго по уникальному постоянному ID
+  // Регистрация дисплея
   socket.on('register_display', (data) => {
-    // Если клиент не прислал корректный объект с ID, игнорируем или создаем временный
     const displayId = (data && data.id) ? data.id : ('socket_' + socket.id);
     const displayName = (data && data.name) ? data.name : `Дисплей (${socket.id.substring(0, 4)})`;
 
     let existing = clientDisplays.find(d => d.id === displayId);
     
     if (existing) {
-      // Обновляем сокет-соединение для существующего постоянного дисплея
       existing.socketId = socket.id;
       existing.ip = socket.handshake.address;
       existing.name = displayName;
     } else {
-      // Регистрируем новое устройство
       clientDisplays.push({
         id: displayId,
         socketId: socket.id,
         name: displayName,
         ip: socket.handshake.address,
-        locked: false
+        isBlocked: false
       });
     }
 
-    // Добавляем сокет в комнату, названную в честь постоянного ID дисплея
     socket.join(displayId);
-    
-    // Рассылаем обновленный список дисплеев на терминалы
     io.emit('update_displays', clientDisplays);
   });
 
-  // Обработка отключения клиента
+  // Дублирующий обработчик замка через socket для надежности
+  socket.on('toggle_display_lock', (data) => {
+    const { id, isBlocked } = data;
+    const display = clientDisplays.find(d => d.id === id);
+    if (display) {
+      display.isBlocked = !!isBlocked;
+      io.emit('update_displays', clientDisplays);
+      io.to(display.socketId || id).emit('display_block_status', { isBlocked: display.isBlocked });
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log(`Клиент отключился: ${socket.id}`);
-    
-    // Удаляем из списка активных только те, у которых совпадает socketId,
-    // чтобы устройство при кратковременном обрыве связи сохраняло свой ID.
     clientDisplays = clientDisplays.filter(d => d.socketId !== socket.id);
     io.emit('update_displays', clientDisplays);
   });
