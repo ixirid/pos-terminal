@@ -148,9 +148,12 @@ app.post('/api/create-transaction', (req, res) => {
 
   pendingTransactions[txId] = transaction;
 
+  // Если выбран конкретный дисплей — шлем QR только ему и кассе. Иначе всем.
   if (targetDisplayId) {
     io.to(targetDisplayId).emit('show_qr', transaction);
     io.to(targetDisplayId).emit('transaction_created', transaction);
+    // Также дублируем на кассу (основное соединение)
+    io.emit('transaction_created_terminal_only', transaction); 
   } else {
     io.emit('show_qr', transaction);
     io.emit('transaction_created', transaction);
@@ -172,11 +175,11 @@ app.get('/api/shortcut/pay-active', (req, res) => {
     tx.status = 'failed';
     const failPayload = { transaction: tx, reason: 'insufficient_funds' };
     
-    // Рассылаем ошибку (крестик) и на дисплеи, и на кассу
+    // Отправляем ошибку (крестик) ТОЛЬКО на кассу и целевой дисплей
+    io.emit('payment_failed', failPayload);
     if (tx.targetDisplayId) {
       io.to(tx.targetDisplayId).emit('payment_failed', failPayload);
     }
-    io.emit('payment_failed', failPayload);
 
     return res.status(400).json({ success: false, error: 'insufficient_funds', transaction: tx });
   }
@@ -193,11 +196,11 @@ app.get('/api/shortcut/pay-active', (req, res) => {
 
   const successPayload = { transaction: tx, newBalance: clientBalance };
   
-  // Рассылаем успех (галочку) и на дисплей, и на кассу
+  // Отправляем успех (галочку) ТОЛЬКО на кассу и целевой дисплей
+  io.emit('payment_success', successPayload);
   if (tx.targetDisplayId) {
     io.to(tx.targetDisplayId).emit('payment_success', successPayload);
   }
-  io.emit('payment_success', successPayload);
 
   io.emit('client_balance_updated', { balance: clientBalance });
 
@@ -226,10 +229,10 @@ app.post('/api/process-payment', (req, res) => {
     tx.status = 'failed';
     
     const failPayload = { transaction: tx, reason: 'insufficient_funds' };
+    io.emit('payment_failed', failPayload);
     if (tx.targetDisplayId) {
       io.to(tx.targetDisplayId).emit('payment_failed', failPayload);
     }
-    io.emit('payment_failed', failPayload);
 
     return res.json({ success: false, error: 'insufficient_funds' });
   }
@@ -245,10 +248,10 @@ app.post('/api/process-payment', (req, res) => {
   });
 
   const successPayload = { transaction: tx, newBalance: clientBalance };
+  io.emit('payment_success', successPayload);
   if (tx.targetDisplayId) {
     io.to(tx.targetDisplayId).emit('payment_success', successPayload);
   }
-  io.emit('payment_success', successPayload);
 
   io.emit('client_balance_updated', { balance: clientBalance });
 
