@@ -3,21 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>POS Терминал Кассы — Мультидисплейное Управление</title>
-  
-  <!-- Socket.io Client JS (Gracefully falls back if running standalone) -->
+  <title>POS Терминал — Дисплеи Покупателя</title>
+  <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
-  
   <style>
     :root {
       --primary: #10b981;
       --primary-glow: rgba(16, 185, 129, 0.35);
       --primary-dark: #059669;
       --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.35);
       --error: #ef4444;
       --error-glow: rgba(239, 68, 68, 0.35);
-      --warning: #f59e0b;
       --bg-base: #090d16;
       --surface: #111827;
       --surface-card: #1f2937;
@@ -47,7 +43,6 @@
       overflow-x: hidden;
     }
 
-    /* HEADER STYLES */
     .pos-header {
       display: flex;
       justify-content: space-between;
@@ -83,7 +78,6 @@
     .brand-text h1 {
       font-size: 17px;
       font-weight: 800;
-      letter-spacing: -0.5px;
       color: #fff;
       line-height: 1.2;
     }
@@ -116,10 +110,6 @@
       white-space: nowrap;
     }
 
-    .client-link-btn:hover {
-      background: rgba(16, 185, 129, 0.22);
-    }
-
     .status-badge-online {
       display: inline-flex;
       align-items: center;
@@ -127,16 +117,10 @@
       background: rgba(16, 185, 129, 0.1);
       padding: 8px 10px;
       border-radius: 20px;
-      border: 1px solid rgba(16, 185, 129, 0.25);
+      border: 1px solid rgba(16, 185, 129, 0.2);
       color: var(--primary);
       font-size: 12px;
       font-weight: 700;
-    }
-
-    .status-badge-offline {
-      background: rgba(245, 158, 11, 0.1);
-      border-color: rgba(245, 158, 11, 0.25);
-      color: var(--warning);
     }
 
     .pulse-dot-green {
@@ -148,15 +132,6 @@
       animation: pulse 1.5s infinite;
     }
 
-    .pulse-dot-amber {
-      width: 6px;
-      height: 6px;
-      background: var(--warning);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--warning);
-    }
-
-    /* MAIN PANEL STYLES */
     .pos-container {
       flex: 1;
       display: flex;
@@ -178,48 +153,6 @@
       display: flex;
       flex-direction: column;
       position: relative;
-    }
-
-    .balance-banner {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
-      border-bottom: 1px solid var(--border-color);
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .balance-info label {
-      font-size: 10px;
-      font-weight: 800;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-    }
-
-    .balance-value {
-      font-size: 20px;
-      font-weight: 900;
-      color: #fff;
-    }
-
-    .display-target-badge {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--accent);
-      background: rgba(59, 130, 246, 0.15);
-      padding: 6px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s ease;
-    }
-
-    .display-target-badge:hover {
-      background: rgba(59, 130, 246, 0.25);
     }
 
     .tabs-header {
@@ -268,7 +201,6 @@
       display: flex;
     }
 
-    /* NUMPAD & DISPLAY CONTROLS */
     .amount-display-wrapper {
       background: rgba(0, 0, 0, 0.3);
       border: 1px solid var(--border-color);
@@ -341,35 +273,6 @@
       background: var(--surface-hover);
     }
 
-    .target-selector-box {
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 8px 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .target-selector-box span {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-muted);
-    }
-
-    .target-selector-box select {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 700;
-      outline: none;
-      cursor: pointer;
-    }
-
     .numpad-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -411,6 +314,13 @@
       border-color: rgba(59, 130, 246, 0.25);
     }
 
+    .action-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
     .btn-primary {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       border: none;
@@ -426,7 +336,6 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      flex-shrink: 0;
       width: 100%;
     }
 
@@ -438,17 +347,23 @@
     .btn-secondary {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
-      color: var(--text-muted);
+      color: #fff;
       padding: 12px;
       font-size: 13px;
       font-weight: 700;
       border-radius: 14px;
       cursor: pointer;
       transition: all 0.2s ease;
-      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
-    /* FULLSCREEN MODALS */
+    .btn-secondary:hover {
+      background: var(--surface-hover);
+    }
+
     .fullscreen-overlay {
       position: fixed;
       inset: 0;
@@ -473,86 +388,102 @@
       to { opacity: 1; transform: scale(1); }
     }
 
-    .modal-card {
-      background: var(--surface);
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      padding: 24px;
-      width: 100%;
-      max-width: 440px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
     .check-icon-circle {
-      width: 80px;
-      height: 80px;
+      width: 90px;
+      height: 90px;
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: #fff;
-      font-size: 40px;
+      font-size: 45px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 12px auto;
-      box-shadow: 0 0 30px var(--primary-glow);
+      margin-bottom: 20px;
+      box-shadow: 0 0 40px var(--primary-glow);
     }
 
     .error-circle {
-      width: 80px;
-      height: 80px;
+      width: 90px;
+      height: 90px;
       background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%);
       color: #fff;
-      font-size: 40px;
+      font-size: 45px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 12px auto;
-      box-shadow: 0 0 30px var(--error-glow);
+      margin-bottom: 20px;
+      box-shadow: 0 0 40px var(--error-glow);
     }
 
-    .display-choice-list {
-      display: flex;
+    .qr-display-panel {
+      display: none;
       flex-direction: column;
-      gap: 10px;
-      max-height: 260px;
-      overflow-y: auto;
-    }
-
-    .display-choice-btn {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 14px;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
       align-items: center;
-      justify-content: space-between;
-      transition: all 0.2s ease;
+      justify-content: center;
+      text-align: center;
+      padding: 10px 0;
+      flex: 1;
     }
 
-    .display-choice-btn:hover {
-      background: var(--surface-hover);
-      border-color: var(--accent);
+    .qr-display-panel.active {
+      display: flex !important;
     }
 
-    .history-list {
+    .qr-box {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 20px;
+      margin: 16px 0;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .qr-box img {
+      width: 200px;
+      height: 200px;
+      display: block;
+    }
+
+    .qr-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      padding: 8px 16px;
+      border-radius: 30px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--primary);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.35); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    .history-list, .displays-list {
       display: flex;
       flex-direction: column;
       gap: 8px;
       overflow-y: auto;
       flex: 1;
-      max-height: 400px;
+      max-height: 420px;
       padding-right: 4px;
     }
 
-    .history-item {
+    .history-item, .display-card {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       border-radius: 14px;
@@ -579,26 +510,73 @@
       font-size: 16px;
       font-weight: 800;
       color: var(--primary);
+      text-align: right;
     }
 
     .history-amount.topup {
       color: var(--accent);
     }
 
-    .display-card-item {
+    .receipt-download-btn {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .select-terminal-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 1100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .select-terminal-modal.active {
+      display: flex !important;
+    }
+
+    .terminal-selector-card {
+      background: var(--surface);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
+    }
+
+    .terminal-option-item {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       border-radius: 14px;
-      padding: 14px;
+      padding: 14px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
 
-    @keyframes pulse {
-      0% { transform: scale(0.95); opacity: 0.8; }
-      50% { transform: scale(1.35); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.8; }
+    .terminal-option-item:hover {
+      border-color: var(--primary);
+      background: var(--surface-hover);
     }
   </style>
 </head>
@@ -609,48 +587,36 @@
       <div class="brand-icon">₽</div>
       <div class="brand-text">
         <h1>POS Терминал</h1>
-        <p id="systemModeSubtext">Мультидисплейная система</p>
+        <p id="serverInfoText">Управление Кассой</p>
       </div>
     </div>
 
     <div class="header-actions">
-      <a href="/display" target="_blank" class="client-link-btn" title="Открыть клиентский экран покупателя">
-        🖥 Экран клиента ↗
+      <a href="/client" target="_blank" class="client-link-btn">
+        👤 Портал клиента
       </a>
-      <div id="statusBadge" class="status-badge-online">
-        <span id="statusBadgeDot" class="pulse-dot-green"></span>
-        <span id="statusBadgeText">Сокеты</span>
+      <a href="/display" target="_blank" class="client-link-btn">
+        🖥 Дисплей (/display)
+      </a>
+      <div class="status-badge-online">
+        <span class="pulse-dot-green"></span>
+        <span>Онлайн</span>
       </div>
     </div>
   </header>
 
   <main class="pos-container">
     <section class="pos-main-panel">
-
-      <!-- BALANCE STATUS BANNER -->
-      <div class="balance-banner">
-        <div class="balance-info">
-          <label>Баланс клиента</label>
-          <div class="balance-value" id="currentBalanceDisplay">10 000 ₽</div>
-        </div>
-        <div class="display-target-badge" id="headerTargetBadge" onclick="switchTab('displays')">
-          <span>🖥 Дисплей:</span>
-          <strong id="headerTargetText">❓ Спрашивать каждый раз</strong>
-        </div>
-      </div>
-
-      <!-- TABS NAVIGATION -->
       <nav class="tabs-header">
         <button class="tab-btn active" id="tabBtnCharge" onclick="switchTab('charge')">💸 Списание</button>
         <button class="tab-btn" id="tabBtnTopup" onclick="switchTab('topup')">➕ Пополнение</button>
         <button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">📜 Чеки</button>
-        <button class="tab-btn" id="tabBtnDisplays" onclick="switchTab('displays')">🖥 Дисплеи</button>
+        <button class="tab-btn" id="tabBtnSettings" onclick="switchTab('settings')">🖥 Дисплеи</button>
       </nav>
 
-      <!-- TAB 1: CHARGE -->
+      <!-- ВКЛАДКА 1: СПИСАНИЕ -->
       <div class="tab-content active" id="tabCharge">
-        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-          
+        <div id="chargeFormView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма к оплате</span>
             <div class="amount-input-container">
@@ -664,17 +630,6 @@
             <button class="preset-btn" onclick="addPreset('charge', 500)">+500</button>
             <button class="preset-btn" onclick="addPreset('charge', 1000)">+1 000</button>
             <button class="preset-btn" onclick="addPreset('charge', 5000)">+5 000</button>
-          </div>
-
-          <!-- TARGET DISPLAY SELECTOR -->
-          <div class="target-selector-box">
-            <span>Целевой экран:</span>
-            <select id="chargeTargetSelect" onchange="updateTargetDisplaySetting(this.value)">
-              <option value="ask" selected>❓ Спрашивать каждый раз</option>
-              <option value="all">🌐 Все подключенные экраны</option>
-              <option value="display_1">🖥 Дисплей #1 (Основной)</option>
-              <option value="display_2">🖥 Дисплей #2</option>
-            </select>
           </div>
 
           <div class="numpad-grid">
@@ -692,19 +647,33 @@
             <button class="num-btn action" onclick="backspace('charge')">⌫</button>
           </div>
 
-          <button class="btn-primary" onclick="initiateChargeTransaction()">⚡ Списать с баланса [Enter]</button>
+          <div class="action-row">
+            <button class="btn-primary" onclick="initiateChargeTransaction()">Списать (QR) [Enter]</button>
+            <button class="btn-secondary" onclick="openDisplaySelector()">🖥 Дисплей</button>
+          </div>
+        </div>
+
+        <div class="qr-display-panel" id="qrDisplayPanel">
+          <div class="qr-status-badge">
+            <span class="pulse-dot"></span>
+            <span>Ожидание оплаты покупателем...</span>
+          </div>
+          <h2 style="font-size: 20px; margin-bottom: 12px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
+          <div class="qr-box">
+            <img id="qrImage" src="" alt="QR-код оплаты">
+          </div>
+          <button class="btn-secondary" onclick="cancelTransaction()">Отменить оплату [Esc]</button>
         </div>
       </div>
 
-      <!-- TAB 2: TOPUP -->
+      <!-- ВКЛАДКА 2: ПОПОЛНЕНИЕ -->
       <div class="tab-content" id="tabTopup">
         <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-          
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма пополнения счета</span>
             <div class="amount-input-container">
               <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
-              <span class="amount-currency" style="color: var(--accent);">₽</span>
+              <span class="amount-currency">₽</span>
             </div>
           </div>
 
@@ -713,17 +682,6 @@
             <button class="preset-btn" onclick="addPreset('topup', 500)">+500</button>
             <button class="preset-btn" onclick="addPreset('topup', 1000)">+1 000</button>
             <button class="preset-btn" onclick="addPreset('topup', 5000)">+5 000</button>
-          </div>
-
-          <!-- TARGET DISPLAY SELECTOR -->
-          <div class="target-selector-box">
-            <span>Целевой экран:</span>
-            <select id="topupTargetSelect" onchange="updateTargetDisplaySetting(this.value)">
-              <option value="ask" selected>❓ Спрашивать каждый раз</option>
-              <option value="all">🌐 Все подключенные экраны</option>
-              <option value="display_1">🖥 Дисплей #1 (Основной)</option>
-              <option value="display_2">🖥 Дисплей #2</option>
-            </select>
           </div>
 
           <div class="numpad-grid">
@@ -741,512 +699,88 @@
             <button class="num-btn action" onclick="backspace('topup')">⌫</button>
           </div>
 
-          <button class="btn-primary" style="background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);" onclick="initiateTopupTransaction()">➕ Внести на счет [Enter]</button>
+          <button class="btn-primary" onclick="submitTopup()">Пополнить счет [Enter]</button>
         </div>
       </div>
 
-      <!-- TAB 3: HISTORY -->
+      <!-- ВКЛАДКА 3: ИСТОРИЯ ЧЕКОВ -->
       <div class="tab-content" id="tabHistory">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">История операций</h3>
-          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="renderHistory()">Обновить</button>
+          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">История чеков и операций</h3>
+          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="loadHistory()">🔄 Обновить</button>
         </div>
         <div class="history-list" id="historyListContainer">
-          <p style="color: var(--text-muted); text-align: center; padding: 20px;">История пуста</p>
+          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка истории...</p>
         </div>
       </div>
 
-      <!-- TAB 4: DISPLAYS MANAGEMENT -->
-      <div class="tab-content" id="tabDisplays">
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          
-          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">Настройки Дисплеев Покупателя</h3>
-
-          <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
-            <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Режим отправки на дисплеи</label>
-            <select id="mainTargetSettingSelect" style="background: var(--surface-card); border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px; outline: none; cursor: pointer;" onchange="updateTargetDisplaySetting(this.value)">
-              <option value="ask" selected>❓ Спрашивать каждый раз при транзакции</option>
-              <option value="all">🌐 Отправлять сразу на Все экраны</option>
-              <option value="display_1">🖥 Всегда Дисплей #1</option>
-              <option value="display_2">🖥 Всегда Дисплей #2</option>
-            </select>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h4 style="font-size: 13px; font-weight: 700; color: #fff;">Подключенные дисплеи:</h4>
-            <a href="/display" target="_blank" class="client-link-btn" style="font-size: 11px; padding: 4px 8px;">+ Открыть новый дисплей</a>
-          </div>
-
-          <div id="displaysListContainer" style="display: flex; flex-direction: column; gap: 8px;">
-            <div class="display-card-item">
-              <div>
-                <strong style="font-size: 14px; color: #fff;">🖥 Дисплей #1 (Основной)</strong>
-                <p style="font-size: 11px; color: var(--primary);">● Подключен (Локально)</p>
-              </div>
-              <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 11px;" onclick="sendTestToDisplay('display_1')">Тест</button>
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 8px; margin-top: 10px;">
-            <button class="btn-secondary" onclick="sendWelcomeScreen()">👋 Заставка "Добро Пожаловать"</button>
-            <button class="btn-secondary" onclick="clearPhantomDisplays()" style="color: var(--warning); border-color: rgba(245,158,11,0.3);">🧹 Очистить фантомы</button>
-            <button class="btn-secondary" onclick="resetLocalBalance()" style="color: #f87171; border-color: rgba(239,68,68,0.3);">🗑 Сбросить (10 000 ₽)</button>
-          </div>
-
+      <!-- ВКЛАДКА 4: ПОДКТЮЧЕННЫЕ ДИСПЛЕИ -->
+      <div class="tab-content" id="tabSettings">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">Подключенные дисплеи (/display)</h3>
+          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="loadDisplays()">🔄 Обновить</button>
+        </div>
+        <div class="displays-list" id="displaysListContainer">
+          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Поиск подключенных экранов (/display)...</p>
         </div>
       </div>
-
     </section>
   </main>
 
-  <!-- ASK / SELECT DISPLAY MODAL -->
-  <div class="fullscreen-overlay" id="askDisplayModal">
-    <div class="modal-card">
-      <h2 style="font-size: 20px; font-weight: 800; color: #fff;">Выберите целевой дисплей</h2>
-      <p style="font-size: 13px; color: var(--text-muted);" id="askDisplayModalSubtitle">На какой экран отправить запрос оплаты?</p>
-      
-      <div class="display-choice-list" id="displayChoicesContainer">
-        <!-- Dynamically populated without phantom displays -->
-      </div>
-
-      <button class="btn-secondary" onclick="closeModal('askDisplayModal')" style="margin-top: 8px;">Отмена [Esc]</button>
-    </div>
-  </div>
-
-  <!-- SUCCESS MODAL -->
+  <!-- ПОЛНОЭКРАННОЕ ОКНО УСПЕХА -->
   <div class="fullscreen-overlay" id="successFullscreenModal">
-    <div class="modal-card">
-      <div class="check-icon-circle">✓</div>
-      <h2 style="font-size: 24px; font-weight: 800; color: #fff;" id="successModalTitle">Операция завершена!</h2>
-      <p style="color: var(--text-muted); font-size: 15px;">Сумма: <strong id="successOverlayAmount" style="color: #fff;">0 ₽</strong></p>
-      <p style="color: var(--primary); font-size: 15px; font-weight: 700;" id="successOverlayRemaining">Новый баланс: 0 ₽</p>
-      <p style="font-size: 12px; color: var(--accent);" id="successOverlayTargetDisplay">Дисплей: Все экраны</p>
-      <button class="btn-primary" onclick="closeSuccessOverlay()" style="margin-top: 8px;">Готово [Enter]</button>
-    </div>
+    <div class="check-icon-circle">✓</div>
+    <h2 style="font-size: 32px; margin-bottom: 8px; color: #fff;">Оплата успешно завершена!</h2>
+    <p style="color: var(--text-muted); font-size: 18px; margin-bottom: 8px;">Сумма: <strong id="successOverlayAmount" style="color: #fff;">0 ₽</strong></p>
+    <p style="color: var(--primary); font-size: 16px; font-weight: 700; margin-bottom: 24px;" id="successOverlayRemaining">Остаток на карте: 0 ₽</p>
+    <button class="btn-primary" onclick="closeSuccessOverlay()" style="max-width: 280px;">Новая операция [Enter]</button>
   </div>
 
-  <!-- ERROR MODAL -->
+  <!-- ПОЛНОЭКРАННОЕ ОКНО ОШИБКИ -->
   <div class="fullscreen-overlay" id="errorFullscreenModal">
-    <div class="modal-card">
-      <div class="error-circle">✕</div>
-      <h2 style="font-size: 24px; font-weight: 800; color: #fff;">Ошибка оплаты</h2>
-      <p style="color: #fca5a5; font-size: 15px;" id="errorOverlaySubtitle">Недостаточно средств на балансе!</p>
-      <button class="btn-primary" onclick="closeErrorOverlay()" style="margin-top: 8px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
+    <div class="error-circle">✕</div>
+    <h2 style="font-size: 32px; margin-bottom: 8px; color: #fff;">Ошибка оплаты</h2>
+    <p style="color: #fca5a5; font-size: 18px; margin-bottom: 24px;" id="errorOverlaySubtitle">Недостаточно средств на балансе карты!</p>
+    <button class="btn-primary" onclick="closeErrorOverlay()" style="max-width: 280px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
+  </div>
+
+  <!-- МОДАЛКА ВЫБОРА ДИСПЛЕЯ -->
+  <div class="select-terminal-modal" id="selectTerminalModal">
+    <div class="terminal-selector-card">
+      <h3 style="font-size: 18px; font-weight: 800; color: #fff;">Выберите дисплей покупателя</h3>
+      <p style="font-size: 13px; color: var(--text-muted);">Куда отправить QR-код оплаты?</p>
+      <div id="terminalSelectorList" style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto;">
+        <!-- Динамический список реальных экранов -->
+      </div>
+      <button class="btn-secondary" onclick="closeTerminalSelector()">Отмена</button>
     </div>
   </div>
 
+  <script src="/js/audio.js"></script>
   <script>
-    /**
-     * Web Audio API Synthesizer for touch taps and payment notifications
-     */
-    class TerminalAudioController {
-      constructor() {
-        this.ctx = null;
-      }
-
-      initCtx() {
-        if (!this.ctx) {
-          const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtxClass) this.ctx = new AudioCtxClass();
-        }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
-      }
-
-      playTap() {
-        try {
-          this.initCtx();
-          if (!this.ctx) return;
-          const now = this.ctx.currentTime;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(650, now);
-          gain.gain.setValueAtTime(0.05, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(now);
-          osc.stop(now + 0.05);
-        } catch (e) {}
-      }
-
-      playSuccess() {
-        try {
-          this.initCtx();
-          if (!this.ctx) return;
-          const now = this.ctx.currentTime;
-          const osc1 = this.ctx.createOscillator(), gain1 = this.ctx.createGain();
-          osc1.frequency.setValueAtTime(1318.51, now); gain1.gain.setValueAtTime(0.2, now);
-          gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-          osc1.connect(gain1); gain1.connect(this.ctx.destination);
-          osc1.start(now); osc1.stop(now + 0.2);
-
-          const osc2 = this.ctx.createOscillator(), gain2 = this.ctx.createGain();
-          osc2.frequency.setValueAtTime(1975.53, now + 0.1); gain2.gain.setValueAtTime(0.25, now + 0.1);
-          gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-          osc2.connect(gain2); gain2.connect(this.ctx.destination);
-          osc2.start(now + 0.1); osc2.stop(now + 0.35);
-        } catch (e) {}
-      }
-
-      playError() {
-        try {
-          this.initCtx();
-          if (!this.ctx) return;
-          const now = this.ctx.currentTime;
-          const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
-          osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now);
-          gain.gain.setValueAtTime(0.2, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-          osc.connect(gain); gain.connect(this.ctx.destination);
-          osc.start(now); osc.stop(now + 0.25);
-        } catch (e) {}
-      }
-    }
-
-    const terminalAudio = new TerminalAudioController();
-  </script>
-
-  <script>
-    let socket = null;
-    let currentBalance = parseInt(localStorage.getItem('pos_terminal_balance') || '10000', 10);
+    const socket = io();
+    let currentTab = 'charge';
+    let pendingAmountForTx = 0;
     let activeDisplaysList = [];
-    let targetDisplaySetting = localStorage.getItem('pos_target_display') || 'ask';
-    let pendingTransaction = null;
 
-    // Initialization on DOM Load
-    window.addEventListener('DOMContentLoaded', () => {
-      updateBalanceDisplay();
-      syncTargetDisplayUI();
-      initSocketConnection();
-      renderHistory();
-    });
-
-    function initSocketConnection() {
-      if (typeof io !== 'undefined') {
-        try {
-          socket = io();
-
-          socket.on('connect', () => {
-            setSocketStatus(true, 'Сокеты Онлайн');
-          });
-
-          socket.on('disconnect', () => {
-            setSocketStatus(false, 'Автономный режим');
-          });
-
-          socket.on('displays_update', (displays) => {
-            // Filter out phantom/offline displays
-            activeDisplaysList = (displays || []).filter(d => d && d.online !== false);
-            renderDisplaysList(activeDisplaysList);
-          });
-
-          socket.on('balance_updated', (data) => {
-            if (data && typeof data.balance === 'number') {
-              currentBalance = data.balance;
-              localStorage.setItem('pos_terminal_balance', currentBalance);
-              updateBalanceDisplay();
-            }
-          });
-        } catch (e) {
-          setSocketStatus(false, 'Локально');
+    // Получаем текущие данные сервера
+    fetch('/api/info')
+      .then(res => res.json())
+      .then(data => {
+        if (data.config && data.config.serverIp) {
+          document.getElementById('serverInfoText').textContent = `IP: ${data.config.serverIp}`;
         }
-      } else {
-        setSocketStatus(false, 'Автономно');
-      }
-    }
-
-    function setSocketStatus(online, label) {
-      const badge = document.getElementById('statusBadge');
-      const dot = document.getElementById('statusBadgeDot');
-      const text = document.getElementById('statusBadgeText');
-
-      if (online) {
-        badge.className = 'status-badge-online';
-        dot.className = 'pulse-dot-green';
-        text.textContent = label;
-      } else {
-        badge.className = 'status-badge-online status-badge-offline';
-        dot.className = 'pulse-dot-amber';
-        text.textContent = label;
-      }
-    }
-
-    function updateBalanceDisplay() {
-      document.getElementById('currentBalanceDisplay').textContent = currentBalance.toLocaleString('ru-RU') + ' ₽';
-    }
-
-    function updateTargetDisplaySetting(value) {
-      targetDisplaySetting = value;
-      localStorage.setItem('pos_target_display', value);
-      syncTargetDisplayUI();
-    }
-
-    function syncTargetDisplayUI() {
-      const chargeSel = document.getElementById('chargeTargetSelect');
-      const topupSel = document.getElementById('topupTargetSelect');
-      const mainSel = document.getElementById('mainTargetSettingSelect');
-      const headerText = document.getElementById('headerTargetText');
-
-      if (chargeSel) chargeSel.value = targetDisplaySetting;
-      if (topupSel) topupSel.value = targetDisplaySetting;
-      if (mainSel) mainSel.value = targetDisplaySetting;
-
-      const labels = {
-        'ask': '❓ Спрашивать каждый раз',
-        'all': '🌐 Все экраны',
-        'display_1': '🖥 Дисплей #1',
-        'display_2': '🖥 Дисплей #2'
-      };
-
-      if (headerText) {
-        headerText.textContent = labels[targetDisplaySetting] || labels['ask'];
-      }
-    }
-
-    function openAskDisplayModal() {
-      const container = document.getElementById('displayChoicesContainer');
-      
-      let html = `
-        <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('all')">
-          <span>🌐 Все подключенные экраны</span>
-          <span style="font-size: 12px; color: var(--accent);">Отправить всем</span>
-        </button>
-      `;
-
-      if (activeDisplaysList.length > 0) {
-        activeDisplaysList.forEach(d => {
-          html += `
-            <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('${d.id}')">
-              <span>🖥 ${d.name || d.id}</span>
-              <span style="font-size: 12px; color: var(--primary);">Онлайн</span>
-            </button>
-          `;
-        });
-      } else {
-        html += `
-          <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('display_1')">
-            <span>🖥 Дисплей #1 (Основной)</span>
-            <span style="font-size: 12px; color: var(--primary);">По умолчанию</span>
-          </button>
-        `;
-      }
-
-      container.innerHTML = html;
-      openModal('askDisplayModal');
-    }
-
-    function initiateChargeTransaction() {
-      terminalAudio.playTap();
-      const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) return;
-
-      if (amount > currentBalance) {
-        terminalAudio.playError();
-        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств на балансе! Доступно: ${currentBalance.toLocaleString('ru-RU')} ₽`;
-        openModal('errorFullscreenModal');
-        return;
-      }
-
-      pendingTransaction = { type: 'charge', amount: amount };
-
-      if (targetDisplaySetting === 'ask') {
-        openAskDisplayModal();
-      } else {
-        executeTransaction(pendingTransaction, targetDisplaySetting);
-      }
-    }
-
-    function initiateTopupTransaction() {
-      terminalAudio.playTap();
-      const amount = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) return;
-
-      // Silent topup behavior
-      executeTopupSilently(amount);
-    }
-
-    function confirmDisplayTargetAndExecute(chosenDisplayTarget) {
-      closeModal('askDisplayModal');
-      if (pendingTransaction) {
-        executeTransaction(pendingTransaction, chosenDisplayTarget);
-      }
-    }
-
-    function executeTransaction(tx, displayTarget) {
-      if (tx.type === 'charge') {
-        currentBalance -= tx.amount;
-        clearInput('charge');
-        document.getElementById('successModalTitle').textContent = 'Списание выполнено!';
-        document.getElementById('successOverlayAmount').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
-        document.getElementById('successOverlayRemaining').textContent = 'Остаток на карте: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
-      }
-
-      localStorage.setItem('pos_terminal_balance', currentBalance);
-      updateBalanceDisplay();
-      saveReceiptLocally(tx.type, tx.amount, displayTarget);
-
-      // Send WebSocket event
-      if (socket && socket.connected) {
-        socket.emit('process_transaction', {
-          type: tx.type,
-          amount: tx.amount,
-          newBalance: currentBalance,
-          targetDisplay: displayTarget
-        });
-      }
-
-      const displayLabels = {
-        'all': '🌐 Все экраны',
-        'display_1': '🖥 Дисплей #1',
-        'display_2': '🖥 Дисплей #2'
-      };
-      document.getElementById('successOverlayTargetDisplay').textContent = 'Отправлено на: ' + (displayLabels[displayTarget] || displayTarget);
-
-      terminalAudio.playSuccess();
-      openModal('successFullscreenModal');
-      pendingTransaction = null;
-    }
-
-    function executeTopupSilently(amount) {
-      currentBalance += amount;
-      clearInput('topup');
-      localStorage.setItem('pos_terminal_balance', currentBalance);
-      updateBalanceDisplay();
-      saveReceiptLocally('topup', amount, 'silent');
-
-      // Sync balance to displays quietly without triggering modal on client screen
-      if (socket && socket.connected) {
-        socket.emit('sync_balance_only', {
-          newBalance: currentBalance
-        });
-      }
-
-      document.getElementById('successModalTitle').textContent = 'Баланс пополнен!';
-      document.getElementById('successOverlayAmount').textContent = '+' + amount.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successOverlayRemaining').textContent = 'Новый баланс: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successOverlayTargetDisplay').textContent = 'Тихий режим (без окна на дисплее)';
-
-      terminalAudio.playSuccess();
-      openModal('successFullscreenModal');
-    }
-
-    function clearPhantomDisplays() {
-      terminalAudio.playTap();
-      activeDisplaysList = activeDisplaysList.filter(d => d.online !== false);
-      renderDisplaysList(activeDisplaysList);
-    }
-
-    function saveReceiptLocally(type, amount, targetDisplay) {
-      try {
-        const history = JSON.parse(localStorage.getItem('pos_local_receipts') || '[]');
-        history.unshift({
-          id: Date.now(),
-          type: type,
-          amount: amount,
-          targetDisplay: targetDisplay,
-          created_at: new Date().toISOString()
-        });
-        localStorage.setItem('pos_local_receipts', JSON.stringify(history.slice(0, 50)));
-      } catch(e) {}
-    }
-
-    function renderHistory() {
-      const container = document.getElementById('historyListContainer');
-      const receipts = JSON.parse(localStorage.getItem('pos_local_receipts') || '[]');
-
-      if (receipts.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">История операций пуста</p>';
-        return;
-      }
-
-      container.innerHTML = receipts.map(item => {
-        const isTopup = item.type === 'topup';
-        const dateStr = new Date(item.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-        return `
-          <div class="history-item">
-            <div class="history-info">
-              <h4>${isTopup ? '➕ Пополнение' : '💸 Списание'}</h4>
-              <p>${dateStr} • ${item.targetDisplay || 'all'}</p>
-            </div>
-            <div class="history-amount ${isTopup ? 'topup' : ''}">
-              ${isTopup ? '+' : '-'}${Number(item.amount).toLocaleString('ru-RU')} ₽
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderDisplaysList(displays) {
-      const container = document.getElementById('displaysListContainer');
-      if (!displays || displays.length === 0) {
-        container.innerHTML = `
-          <div class="display-card-item">
-            <div>
-              <strong style="font-size: 14px; color: #fff;">🖥 Дисплей #1 (Основной)</strong>
-              <p style="font-size: 11px; color: var(--primary);">● Подключен (Локально)</p>
-            </div>
-            <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 11px;" onclick="sendTestToDisplay('display_1')">Тест</button>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = displays.map(d => `
-        <div class="display-card-item">
-          <div>
-            <strong style="font-size: 14px; color: #fff;">🖥 ${d.name || d.id}</strong>
-            <p style="font-size: 11px; color: ${d.online ? 'var(--primary)' : 'var(--text-muted)'};">
-              ${d.online ? '● Онлайн' : '○ Офлайн'}
-            </p>
-          </div>
-          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 11px;" onclick="sendTestToDisplay('${d.id}')">Тест</button>
-        </div>
-      `).join('');
-    }
-
-    /* NUMPAD & UI CONTROLS */
-    function appendDigit(type, digit) {
-      terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
-      let val = input.value.replace(/\D/g, '');
-      if (val === '0' || val === '') val = digit;
-      else if (val.length < 7) val += digit;
-
-      input.value = parseInt(val, 10).toLocaleString('ru-RU');
-    }
-
-    function backspace(type) {
-      terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
-      let val = input.value.replace(/\D/g, '').slice(0, -1);
-      input.value = (val === '' ? '0' : parseInt(val, 10)).toLocaleString('ru-RU');
-    }
-
-    function clearInput(type) {
-      terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      document.getElementById(inputId).value = '0';
-    }
-
-    function addPreset(type, amount) {
-      terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
-      let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
-      current += amount;
-      input.value = current.toLocaleString('ru-RU');
-    }
+        if (data.history) renderHistory(data.history);
+        if (data.displays) updateDisplaysList(data.displays);
+      })
+      .catch(e => {});
 
     function switchTab(tab) {
-      terminalAudio.playTap();
+      if (window.terminalAudio) terminalAudio.playTap();
+      currentTab = tab;
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
+      
       if (tab === 'charge') {
         document.getElementById('tabBtnCharge').classList.add('active');
         document.getElementById('tabCharge').classList.add('active');
@@ -1256,67 +790,292 @@
       } else if (tab === 'history') {
         document.getElementById('tabBtnHistory').classList.add('active');
         document.getElementById('tabHistory').classList.add('active');
-        renderHistory();
-      } else if (tab === 'displays') {
-        document.getElementById('tabBtnDisplays').classList.add('active');
-        document.getElementById('tabDisplays').classList.add('active');
+        loadHistory();
+      } else if (tab === 'settings') {
+        document.getElementById('tabBtnSettings').classList.add('active');
+        document.getElementById('tabSettings').classList.add('active');
+        loadDisplays();
       }
     }
 
-    function openModal(id) { document.getElementById(id).classList.add('active'); }
-    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-    function closeSuccessOverlay() { terminalAudio.playTap(); closeModal('successFullscreenModal'); }
-    function closeErrorOverlay() { terminalAudio.playTap(); closeModal('errorFullscreenModal'); }
-
-    function sendTestToDisplay(displayId) {
-      terminalAudio.playTap();
-      if (socket && socket.connected) {
-        socket.emit('display_test', { targetDisplay: displayId });
+    function appendDigit(type, digit) {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const input = document.getElementById(inputId);
+      let val = input.value.replace(/\D/g, '');
+      if (val === '0' || val === '') {
+        val = digit;
+      } else {
+        if (val.length < 7) val += digit;
       }
+      input.value = parseInt(val, 10).toLocaleString('ru-RU');
     }
 
-    function sendWelcomeScreen() {
-      terminalAudio.playTap();
-      if (socket && socket.connected) {
-        socket.emit('display_show_welcome', { targetDisplay: targetDisplaySetting });
+    function backspace(type) {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const input = document.getElementById(inputId);
+      let val = input.value.replace(/\D/g, '');
+      val = val.slice(0, -1);
+      input.value = (val === '' ? '0' : parseInt(val, 10)).toLocaleString('ru-RU');
+    }
+
+    function clearInput(type) {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      document.getElementById(inputId).value = '0';
+    }
+
+    function addPreset(type, amount) {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const input = document.getElementById(inputId);
+      let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
+      current += amount;
+      input.value = current.toLocaleString('ru-RU');
+    }
+
+    function initiateChargeTransaction() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const amountVal = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
+      if (amountVal <= 0) return;
+      pendingAmountForTx = amountVal;
+      createQrTransaction(null);
+    }
+
+    function openDisplaySelector() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const amountVal = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
+      if (amountVal <= 0) return;
+      pendingAmountForTx = amountVal;
+
+      fetch('/api/displays')
+        .then(res => res.json())
+        .then(data => {
+          updateDisplaysList(data.displays || []);
+          renderTerminalModalList();
+          document.getElementById('selectTerminalModal').classList.add('active');
+        })
+        .catch(() => {
+          renderTerminalModalList();
+          document.getElementById('selectTerminalModal').classList.add('active');
+        });
+    }
+
+    function renderTerminalModalList() {
+      const container = document.getElementById('terminalSelectorList');
+      if (!activeDisplaysList || activeDisplaysList.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 16px; font-size: 13px;">Нет активных дисплеев покупателя (/display). Сначала откройте экран покупателя в браузере.</p>`;
+        return;
       }
+
+      container.innerHTML = activeDisplaysList.map(d => `
+        <div class="terminal-option-item" onclick="selectDisplayAndCharge('${d.id}')">
+          <div>
+            <div style="font-weight: 700; color: #fff; font-size: 14px;">${d.name || 'Дисплей ' + d.id}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">IP: ${d.ip || 'Онлайн'}</div>
+          </div>
+          <div style="font-size: 12px; color: var(--primary); font-weight: 700;">Отправить →</div>
+        </div>
+      `).join('');
     }
 
-    function resetLocalBalance() {
-      terminalAudio.playTap();
-      currentBalance = 10000;
-      localStorage.setItem('pos_terminal_balance', currentBalance);
-      updateBalanceDisplay();
+    function selectDisplayAndCharge(targetDisplayId) {
+      closeTerminalSelector();
+      createQrTransaction(targetDisplayId);
     }
 
-    /* KEYBOARD HOTKEYS SUPPORT */
+    function closeTerminalSelector() {
+      document.getElementById('selectTerminalModal').classList.remove('active');
+    }
+
+    function createQrTransaction(targetDisplayId) {
+      fetch('/api/create-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: pendingAmountForTx, targetDisplayId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          renderQrView(data.transaction);
+        }
+      })
+      .catch(err => console.error(err));
+    }
+
+    function renderQrView(tx) {
+      document.getElementById('chargeFormView').style.display = 'none';
+      document.getElementById('qrDisplayPanel').classList.add('active');
+      document.getElementById('qrAmountDisplay').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
+      document.getElementById('qrImage').src = tx.qrCode;
+    }
+
+    function cancelTransaction() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      fetch('/api/cancel-transaction', { method: 'POST' }).catch(e => {});
+      resetChargeView();
+    }
+
+    function resetChargeView() {
+      document.getElementById('chargeAmount').value = '0';
+      document.getElementById('chargeFormView').style.display = 'flex';
+      document.getElementById('qrDisplayPanel').classList.remove('active');
+      document.getElementById('successFullscreenModal').classList.remove('active');
+      document.getElementById('errorFullscreenModal').classList.remove('active');
+    }
+
+    function closeSuccessOverlay() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      resetChargeView();
+    }
+
+    function closeErrorOverlay() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      resetChargeView();
+    }
+
+    function submitTopup() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const amountVal = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
+      if (amountVal <= 0) return;
+
+      fetch('/api/topup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amountVal })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          if (window.terminalAudio) terminalAudio.playSuccess();
+          clearInput('topup');
+          switchTab('charge');
+        }
+      });
+    }
+
+    function loadHistory() {
+      fetch('/api/history')
+        .then(res => res.json())
+        .then(data => renderHistory(data.history || []))
+        .catch(e => {});
+    }
+
+    function renderHistory(history) {
+      const container = document.getElementById('historyListContainer');
+      if (!history || history.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">История чеков пуста</p>`;
+        return;
+      }
+
+      container.innerHTML = history.map(item => {
+        const isTopup = item.type === 'topup';
+        const dateStr = new Date(item.createdAt || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        return `
+          <div class="history-item">
+            <div class="history-info">
+              <h4>${isTopup ? '➕ Пополнение счета' : '🧾 Чек оплаты'} <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">#${item.id}</span></h4>
+              <p>${dateStr} • ${isTopup ? 'Пополнение' : 'Безналичный расчет'}</p>
+              ${!isTopup ? `<a href="/api/receipt/${item.id}" target="_blank" class="receipt-download-btn">📥 Скачать чек</a>` : ''}
+            </div>
+            <div class="history-amount ${isTopup ? 'topup' : ''}">
+              ${isTopup ? '+' : ''}${item.amount.toLocaleString('ru-RU')} ₽
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function loadDisplays() {
+      fetch('/api/displays')
+        .then(res => res.json())
+        .then(data => updateDisplaysList(data.displays || []))
+        .catch(e => {});
+    }
+
+    function updateDisplaysList(displays) {
+      // Оставляем только реальные подключенные вебсокет-клиенты /display
+      activeDisplaysList = (displays || []).filter(d => !d.isLocal);
+      renderDisplays(activeDisplaysList);
+    }
+
+    function renderDisplays(displays) {
+      const container = document.getElementById('displaysListContainer');
+      if (!displays || displays.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет активных дисплеев. Откройте <a href="/display" target="_blank" style="color: var(--primary);">/display</a> в новом окне или на клиентском устройстве.</p>`;
+        return;
+      }
+
+      container.innerHTML = displays.map(d => `
+        <div class="display-card">
+          <div>
+            <h4 style="font-size: 14px; font-weight: 700; color: #fff;">🖥 ${d.name || 'Дисплей Покупателя'}</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">ID: ${d.id} • IP: ${d.ip || 'Онлайн'}</p>
+          </div>
+          <span style="font-size: 11px; background: rgba(16,185,129,0.2); color: var(--primary); padding: 4px 10px; border-radius: 6px; font-weight: 700;">● Подключен</span>
+        </div>
+      `).join('');
+    }
+
+    // Сокетные события
+    socket.on('update_displays', (displays) => {
+      updateDisplaysList(displays);
+    });
+
+    socket.on('payment_success', (data) => {
+      if (window.terminalAudio) window.terminalAudio.playSuccess();
+      document.getElementById('qrDisplayPanel').classList.remove('active');
+      document.getElementById('errorFullscreenModal').classList.remove('active');
+      
+      const successModal = document.getElementById('successFullscreenModal');
+      successModal.classList.add('active');
+      
+      document.getElementById('successOverlayAmount').textContent = data.transaction.amount.toLocaleString('ru-RU') + ' ₽';
+      if (data.newBalance !== undefined) {
+        document.getElementById('successOverlayRemaining').textContent = 'Остаток на карте: ' + data.newBalance.toLocaleString('ru-RU') + ' ₽';
+      }
+    });
+
+    socket.on('payment_failed', (data) => {
+      if (window.terminalAudio) window.terminalAudio.playError();
+      document.getElementById('qrDisplayPanel').classList.remove('active');
+      document.getElementById('successFullscreenModal').classList.remove('active');
+      
+      const errorModal = document.getElementById('errorFullscreenModal');
+      errorModal.classList.add('active');
+      
+      if (data.reason === 'insufficient_funds') {
+        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств на балансе! Требуется: ${data.transaction.amount.toLocaleString('ru-RU')} ₽`;
+      }
+    });
+
+    socket.on('transaction_cancelled', () => {
+      resetChargeView();
+    });
+
+    // Клавиатура
     document.addEventListener('keydown', (e) => {
-      const askModal = document.getElementById('askDisplayModal');
       const errModal = document.getElementById('errorFullscreenModal');
       const succModal = document.getElementById('successFullscreenModal');
+      const qrPanel = document.getElementById('qrDisplayPanel');
 
       if (e.key === 'Enter') {
-        if (askModal.classList.contains('active')) confirmDisplayTargetAndExecute('all');
-        else if (errModal.classList.contains('active')) closeErrorOverlay();
-        else if (succModal.classList.contains('active')) closeSuccessOverlay();
-        else {
-          const activeTab = document.querySelector('.tab-btn.active').id;
-          if (activeTab === 'tabBtnCharge') initiateChargeTransaction();
-          else if (activeTab === 'tabBtnTopup') initiateTopupTransaction();
+        if (errModal.classList.contains('active')) {
+          closeErrorOverlay();
+        } else if (succModal.classList.contains('active')) {
+          closeSuccessOverlay();
+        } else if (!qrPanel.classList.contains('active')) {
+          if (currentTab === 'charge') initiateChargeTransaction();
+          else if (currentTab === 'topup') submitTopup();
         }
       } else if (e.key === 'Escape') {
-        closeModal('askDisplayModal');
-        closeSuccessOverlay();
-        closeErrorOverlay();
-      } else if (!isNaN(e.key) && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
-        const activeTab = document.querySelector('.tab-btn.active').id;
-        const type = activeTab === 'tabBtnCharge' ? 'charge' : 'topup';
-        appendDigit(type, e.key);
-      } else if (e.key === 'Backspace' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
-        const activeTab = document.querySelector('.tab-btn.active').id;
-        const type = activeTab === 'tabBtnCharge' ? 'charge' : 'topup';
-        backspace(type);
+        cancelTransaction();
+        closeTerminalSelector();
+      } else if (!isNaN(e.key) && currentTab !== 'history' && currentTab !== 'settings') {
+        appendDigit(currentTab, e.key);
+      } else if (e.key === 'Backspace' && currentTab !== 'history' && currentTab !== 'settings') {
+        backspace(currentTab);
       }
     });
   </script>
