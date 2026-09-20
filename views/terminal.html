@@ -665,6 +665,7 @@
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма к оплате</span>
             <div class="amount-input-container">
+              <!-- ИЗМЕНЕНО: значение по умолчанию установлено в 0[cite: 4] -->
               <input type="text" id="chargeAmount" class="amount-input" value="0" readonly>
               <span class="amount-currency">₽</span>
             </div>
@@ -719,6 +720,7 @@
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма пополнения счета</span>
             <div class="amount-input-container">
+              <!-- ИЗМЕНЕНО: значение по умолчанию установлено в 0[cite: 4] -->
               <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
               <span class="amount-currency">₽</span>
             </div>
@@ -1107,13 +1109,11 @@
       }).catch(e => {});
     }
 
-    // ИСПРАВЛЕНИЕ: Отправка через WebSocket вместо несуществующего REST эндпоинта
     function toggleBlockDisplay(id, blockStatus) {
       if (window.terminalAudio) terminalAudio.playTap();
       socket.emit('toggle_display_lock', { id: id, isBlocked: blockStatus });
     }
 
-    // Слушаем обновление списка дисплеев в реальном времени от сервера
     socket.on('update_displays', (displays) => {
       renderDisplays(displays);
     });
