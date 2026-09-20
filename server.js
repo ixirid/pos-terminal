@@ -33,6 +33,24 @@ if (fs.existsSync(CONFIG_PATH)) {
   }
 }
 
+// Вспомогательная функция для отправки событий только кассе и конкретному дисплею (если он указан)
+function sendTargetedEvent(eventName, payload, targetDisplayId) {
+  if (!targetDisplayId) {
+    // Если дисплей не выбран — отправляем всем
+    io.emit(eventName, payload);
+  } else {
+    // Если дисплей выбран — отправляем ТОЛЬКО кассе (не-дисплеям) и целевому дисплею
+    for (let [socketId, sock] of io.sockets.sockets) {
+      const isDisplay = clientDisplays.some(d => d.socketId === socketId);
+      const isTarget = clientDisplays.some(d => d.id === targetDisplayId && d.socketId === socketId);
+      
+      if (!isDisplay || isTarget) {
+        sock.emit(eventName, payload);
+      }
+    }
+  }
+}
+
 // ==================== HTML РОУТЫ ====================
 
 app.get('/', (req, res) => {
@@ -148,16 +166,9 @@ app.post('/api/create-transaction', (req, res) => {
 
   pendingTransactions[txId] = transaction;
 
-  // Если выбран конкретный дисплей — шлем QR только ему и кассе. Иначе всем.
-  if (targetDisplayId) {
-    io.to(targetDisplayId).emit('show_qr', transaction);
-    io.to(targetDisplayId).emit('transaction_created', transaction);
-    // Также дублируем на кассу (основное соединение)
-    io.emit('transaction_created_terminal_only', transaction); 
-  } else {
-    io.emit('show_qr', transaction);
-    io.emit('transaction_created', transaction);
-  }
+  // Рассылаем QR только на кассу и целевой дисплей
+  sendTargetedEvent('show_qr', transaction, targetDisplayId);
+  sendTargetedEvent('transaction_created', transaction, targetDisplayId);
 
   res.json({ success: true, transaction });
 });
@@ -175,11 +186,8 @@ app.get('/api/shortcut/pay-active', (req, res) => {
     tx.status = 'failed';
     const failPayload = { transaction: tx, reason: 'insufficient_funds' };
     
-    // Отправляем ошибку (крестик) ТОЛЬКО на кассу и целевой дисплей
-    io.emit('payment_failed', failPayload);
-    if (tx.targetDisplayId) {
-      io.to(tx.targetDisplayId).emit('payment_failed', failPayload);
-    }
+    // Ошибка (крестик) только на кассу и нужный дисплей
+    sendTargetedEvent('payment_failed', failPayload, tx.targetDisplayId);
 
     return res.status(400).json({ success: false, error: 'insufficient_funds', transaction: tx });
   }
@@ -196,11 +204,8 @@ app.get('/api/shortcut/pay-active', (req, res) => {
 
   const successPayload = { transaction: tx, newBalance: clientBalance };
   
-  // Отправляем успех (галочку) ТОЛЬКО на кассу и целевой дисплей
-  io.emit('payment_success', successPayload);
-  if (tx.targetDisplayId) {
-    io.to(tx.targetDisplayId).emit('payment_success', successPayload);
-  }
+  // Успех (галочка) только на кассу и нужный дисплей
+  sendTargetedEvent('payment_success', successPayload, tx.targetDisplayId);
 
   io.emit('client_balance_updated', { balance: clientBalance });
 
@@ -229,10 +234,7 @@ app.post('/api/process-payment', (req, res) => {
     tx.status = 'failed';
     
     const failPayload = { transaction: tx, reason: 'insufficient_funds' };
-    io.emit('payment_failed', failPayload);
-    if (tx.targetDisplayId) {
-      io.to(tx.targetDisplayId).emit('payment_failed', failPayload);
-    }
+    sendTargetedEvent('payment_failed', failPayload, tx.targetDisplayId);
 
     return res.json({ success: false, error: 'insufficient_funds' });
   }
@@ -248,10 +250,7 @@ app.post('/api/process-payment', (req, res) => {
   });
 
   const successPayload = { transaction: tx, newBalance: clientBalance };
-  io.emit('payment_success', successPayload);
-  if (tx.targetDisplayId) {
-    io.to(tx.targetDisplayId).emit('payment_success', successPayload);
-  }
+  sendTargetedEvent('payment_success', successPayload, tx.targetDisplayId);
 
   io.emit('client_balance_updated', { balance: clientBalance });
 
