@@ -681,7 +681,6 @@
       renderPayState(tx);
     });
 
-    // Дублируем слушатель на случай старых событий сервера
     socket.on('transaction_created', (tx) => {
       if (tx.targetDisplayId && tx.targetDisplayId !== displayId) {
         return; 
@@ -728,8 +727,12 @@
       switchState(stateIdle);
     });
 
+    // Исправленный обработчик блокировки дисплея
     socket.on('display_block_status', (data) => {
-      if (data.id === displayId) {
+      console.log('Получен статус блокировки:', data, 'Мой ID:', displayId);
+      
+      const targetId = data.id || data.displayId;
+      if (targetId === displayId) {
         if (data.isBlocked) {
           blockedScreen.classList.add('active');
         } else {
