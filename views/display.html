@@ -616,16 +616,23 @@
 
   </main>
 
-<script src="/js/audio.js"></script>
+  <script src="/js/audio.js"></script>
   <script>
     const socket = io();
-    socket.emit('register_display'); // <--- ВСТАВЬТЕ ЭТУ СТРОКУ СЮДА
 
-    let displayId = null;
+    // Фиксируем уникальный ID дисплея в браузере, чтобы он не плодил клонов при перезагрузке
+    let displayId = localStorage.getItem('pos_display_id');
+    if (!displayId) {
+      displayId = 'display_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('pos_display_id', displayId);
+    }
 
     socket.on('connect', () => {
-      displayId = socket.id;
-      socket.emit('register_display'); // <--- И ДЛЯ НАДЕЖНОСТИ СЮДА
+      // Передаем постоянный ID на сервер при каждом подключении
+      socket.emit('register_display', {
+        id: displayId,
+        name: 'SberPay Дисплей'
+      });
     });
 
     const stateIdle = document.getElementById('state-idle');
@@ -667,10 +674,17 @@
       }
     });
 
-    socket.on('transaction_created', (tx) => {
-      // Если у транзакции указан конкретный дисплей, проверяем он ли это
+    socket.on('show_qr', (tx) => {
       if (tx.targetDisplayId && tx.targetDisplayId !== displayId) {
-        return; // Пропускаем, если отправлено на другой терминал
+        return; 
+      }
+      renderPayState(tx);
+    });
+
+    // Дублируем слушатель на случай старых событий сервера
+    socket.on('transaction_created', (tx) => {
+      if (tx.targetDisplayId && tx.targetDisplayId !== displayId) {
+        return; 
       }
       renderPayState(tx);
     });
