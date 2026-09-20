@@ -33,7 +33,10 @@
       padding: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     body {
@@ -44,7 +47,9 @@
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
-      overflow-x: hidden;
+      overflow: hidden;
+      overscroll-behavior-y: none;
+      touch-action: none;
     }
 
     .pos-header {
@@ -204,6 +209,9 @@
       gap: 12px;
       flex: 1;
       justify-content: space-between;
+      overflow-y: auto;
+      touch-action: pan-y;
+      overscroll-behavior-y: contain;
     }
 
     .tab-content.active {
@@ -511,6 +519,8 @@
       flex: 1;
       max-height: 400px;
       padding-right: 4px;
+      touch-action: pan-y;
+      overscroll-behavior-y: contain;
     }
 
     .history-item {
@@ -838,11 +848,27 @@
   </div>
 
   <script>
-    // 1. SUPABASE CLIENT INIT
-    const SUPABASE_URL = 'https://kaaooeeblogssqdmnvqr.supabase.co';
-    const SUPABASE_KEY = 'EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYW9vZWVibG9nc3NxZG1udnFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NjIzODAsImV4cCI6MjEwNTQzODM4MH0.dloUMX2qqGVXVmbPKfxOwiT4Da8DagUdAfkZm0WkG1c';
+    // 0. ГЛОБАЛЬНОЕ СОСТОЯНИЕ (Поднято наверх, чтобы скрипт кнопок не ломался при сетевых ошибках)
+    let currentTab = 'charge';
+    let currentUserId = null;
+    let currentBalance = 0;
+    let pendingDisplayAmount = 0;
+    let supabase = null;
+    let displayChannel = { postMessage: () => {} }; // Безопасная заглушка
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // 1. SUPABASE CLIENT INIT (Обернуто в try/catch)
+    try {
+      const SUPABASE_URL = 'https://kaaooeeblogssqdmnvqr.supabase.co';
+      const SUPABASE_KEY = 'EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYW9vZWVibG9nc3NxZG1udnFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NjIzODAsImV4cCI6MjEwNTQzODM4MH0.dloUMX2qqGVXVmbPKfxOwiT4Da8DagUdAfkZm0WkG1c';
+
+      if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      } else {
+        console.warn("Supabase SDK не найден. Приложение работает автономно.");
+      }
+    } catch (e) {
+      console.error("Ошибка инициализации БД:", e);
+    }
 
     // 2. AUDIO SYNTHESIZER
     class TerminalAudioController {
@@ -935,48 +961,54 @@
 
     const terminalAudio = new TerminalAudioController();
 
-    // 3. BROADCAST CHANNEL FOR DISPLAY SYNC
-    const displayChannel = new BroadcastChannel('pos_display_channel');
+    // 3. BROADCAST CHANNEL FOR DISPLAY SYNC (Защита от падений в средах без поддержки)
+    try {
+      if (window.BroadcastChannel) {
+        displayChannel = new BroadcastChannel('pos_display_channel');
 
-    displayChannel.onmessage = (event) => {
-      const data = event.data;
-      if (data.type === 'CUSTOMER_CONFIRMED') {
-        document.getElementById('waitDisplayFullscreenModal').classList.remove('active');
-        executeChargeTransaction(data.amount);
-      } else if (data.type === 'CUSTOMER_REJECTED') {
-        document.getElementById('waitDisplayFullscreenModal').classList.remove('active');
-        terminalAudio.playError();
-        document.getElementById('errorOverlaySubtitle').textContent = 'Покупатель отклонил оплату на дисплее!';
-        document.getElementById('errorFullscreenModal').classList.add('active');
+        displayChannel.onmessage = (event) => {
+          const data = event.data;
+          if (data.type === 'CUSTOMER_CONFIRMED') {
+            document.getElementById('waitDisplayFullscreenModal').classList.remove('active');
+            executeChargeTransaction(data.amount);
+          } else if (data.type === 'CUSTOMER_REJECTED') {
+            document.getElementById('waitDisplayFullscreenModal').classList.remove('active');
+            terminalAudio.playError();
+            document.getElementById('errorOverlaySubtitle').textContent = 'Покупатель отклонил оплату на дисплее!';
+            document.getElementById('errorFullscreenModal').classList.add('active');
+          }
+        };
       }
-    };
-
-    // 4. GLOBAL STATE
-    let currentTab = 'charge';
-    let currentUserId = null;
-    let currentBalance = 0;
-    let pendingDisplayAmount = 0;
+    } catch(e) {
+      console.warn("BroadcastChannel недоступен:", e);
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
       await loadUserAccount();
       document.addEventListener('click', () => terminalAudio.initCtx(), { once: true });
+      document.addEventListener('touchstart', () => terminalAudio.initCtx(), { once: true });
     });
 
     async function loadUserAccount() {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .limit(1)
-        .single();
+      if (!supabase) return;
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .limit(1)
+          .single();
 
-      if (error) {
-        console.error('Ошибка загрузки аккаунта:', error);
-        return;
+        if (error) {
+          console.error('Ошибка загрузки аккаунта:', error);
+          return;
+        }
+
+        currentUserId = data.id;
+        currentBalance = Number(data.balance);
+        updateBalanceDisplays();
+      } catch (e) {
+        console.error('Сетевая ошибка при загрузке аккаунта:', e);
       }
-
-      currentUserId = data.id;
-      currentBalance = Number(data.balance);
-      updateBalanceDisplays();
     }
 
     function updateBalanceDisplays() {
@@ -1124,20 +1156,26 @@
 
       const newBalance = currentBalance - amount;
 
-      const { error: updateErr } = await supabase
-        .from('users')
-        .update({ balance: newBalance, updated_at: new Date() })
-        .eq('id', currentUserId);
+      if (supabase) {
+        try {
+          const { error: updateErr } = await supabase
+            .from('users')
+            .update({ balance: newBalance, updated_at: new Date() })
+            .eq('id', currentUserId);
 
-      if (updateErr) {
-        console.error('Ошибка списания:', updateErr);
-        terminalAudio.playError();
-        return;
+          if (updateErr) {
+            console.error('Ошибка списания:', updateErr);
+            terminalAudio.playError();
+            return;
+          }
+
+          await supabase
+            .from('receipts')
+            .insert([{ type: 'charge', amount: amount, user_id: currentUserId }]);
+        } catch(e) {
+          console.error('Сетевая ошибка при списании:', e);
+        }
       }
-
-      await supabase
-        .from('receipts')
-        .insert([{ type: 'charge', amount: amount, user_id: currentUserId }]);
 
       currentBalance = newBalance;
       updateBalanceDisplays();
@@ -1163,20 +1201,26 @@
 
       const newBalance = currentBalance + amount;
 
-      const { error: updateErr } = await supabase
-        .from('users')
-        .update({ balance: newBalance, updated_at: new Date() })
-        .eq('id', currentUserId);
+      if (supabase) {
+        try {
+          const { error: updateErr } = await supabase
+            .from('users')
+            .update({ balance: newBalance, updated_at: new Date() })
+            .eq('id', currentUserId);
 
-      if (updateErr) {
-        console.error('Ошибка пополнения:', updateErr);
-        terminalAudio.playError();
-        return;
+          if (updateErr) {
+            console.error('Ошибка пополнения:', updateErr);
+            terminalAudio.playError();
+            return;
+          }
+
+          await supabase
+            .from('receipts')
+            .insert([{ type: 'topup', amount: amount, user_id: currentUserId }]);
+        } catch(e) {
+          console.error('Сетевая ошибка при пополнении:', e);
+        }
       }
-
-      await supabase
-        .from('receipts')
-        .insert([{ type: 'topup', amount: amount, user_id: currentUserId }]);
 
       currentBalance = newBalance;
       updateBalanceDisplays();
@@ -1193,38 +1237,47 @@
       const container = document.getElementById('historyListContainer');
       container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка чеков...</p>';
 
-      const { data, error } = await supabase
-        .from('receipts')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error || !data) {
-        container.innerHTML = '<p style="color: var(--error); text-align: center; padding: 20px;">Ошибка загрузки истории</p>';
+      if (!supabase) {
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">БД отключена. История недоступна.</p>';
         return;
       }
 
-      if (data.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">История операций пуста</p>';
-        return;
-      }
+      try {
+        const { data, error } = await supabase
+          .from('receipts')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      container.innerHTML = data.map(item => {
-        const isTopup = item.type === 'topup';
-        const dateStr = new Date(item.created_at).toLocaleString('ru-RU', {
-          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-        });
-        return `
-          <div class="history-item">
-            <div class="history-info">
-              <h4>${isTopup ? '➕ Пополнение' : '🧾 Чек оплаты'}</h4>
-              <p>${dateStr}</p>
+        if (error || !data) {
+          container.innerHTML = '<p style="color: var(--error); text-align: center; padding: 20px;">Ошибка загрузки истории</p>';
+          return;
+        }
+
+        if (data.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">История операций пуста</p>';
+          return;
+        }
+
+        container.innerHTML = data.map(item => {
+          const isTopup = item.type === 'topup';
+          const dateStr = new Date(item.created_at).toLocaleString('ru-RU', {
+            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+          });
+          return `
+            <div class="history-item">
+              <div class="history-info">
+                <h4>${isTopup ? '➕ Пополнение' : '🧾 Чек оплаты'}</h4>
+                <p>${dateStr}</p>
+              </div>
+              <div class="history-amount ${isTopup ? 'topup' : ''}">
+                ${isTopup ? '+' : '-'}${Number(item.amount).toLocaleString('ru-RU')} ₽
+              </div>
             </div>
-            <div class="history-amount ${isTopup ? 'topup' : ''}">
-              ${isTopup ? '+' : '-'}${Number(item.amount).toLocaleString('ru-RU')} ₽
-            </div>
-          </div>
-        `;
-      }).join('');
+          `;
+        }).join('');
+      } catch(e) {
+        container.innerHTML = '<p style="color: var(--error); text-align: center; padding: 20px;">Сетевая ошибка загрузки чеков</p>';
+      }
     }
 
     function closeSuccessOverlay() {
