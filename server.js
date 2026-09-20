@@ -2,211 +2,181 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const crypto = require('crypto');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
-});
+const io = new Server(server);
 
-const PORT = process.env.PORT || 3000;
-
-// Middleware for parsing JSON and URL-encoded bodies
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve static assets from public folder or current directory
-app.use(express.static(path.join(__dirname)));
+let clientDisplays = [];
+let pendingTransactions = {};
+let history = [];
+let clientBalance = 0;
 
-const activeDisplays = new Map(); // id -> { id, name, socketId, online, blocked }
-const pendingTransactions = new Map(); // txId -> { txId, amount, payUrl, createdAt }
+const CONFIG_PATH = path.join(__dirname, 'config.json');
+let config = { serverIp: 'localhost' };
+if (fs.existsSync(CONFIG_PATH)) {
+  try {
+    config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  } catch (e) {}
+}
 
-// POS Terminal main page (fallback to terminal.html if index.html is missing)
 app.get('/', (req, res) => {
-  const terminalPath = path.join(__dirname, 'terminal.html');
-  const payPath = path.join(__dirname, 'pay.html');
-  
-  require('fs').access(terminalPath, (err) => {
-    if (!err) {
-      res.sendFile(terminalPath);
-    } else {
-      require('fs').access(payPath, (err2) => {
-        if (!err2) {
-          res.sendFile(payPath);
-        } else {
-          res.status(404).send('Terminal interface file not found.');
-        }
-      });
-    }
-  });
+  res.sendFile(path.join(__dirname, 'views', 'terminal.html'));
 });
 
-// Customer display multi-screen page
 app.get('/display', (req, res) => {
-  const displayPath = path.join(__dirname, 'display.html');
-  require('fs').access(displayPath, (err) => {
-    if (!err) {
-      res.sendFile(displayPath);
-    } else {
-      res.sendFile(path.join(__dirname, 'pay.html'));
-    }
-  });
+  res.sendFile(path.join(__dirname, 'views', 'display.html'));
+});
+
+app.get('/client', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'client_portal.html'));
 });
 
 app.get('/pay', (req, res) => {
-  res.sendFile(path.join(__dirname, 'pay.html'));
+  res.sendFile(path.join(__dirname, 'views', 'pay.html'));
 });
 
-// API endpoint to verify or fetch transaction details by unique code/id
+app.get('/api/info', (req, res) => {
+  res.json({
+    config,
+    history,
+    displays: clientDisplays,
+    balance: clientBalance
+  });
+});
+
+app.get('/api/displays', (req, res) => {
+  res.json({ displays: clientDisplays });
+});
+
+app.post('/api/create-transaction', (req, res) => {
+  const { amount, targetDisplayId } = req.body;
+  const txId = 'tx_' + Math.random().toString(36.substring(2, 9)) + Date.now().toString(36);
+  
+  const host = req.headers.host || 'localhost:10000';
+  const protocol = req.headers['x-forwarded-proto'] || 'http';
+  const payUrl = `${protocol}://${host}/pay?amount=${amount}&tx=${txId}`;
+  
+  // Генерация QR-кода через публичное API
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payUrl)}`;
+
+  const transaction = {
+    id: txId,
+    amount: parseInt(amount, 10),
+    qrCode: qrCodeUrl,
+    payUrl: payUrl,
+    createdAt: Date.now(),
+    status: 'pending'
+  };
+
+  pendingTransactions[txId] = transaction;
+
+  if (targetDisplayId) {
+    io.to(targetDisplayId).emit('show_qr', transaction);
+  } else {
+    io.emit('show_qr', transaction);
+  }
+
+  res.json({ success: true, transaction });
+});
+
 app.get('/api/transaction/:txId', (req, res) => {
-  const { txId } = req.params;
-  const tx = pendingTransactions.get(txId);
-  
+  const tx = pendingTransactions[req.params.txId];
   if (!tx) {
-    return res.status(404).json({ success: false, error: 'Транзакция не найдена или истек срок действия' });
+    return res.status(404).json({ error: 'Transaction not found' });
   }
-  
-  res.json({ success: true, transaction: tx });
+  res.json({ transaction: tx, balance: clientBalance });
 });
 
-// API endpoint to confirm payment from external client or QR scan page
-app.post('/api/pay/confirm', (req, res) => {
+app.post('/api/process-payment', (req, res) => {
   const { txId } = req.body;
-  const tx = pendingTransactions.get(txId);
+  const tx = pendingTransactions[txId];
 
-  if (!tx) {
-    return res.status(404).json({ success: false, error: 'Транзакция не найдена' });
+  if (!tx || tx.status !== 'pending') {
+    return res.status(400).json({ success: false, error: 'Invalid or expired transaction' });
   }
 
-  // Broadcast success event to all POS terminals and customer displays
-  io.emit('payment_completed_external', {
-    txId: tx.txId,
+  if (clientBalance < tx.amount) {
+    tx.status = 'failed';
+    io.emit('payment_failed', { transaction: tx, reason: 'insufficient_funds' });
+    return res.json({ success: false, error: 'insufficient_funds' });
+  }
+
+  clientBalance -= tx.amount;
+  tx.status = 'success';
+
+  history.unshift({
+    id: tx.id,
     amount: tx.amount,
-    targetDisplay: tx.targetDisplay || 'all'
+    type: 'charge',
+    createdAt: Date.now()
   });
 
-  pendingTransactions.delete(txId);
-  res.json({ success: true, message: 'Оплата успешно подтверждена' });
+  io.emit('payment_success', { transaction: tx, newBalance: clientBalance });
+  io.emit('client_balance_updated', { balance: clientBalance });
+
+  res.json({ success: true, newBalance: clientBalance });
+});
+
+app.post('/api/topup', (req, res) => {
+  const { amount } = req.body;
+  const topupAmount = parseInt(amount, 10);
+  if (topupAmount <= 0) return res.status(400).json({ success: false });
+
+  clientBalance += topupAmount;
+  const txId = 'top_' + Date.now();
+
+  history.unshift({
+    id: txId,
+    amount: topupAmount,
+    type: 'topup',
+    createdAt: Date.now()
+  });
+
+  io.emit('client_balance_updated', { balance: clientBalance });
+  res.json({ success: true, newBalance: clientBalance });
+});
+
+app.get('/api/history', (req, res) => {
+  res.json({ history });
+});
+
+app.post('/api/cancel-transaction', (req, res) => {
+  pendingTransactions = {};
+  io.emit('transaction_cancelled');
+  res.json({ success: true });
 });
 
 io.on('connection', (socket) => {
-  console.log(`[Socket] Новое подключение: ${socket.id}`);
-
-  // Register customer display connection
   socket.on('register_display', (data) => {
-    const displayId = data && data.displayId ? data.displayId : ('disp_' + socket.id.slice(0, 6));
-    const displayName = data && data.name ? data.name : ('Экран #' + displayId);
-
-    activeDisplays.set(socket.id, {
-      id: displayId,
-      name: displayName,
-      socketId: socket.id,
-      online: true,
-      blocked: false
-    });
-
-    socket.join('displays_room');
-    broadcastDisplaysList();
-  });
-
-  socket.on('request_displays_list', () => {
-    broadcastDisplaysList();
-  });
-
-  socket.on('get_active_displays', () => {
-    broadcastDisplaysList();
-  });
-
-  // Handle QR code display command from POS terminal
-  socket.on('display_show_qr', (data) => {
-    const { txId, amount, targetDisplay, payUrl, qrUrl } = data;
-    
-    // Store transaction with its unique link
-    if (txId) {
-      pendingTransactions.set(txId, {
-        txId,
-        amount,
-        payUrl,
-        targetDisplay,
-        createdAt: Date.now()
+    const existing = clientDisplays.find(d => d.id === data.id);
+    if (existing) {
+      existing.socketId = socket.id;
+      existing.ip = socket.handshake.address;
+    } else {
+      clientDisplays.push({
+        id: data.id,
+        socketId: socket.id,
+        name: data.name || `Дисплей ${clientDisplays.length + 1}`,
+        ip: socket.handshake.address,
+        locked: false
       });
     }
-
-    if (targetDisplay === 'all') {
-      io.to('displays_room').emit('show_qr_screen', { txId, amount, payUrl, qrUrl });
-    } else {
-      // Find specific display socket
-      for (let [sId, info] of activeDisplays.entries()) {
-        if (info.id === targetDisplay || sId === targetDisplay) {
-          io.to(sId).emit('show_qr_screen', { txId, amount, payUrl, qrUrl });
-          break;
-        }
-      }
-    }
-  });
-
-  // Handle welcome screen command
-  socket.on('display_show_welcome', (data) => {
-    const { targetDisplay } = data || {};
-    if (targetDisplay === 'all') {
-      io.to('displays_room').emit('show_welcome_screen');
-    } else {
-      for (let [sId, info] of activeDisplays.entries()) {
-        if (info.id === targetDisplay || sId === targetDisplay) {
-          io.to(sId).emit('show_welcome_screen');
-          break;
-        }
-      }
-    }
-  });
-
-  // Handle block/unblock command
-  socket.on('display_block', (data) => {
-    const { targetDisplay, blocked } = data;
-    if (targetDisplay === 'all') {
-      for (let info of activeDisplays.values()) {
-        info.blocked = blocked;
-      }
-      io.to('displays_room').emit('set_blocked_status', { blocked });
-    } else {
-      for (let [sId, info] of activeDisplays.entries()) {
-        if (info.id === targetDisplay || sId === targetDisplay) {
-          info.blocked = blocked;
-          io.to(sId).emit('set_blocked_status', { blocked });
-          break;
-        }
-      }
-    }
-    broadcastDisplaysList();
-  });
-
-  socket.on('sync_balance_only', (data) => {
-    socket.broadcast.emit('balance_updated', data);
-  });
-
-  socket.on('process_transaction', (data) => {
-    socket.broadcast.emit('balance_updated', data);
-    io.to('displays_room').emit('show_success_screen', data);
+    socket.join(data.id);
+    io.emit('update_displays', clientDisplays);
   });
 
   socket.on('disconnect', () => {
-    if (activeDisplays.has(socket.id)) {
-      activeDisplays.delete(socket.id);
-      broadcastDisplaysList();
-    }
-    console.log(`[Socket] Отключение: ${socket.id}`);
+    clientDisplays = clientDisplays.filter(d => d.socketId !== socket.id);
+    io.emit('update_displays', clientDisplays);
   });
 });
 
-function broadcastDisplaysList() {
-  const displaysArr = Array.from(activeDisplays.values());
-  io.emit('displays_update', displaysArr);
-}
-
+const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`POS сервер запущен на порту ${PORT}`);
   console.log(`Терминал: http://localhost:${PORT}`);
