@@ -99,7 +99,6 @@ app.post('/api/displays/:id/block', (req, res) => {
     display.isBlocked = !!isBlocked;
     io.emit('update_displays', clientDisplays);
     
-    // Отправляем событие и в комнату дисплея, и напрямую по socketId для гарантированной доставки
     io.to(display.id).emit('display_block_status', { id: display.id, isBlocked: display.isBlocked });
     if (display.socketId) {
       io.to(display.socketId).emit('display_block_status', { id: display.id, isBlocked: display.isBlocked });
@@ -149,7 +148,6 @@ app.post('/api/create-transaction', (req, res) => {
 
   pendingTransactions[txId] = transaction;
 
-  // Отправка события на конкретный дисплей или на все сразу
   if (targetDisplayId) {
     io.to(targetDisplayId).emit('show_qr', transaction);
     io.to(targetDisplayId).emit('transaction_created', transaction);
@@ -159,6 +157,18 @@ app.post('/api/create-transaction', (req, res) => {
   }
 
   res.json({ success: true, transaction });
+});
+
+// Получение активной транзакции методом GET (для быстрой оплаты / карты)
+app.get('/api/shortcut/pay-active', (req, res) => {
+  // Ищем последнюю активную транзакцию со статусом pending
+  const activeTx = Object.values(pendingTransactions).filter(tx => tx.status === 'pending');
+  if (activeTx.length === 0) {
+    return res.status(404).json({ success: false, error: 'No active transactions found' });
+  }
+  // Возвращаем самую свежую активную транзакцию
+  const latestTx = activeTx[activeTx.length - 1];
+  res.json({ success: true, transaction: latestTx });
 });
 
 // Получение статуса транзакции
