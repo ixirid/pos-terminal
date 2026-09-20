@@ -647,6 +647,7 @@
         <button class="tab-btn" id="tabBtnDisplays" onclick="switchTab('displays')">🖥 Дисплеи</button>
       </nav>
 
+      <!-- TAB 1: CHARGE -->
       <div class="tab-content active" id="tabCharge">
         <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
           
@@ -695,6 +696,7 @@
         </div>
       </div>
 
+      <!-- TAB 2: TOPUP -->
       <div class="tab-content" id="tabTopup">
         <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
           
@@ -743,6 +745,7 @@
         </div>
       </div>
 
+      <!-- TAB 3: HISTORY -->
       <div class="tab-content" id="tabHistory">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <h3 style="font-size: 15px; font-weight: 800; color: #fff;">История операций</h3>
@@ -753,6 +756,7 @@
         </div>
       </div>
 
+      <!-- TAB 4: DISPLAYS MANAGEMENT -->
       <div class="tab-content" id="tabDisplays">
         <div style="display: flex; flex-direction: column; gap: 14px;">
           
@@ -760,7 +764,7 @@
 
           <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
             <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">Режим отправки на дисплеи</label>
-            <select id="mainTargetSettingSelect" class="config-input" style="background: var(--surface-card); border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px; outline: none; cursor: pointer;" onchange="updateTargetDisplaySetting(this.value)">
+            <select id="mainTargetSettingSelect" style="background: var(--surface-card); border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px; outline: none; cursor: pointer;" onchange="updateTargetDisplaySetting(this.value)">
               <option value="ask" selected>❓ Спрашивать каждый раз при транзакции</option>
               <option value="all">🌐 Отправлять сразу на Все экраны</option>
               <option value="display_1">🖥 Всегда Дисплей #1</option>
@@ -794,7 +798,6 @@
 
     </section>
   </main>
-
 
   <!-- ASK / SELECT DISPLAY MODAL -->
   <div class="fullscreen-overlay" id="askDisplayModal">
@@ -908,145 +911,16 @@
 
   <script>
     let socket = null;
-    let currentBalance = 10000; // Начальный баланс по умолчанию
-    let activeDisplaysList = []; // Список только активных подключенных дисплеев
+    let currentBalance = parseInt(localStorage.getItem('pos_terminal_balance') || '10000', 10);
+    let activeDisplaysList = [];
     let targetDisplaySetting = localStorage.getItem('pos_target_display') || 'ask';
     let pendingTransaction = null;
 
-    function initSocketConnection() {
-      if (typeof io !== 'undefined') {
-        try {
-          socket = io();
-
-          socket.on('connect', () => {
-            setSocketStatus(true, 'Сокеты Онлайн');
-          });
-
-          socket.on('disconnect', () => {
-            setSocketStatus(false, 'Автономный режим');
-          });
-
-          socket.on('displays_update', (displays) => {
-            // Фильтрация фантомов: оставляет только реальные онлайн-экраны
-            activeDisplaysList = (displays || []).filter(d => d && d.online !== false);
-            renderDisplaysList(activeDisplaysList);
-          });
-
-          socket.on('balance_updated', (data) => {
-            if (data && typeof data.balance === 'number') {
-              currentBalance = data.balance;
-              localStorage.setItem('pos_terminal_balance', currentBalance);
-              updateBalanceDisplay();
-            }
-          });
-        } catch (e) {
-          setSocketStatus(false, 'Локально');
-        }
-      } else {
-        setSocketStatus(false, 'Автономно');
-      }
-    }
-
-    function openAskDisplayModal() {
-      const container = document.getElementById('displayChoicesContainer');
-      
-      let html = `
-        <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('all')">
-          <span>🌐 Все подключенные экраны</span>
-          <span style="font-size: 12px; color: var(--accent);">Отправить всем</span>
-        </button>
-      `;
-
-      if (activeDisplaysList.length > 0) {
-        activeDisplaysList.forEach(d => {
-          html += `
-            <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('${d.id}')">
-              <span>🖥 ${d.name || d.id}</span>
-              <span style="font-size: 12px; color: var(--primary);">Онлайн</span>
-            </button>
-          `;
-        });
-      } else {
-        html += `
-          <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('display_1')">
-            <span>🖥 Дисплей #1 (Основной)</span>
-            <span style="font-size: 12px; color: var(--primary);">По умолчанию</span>
-          </button>
-        `;
-      }
-
-      container.innerHTML = html;
-      openModal('askDisplayModal');
-    }
-
-    /* TRANSACTION WORKFLOW WITH TOPUP SILENT BEHAVIOR */
-    function initiateChargeTransaction() {
-      terminalAudio.playTap();
-      const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) return;
-
-      if (amount > currentBalance) {
-        terminalAudio.playError();
-        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств на балансе! Доступно: ${currentBalance.toLocaleString('ru-RU')} ₽`;
-        openModal('errorFullscreenModal');
-        return;
-      }
-
-      pendingTransaction = { type: 'charge', amount: amount };
-
-      if (targetDisplaySetting === 'ask') {
-        openAskDisplayModal();
-      } else {
-        executeTransaction(pendingTransaction, targetDisplaySetting);
-      }
-    }
-
-    function initiateTopupTransaction() {
-      terminalAudio.playTap();
-      const amount = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) return;
-
-      // При пополнении не выводим окна на дисплей клиента — тихо обновляем баланс
-      executeTopupSilently(amount);
-    }
-
-    function executeTopupSilently(amount) {
-      currentBalance += amount;
-      clearInput('topup');
-      localStorage.setItem('pos_terminal_balance', currentBalance);
+    // Initialization on DOM Load
+    window.addEventListener('DOMContentLoaded', () => {
       updateBalanceDisplay();
-      saveReceiptLocally('topup', amount, 'silent');
-
-      // Отправляем сокетом только обновление цифры баланса, БЕЗ всплывающего окна
-      if (socket && socket.connected) {
-        socket.emit('sync_balance_only', {
-          newBalance: currentBalance
-        });
-      }
-
-      document.getElementById('successModalTitle').textContent = 'Баланс пополнен!';
-      document.getElementById('successOverlayAmount').textContent = '+' + amount.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successOverlayRemaining').textContent = 'Новый баланс: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successOverlayTargetDisplay').textContent = 'Тихий режим (без окна на дисплее)';
-
-      terminalAudio.playSuccess();
-      openModal('successFullscreenModal');
-    }
-
-    function clearPhantomDisplays() {
-      terminalAudio.playTap();
-      activeDisplaysList = activeDisplaysList.filter(d => d.online !== false);
-      renderDisplaysList(activeDisplaysList);
-    }
-      updateBalanceDisplay();
-
-      // Sync target display selectors with stored setting
       syncTargetDisplayUI();
-
-      // Connect Socket.io
       initSocketConnection();
-
-      // Render transaction history
       renderHistory();
     });
 
@@ -1064,7 +938,9 @@
           });
 
           socket.on('displays_update', (displays) => {
-            renderDisplaysList(displays);
+            // Filter out phantom/offline displays
+            activeDisplaysList = (displays || []).filter(d => d && d.online !== false);
+            renderDisplaysList(activeDisplaysList);
           });
 
           socket.on('balance_updated', (data) => {
@@ -1130,7 +1006,38 @@
       }
     }
 
-    /* TRANSACTION WORKFLOW WITH "ASK EVERY TIME" SUPPORT */
+    function openAskDisplayModal() {
+      const container = document.getElementById('displayChoicesContainer');
+      
+      let html = `
+        <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('all')">
+          <span>🌐 Все подключенные экраны</span>
+          <span style="font-size: 12px; color: var(--accent);">Отправить всем</span>
+        </button>
+      `;
+
+      if (activeDisplaysList.length > 0) {
+        activeDisplaysList.forEach(d => {
+          html += `
+            <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('${d.id}')">
+              <span>🖥 ${d.name || d.id}</span>
+              <span style="font-size: 12px; color: var(--primary);">Онлайн</span>
+            </button>
+          `;
+        });
+      } else {
+        html += `
+          <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('display_1')">
+            <span>🖥 Дисплей #1 (Основной)</span>
+            <span style="font-size: 12px; color: var(--primary);">По умолчанию</span>
+          </button>
+        `;
+      }
+
+      container.innerHTML = html;
+      openModal('askDisplayModal');
+    }
+
     function initiateChargeTransaction() {
       terminalAudio.playTap();
       const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
@@ -1146,7 +1053,7 @@
       pendingTransaction = { type: 'charge', amount: amount };
 
       if (targetDisplaySetting === 'ask') {
-        openModal('askDisplayModal');
+        openAskDisplayModal();
       } else {
         executeTransaction(pendingTransaction, targetDisplaySetting);
       }
@@ -1157,13 +1064,8 @@
       const amount = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
       if (amount <= 0) return;
 
-      pendingTransaction = { type: 'topup', amount: amount };
-
-      if (targetDisplaySetting === 'ask') {
-        openModal('askDisplayModal');
-      } else {
-        executeTransaction(pendingTransaction, targetDisplaySetting);
-      }
+      // Silent topup behavior
+      executeTopupSilently(amount);
     }
 
     function confirmDisplayTargetAndExecute(chosenDisplayTarget) {
@@ -1180,19 +1082,13 @@
         document.getElementById('successModalTitle').textContent = 'Списание выполнено!';
         document.getElementById('successOverlayAmount').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
         document.getElementById('successOverlayRemaining').textContent = 'Остаток на карте: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
-      } else {
-        currentBalance += tx.amount;
-        clearInput('topup');
-        document.getElementById('successModalTitle').textContent = 'Баланс пополнен!';
-        document.getElementById('successOverlayAmount').textContent = '+' + tx.amount.toLocaleString('ru-RU') + ' ₽';
-        document.getElementById('successOverlayRemaining').textContent = 'Новый баланс: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
       }
 
       localStorage.setItem('pos_terminal_balance', currentBalance);
       updateBalanceDisplay();
       saveReceiptLocally(tx.type, tx.amount, displayTarget);
 
-      // Send WebSocket event if connected
+      // Send WebSocket event
       if (socket && socket.connected) {
         socket.emit('process_transaction', {
           type: tx.type,
@@ -1212,6 +1108,35 @@
       terminalAudio.playSuccess();
       openModal('successFullscreenModal');
       pendingTransaction = null;
+    }
+
+    function executeTopupSilently(amount) {
+      currentBalance += amount;
+      clearInput('topup');
+      localStorage.setItem('pos_terminal_balance', currentBalance);
+      updateBalanceDisplay();
+      saveReceiptLocally('topup', amount, 'silent');
+
+      // Sync balance to displays quietly without triggering modal on client screen
+      if (socket && socket.connected) {
+        socket.emit('sync_balance_only', {
+          newBalance: currentBalance
+        });
+      }
+
+      document.getElementById('successModalTitle').textContent = 'Баланс пополнен!';
+      document.getElementById('successOverlayAmount').textContent = '+' + amount.toLocaleString('ru-RU') + ' ₽';
+      document.getElementById('successOverlayRemaining').textContent = 'Новый баланс: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
+      document.getElementById('successOverlayTargetDisplay').textContent = 'Тихий режим (без окна на дисплее)';
+
+      terminalAudio.playSuccess();
+      openModal('successFullscreenModal');
+    }
+
+    function clearPhantomDisplays() {
+      terminalAudio.playTap();
+      activeDisplaysList = activeDisplaysList.filter(d => d.online !== false);
+      renderDisplaysList(activeDisplaysList);
     }
 
     function saveReceiptLocally(type, amount, targetDisplay) {
@@ -1282,7 +1207,7 @@
       `).join('');
     }
 
-    /* NUMPAD LOGIC */
+    /* NUMPAD & UI CONTROLS */
     function appendDigit(type, digit) {
       terminalAudio.playTap();
       const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
