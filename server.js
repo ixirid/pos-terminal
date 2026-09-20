@@ -27,7 +27,7 @@ const pendingTransactions = new Map(); // txId -> { txId, amount, payUrl, create
 
 // POS Terminal main page (fallback to pay.html if index.html is missing)
 app.get('/', (req, res) => {
-  const indexPath = path.join(__dirname, 'index.html');
+  const indexPath = path.join(__dirname, 'terminal.html');
   const payPath = path.join(__dirname, 'pay.html');
   
   require('fs').access(indexPath, (err) => {
