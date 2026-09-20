@@ -25,14 +25,36 @@ app.use(express.static(path.join(__dirname)));
 const activeDisplays = new Map(); // id -> { id, name, socketId, online, blocked }
 const pendingTransactions = new Map(); // txId -> { txId, amount, payUrl, createdAt }
 
-// POS Terminal main page
+// POS Terminal main page (fallback to pay.html if index.html is missing)
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const indexPath = path.join(__dirname, 'index.html');
+  const payPath = path.join(__dirname, 'pay.html');
+  
+  require('fs').access(indexPath, (err) => {
+    if (!err) {
+      res.sendFile(indexPath);
+    } else {
+      require('fs').access(payPath, (err2) => {
+        if (!err2) {
+          res.sendFile(payPath);
+        } else {
+          res.status(404).send('Terminal interface file not found.');
+        }
+      });
+    }
+  });
 });
 
 // Customer display multi-screen page
 app.get('/display', (req, res) => {
-  res.sendFile(path.join(__dirname, 'display.html'));
+  const displayPath = path.join(__dirname, 'display.html');
+  require('fs').access(displayPath, (err) => {
+    if (!err) {
+      res.sendFile(displayPath);
+    } else {
+      res.sendFile(path.join(__dirname, 'pay.html'));
+    }
+  });
 });
 
 app.get('/pay', (req, res) => {
