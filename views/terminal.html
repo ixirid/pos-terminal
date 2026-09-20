@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>POS Терминал — Полная версия</title>
+  <title>POS Терминал — Облачная и Автономная версия</title>
   
   <!-- Подключение Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -41,7 +41,6 @@
       -webkit-user-select: none;
       -webkit-touch-callout: none;
       -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
     }
 
     body {
@@ -108,7 +107,7 @@
       gap: 10px;
     }
 
-    .status-badge-online {
+    .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -119,15 +118,27 @@
       color: var(--primary);
       font-size: 12px;
       font-weight: 700;
+      transition: all 0.3s ease;
     }
 
-    .pulse-dot-green {
+    .status-badge.offline {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: var(--warning);
+    }
+
+    .pulse-dot {
       width: 7px;
       height: 7px;
       background: var(--primary);
       border-radius: 50%;
       box-shadow: 0 0 8px var(--primary);
       animation: pulse 1.5s infinite;
+    }
+
+    .status-badge.offline .pulse-dot {
+      background: var(--warning);
+      box-shadow: 0 0 8px var(--warning);
     }
 
     .btn-header-icon {
@@ -560,7 +571,6 @@
       color: var(--accent);
     }
 
-    /* FULLSCREEN OVERLAYS */
     .fullscreen-overlay {
       position: fixed;
       inset: 0;
@@ -632,8 +642,53 @@
 
     @keyframes pulse {
       0% { transform: scale(0.95); opacity: 0.85; }
-      50% { transform: scale(1.1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 1; }
       100% { transform: scale(0.95); opacity: 0.85; }
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast-msg {
+      background: var(--surface-card);
+      border: 1px solid var(--accent);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      animation: toastIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Interactive Customer Display Simulator Modal */
+    .customer-sim-card {
+      background: #111827;
+      border: 2px solid var(--accent);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 360px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
     }
   </style>
 </head>
@@ -649,9 +704,9 @@
     </div>
 
     <div class="header-actions">
-      <div class="status-badge-online">
-        <span class="pulse-dot-green"></span>
-        <span>Онлайн</span>
+      <div class="status-badge" id="statusBadge">
+        <span class="pulse-dot"></span>
+        <span id="statusText">Проверка связи...</span>
       </div>
       <button class="btn-header-icon" title="Настройки Терминала и Дисплея" onclick="switchTab('settings')">⚙️</button>
     </div>
@@ -756,7 +811,7 @@
           <button class="btn-secondary" style="padding: 6px 12px; font-size: 11px;" onclick="loadReceipts()">Обновить</button>
         </div>
         <div class="history-list" id="historyListContainer">
-          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка чеков из Supabase...</p>
+          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка чеков...</p>
         </div>
       </div>
 
@@ -787,8 +842,8 @@
             </label>
           </div>
 
-          <div style="display: flex; gap: 8px; margin-top: 6px;">
-            <button class="btn-secondary" style="flex: 1;" onclick="openCustomerDisplayWindow()">🔗 Открыть экран покупателя</button>
+          <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+            <button class="btn-secondary" style="flex: 1;" onclick="openSimulatedDisplayModal()">📱 Дисплей покупателя (Симулятор)</button>
             <button class="btn-secondary" onclick="testDisplayPing()">📡 Тест</button>
           </div>
         </div>
@@ -821,7 +876,7 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 8px;">
-          <button class="btn-secondary" style="color: #60a5fa;" onclick="loadUserAccount()">🔄 Синхронизировать с облаком</button>
+          <button class="btn-secondary" style="color: #60a5fa;" onclick="loadUserAccount()">🔄 Синхронизировать данные</button>
         </div>
       </div>
     </section>
@@ -832,7 +887,7 @@
     <div class="display-wait-circle">📲</div>
     <h2 style="font-size: 24px; margin-bottom: 8px; color: #fff;">Ожидание от покупателя</h2>
     <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 8px;">Запрос отправлен на Дисплей Покупателя</p>
-    <p style="color: var(--accent); font-size: 22px; font-weight: 800; margin-bottom: 24px;" id="waitOverlayAmount">0 ₽</p>
+    <p style="color: var(--accent); font-size: 24px; font-weight: 900; margin-bottom: 24px;" id="waitOverlayAmount">0 ₽</p>
     <button class="btn-secondary" onclick="cancelDisplayRequest()" style="max-width: 260px;">Отмена операции</button>
   </div>
 
@@ -853,30 +908,49 @@
     <button class="btn-primary" onclick="closeErrorOverlay()" style="max-width: 260px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
   </div>
 
+  <!-- МОДАЛЬНОЕ ОКНО ИНТЕРАКТИВНОГО ДИСПЛЕЯ ПОКУПАТЕЛЯ -->
+  <div class="fullscreen-overlay" id="customerSimModal">
+    <div class="customer-sim-card">
+      <div style="font-size: 12px; font-weight: 800; color: var(--accent); text-transform: uppercase;">ЭКРАН ПОКУПАТЕЛЯ</div>
+      <div style="font-size: 32px; font-weight: 900; color: #fff;" id="simDisplayAmount">0 ₽</div>
+      <p style="font-size: 13px; color: var(--text-muted); text-align: center;" id="simDisplayStatus">Подтвердите списание с вашей карты</p>
+      
+      <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
+        <button class="btn-primary" onclick="customerSimConfirm()" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);">✓ Оплатить</button>
+        <button class="btn-secondary" onclick="customerSimReject()" style="color: #f87171;">✕ Отмена</button>
+      </div>
+
+      <button class="btn-secondary" onclick="closeSimulatedDisplayModal()" style="font-size: 11px; padding: 6px 12px; margin-top: 4px;">Скрыть экран</button>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
   <script>
-    // 0. ГЛОБАЛЬНОЕ СОСТОЯНИЕ (Поднято наверх, чтобы скрипт кнопок не ломался при сетевых ошибках)
     let currentTab = 'charge';
     let currentUserId = null;
-    let currentBalance = 0;
+    let currentBalance = 10000; // По умолчанию для офлайн режима
     let pendingDisplayAmount = 0;
+    let isCloudConnected = false;
     let supabase = null;
-    let displayChannel = { postMessage: () => {} }; // Безопасная заглушка
+    let displayChannel = { postMessage: () => {} };
 
-    // 1. SUPABASE CLIENT INIT (Обернуто в try/catch)
-    try {
-      const SUPABASE_URL = 'https://kaaooeeblogssqdmnvqr.supabase.co';
-      const SUPABASE_KEY = 'EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYW9vZWVibG9nc3NxZG1udnFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NjIzODAsImV4cCI6MjEwNTQzODM4MH0.dloUMX2qqGVXVmbPKfxOwiT4Da8DagUdAfkZm0WkG1c';
-
-      if (window.supabase) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      } else {
-        console.warn("Supabase SDK не найден. Приложение работает автономно.");
-      }
-    } catch (e) {
-      console.error("Ошибка инициализации БД:", e);
+    // Toast Notice helper (No alert/confirm used)
+    function showToast(msg) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast-msg';
+      toast.textContent = msg;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
     }
 
-    // 2. AUDIO SYNTHESIZER
+    // Audio Synth Controller
     class TerminalAudioController {
       constructor() {
         this.ctx = null;
@@ -967,7 +1041,18 @@
 
     const terminalAudio = new TerminalAudioController();
 
-    // 3. BROADCAST CHANNEL FOR DISPLAY SYNC (Защита от падений в средах без поддержки)
+    try {
+      const SUPABASE_URL = 'https://kaaooeeblogssqdmnvqr.supabase.co';
+      const SUPABASE_KEY = 'EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthYW9vZWVibG9nc3NxZG1udnFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NjIzODAsImV4cCI6MjEwNTQzODM4MH0.dloUMX2qqGVXVmbPKfxOwiT4Da8DagUdAfkZm0WkG1c';
+
+      if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+    } catch (e) {
+      console.warn("Supabase SDK не инициализирован. Переход в автономный режим.");
+    }
+
+    // BroadcastChannel sync
     try {
       if (window.BroadcastChannel) {
         displayChannel = new BroadcastChannel('pos_display_channel');
@@ -976,12 +1061,16 @@
           const data = event.data;
           if (data.type === 'CUSTOMER_CONFIRMED') {
             document.getElementById('waitDisplayFullscreenModal').classList.remove('active');
+            closeSimulatedDisplayModal();
             executeChargeTransaction(data.amount);
           } else if (data.type === 'CUSTOMER_REJECTED') {
             document.getElementById('waitDisplayFullscreenModal').classList.remove('active');
+            closeSimulatedDisplayModal();
             terminalAudio.playError();
             document.getElementById('errorOverlaySubtitle').textContent = 'Покупатель отклонил оплату на дисплее!';
             document.getElementById('errorFullscreenModal').classList.add('active');
+          } else if (data.type === 'AMOUNT_PREVIEW') {
+            document.getElementById('simDisplayAmount').textContent = (data.amount || 0).toLocaleString('ru-RU') + ' ₽';
           }
         };
       }
@@ -990,32 +1079,26 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
+      // Load saved local balance if present
+      const savedBalance = localStorage.getItem('pos_local_balance');
+      if (savedBalance !== null) {
+        currentBalance = Number(savedBalance);
+      }
+
       await loadUserAccount();
       document.addEventListener('click', () => terminalAudio.initCtx(), { once: true });
       document.addEventListener('touchstart', () => terminalAudio.initCtx(), { once: true });
     });
 
-    // Блокировка двойного тапа по рамке и фону (чтобы не приближало),
-    // при этом интерактивные элементы (кнопки, инпуты) продолжают кликаться мгновенно
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', (event) => {
-      const now = Date.now();
-      if (now - lastTouchEnd <= 300) {
-        const isInteractive = event.target.closest('button, input, select, textarea, label, a, .num-btn, .tab-btn, .preset-btn');
-        if (!isInteractive) {
-          event.preventDefault();
-        }
-      }
-      lastTouchEnd = now;
-    }, { passive: false });
-
-    // Блокировка жест масштабирования двумя пальцами
-    document.addEventListener('gesturestart', (e) => {
-      e.preventDefault();
-    });
-
     async function loadUserAccount() {
-      if (!supabase) return;
+      const badge = document.getElementById('statusBadge');
+      const text = document.getElementById('statusText');
+
+      if (!supabase) {
+        setOfflineMode(badge, text, 'Офлайн (Локально)');
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from('users')
@@ -1023,17 +1106,29 @@
           .limit(1)
           .single();
 
-        if (error) {
-          console.error('Ошибка загрузки аккаунта:', error);
+        if (error || !data) {
+          setOfflineMode(badge, text, 'Локальный режим');
           return;
         }
 
         currentUserId = data.id;
         currentBalance = Number(data.balance);
+        localStorage.setItem('pos_local_balance', currentBalance);
+        
+        isCloudConnected = true;
+        badge.classList.remove('offline');
+        text.textContent = 'Облако Онлайн';
         updateBalanceDisplays();
       } catch (e) {
-        console.error('Сетевая ошибка при загрузке аккаунта:', e);
+        setOfflineMode(badge, text, 'Локальный режим');
       }
+    }
+
+    function setOfflineMode(badge, text, label) {
+      isCloudConnected = false;
+      badge.classList.add('offline');
+      text.textContent = label;
+      updateBalanceDisplays();
     }
 
     function updateBalanceDisplays() {
@@ -1064,7 +1159,6 @@
       }
     }
 
-    // Numpad inputs
     function appendDigit(type, digit) {
       terminalAudio.playTap();
       const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
@@ -1075,14 +1169,15 @@
       } else {
         if (val.length < 7) val += digit;
       }
-      input.value = parseInt(val, 10).toLocaleString('ru-RU');
+      const parsedVal = parseInt(val, 10);
+      input.value = parsedVal.toLocaleString('ru-RU');
 
-      // Send real-time amount preview to customer display
       if (type === 'charge' && document.getElementById('toggleCustomerDisplay').checked) {
         displayChannel.postMessage({
           type: 'AMOUNT_PREVIEW',
-          amount: parseInt(val, 10)
+          amount: parsedVal
         });
+        document.getElementById('simDisplayAmount').textContent = parsedVal.toLocaleString('ru-RU') + ' ₽';
       }
     }
 
@@ -1100,6 +1195,7 @@
           type: 'AMOUNT_PREVIEW',
           amount: parsed
         });
+        document.getElementById('simDisplayAmount').textContent = parsed.toLocaleString('ru-RU') + ' ₽';
       }
     }
 
@@ -1113,6 +1209,7 @@
           type: 'AMOUNT_PREVIEW',
           amount: 0
         });
+        document.getElementById('simDisplayAmount').textContent = '0 ₽';
       }
     }
 
@@ -1129,12 +1226,16 @@
           type: 'AMOUNT_PREVIEW',
           amount: current
         });
+        document.getElementById('simDisplayAmount').textContent = current.toLocaleString('ru-RU') + ' ₽';
       }
     }
 
     async function submitCharge() {
       const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) return;
+      if (amount <= 0) {
+        showToast('Введите сумму для списания!');
+        return;
+      }
 
       const autoAsk = document.getElementById('toggleAutoAskDisplay').checked;
       if (autoAsk) {
@@ -1159,6 +1260,9 @@
       document.getElementById('waitOverlayAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
       document.getElementById('waitDisplayFullscreenModal').classList.add('active');
 
+      // Update simulator as well
+      document.getElementById('simDisplayAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+
       displayChannel.postMessage({
         type: 'PAYMENT_REQUEST',
         amount: amount
@@ -1181,28 +1285,27 @@
 
       const newBalance = currentBalance - amount;
 
-      if (supabase) {
+      // Cloud attempt with seamless offline fallback
+      if (supabase && currentUserId) {
         try {
-          const { error: updateErr } = await supabase
+          await supabase
             .from('users')
             .update({ balance: newBalance, updated_at: new Date() })
             .eq('id', currentUserId);
-
-          if (updateErr) {
-            console.error('Ошибка списания:', updateErr);
-            terminalAudio.playError();
-            return;
-          }
 
           await supabase
             .from('receipts')
             .insert([{ type: 'charge', amount: amount, user_id: currentUserId }]);
         } catch(e) {
-          console.error('Сетевая ошибка при списании:', e);
+          console.warn('Ошибка облака, запись сделана локально.');
         }
       }
 
+      // Save local state
+      saveLocalReceipt('charge', amount);
       currentBalance = newBalance;
+      localStorage.setItem('pos_local_balance', currentBalance);
+      
       updateBalanceDisplays();
       clearInput('charge');
 
@@ -1222,32 +1325,32 @@
     async function submitTopup() {
       terminalAudio.playTap();
       const amount = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) return;
+      if (amount <= 0) {
+        showToast('Введите сумму пополнения!');
+        return;
+      }
 
       const newBalance = currentBalance + amount;
 
-      if (supabase) {
+      if (supabase && currentUserId) {
         try {
-          const { error: updateErr } = await supabase
+          await supabase
             .from('users')
             .update({ balance: newBalance, updated_at: new Date() })
             .eq('id', currentUserId);
-
-          if (updateErr) {
-            console.error('Ошибка пополнения:', updateErr);
-            terminalAudio.playError();
-            return;
-          }
 
           await supabase
             .from('receipts')
             .insert([{ type: 'topup', amount: amount, user_id: currentUserId }]);
         } catch(e) {
-          console.error('Сетевая ошибка при пополнении:', e);
+          console.warn('Облачное пополнение недоступно, выполнено локально.');
         }
       }
 
+      saveLocalReceipt('topup', amount);
       currentBalance = newBalance;
+      localStorage.setItem('pos_local_balance', currentBalance);
+
       updateBalanceDisplays();
       clearInput('topup');
 
@@ -1258,51 +1361,66 @@
       document.getElementById('successFullscreenModal').classList.add('active');
     }
 
+    function saveLocalReceipt(type, amount) {
+      try {
+        const history = JSON.parse(localStorage.getItem('pos_local_receipts') || '[]');
+        history.unshift({
+          id: Date.now(),
+          type: type,
+          amount: amount,
+          created_at: new Date().toISOString()
+        });
+        localStorage.setItem('pos_local_receipts', JSON.stringify(history.slice(0, 50)));
+      } catch(e) {}
+    }
+
     async function loadReceipts() {
       const container = document.getElementById('historyListContainer');
       container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка чеков...</p>';
 
-      if (!supabase) {
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">БД отключена. История недоступна.</p>';
+      let receipts = [];
+
+      if (supabase && isCloudConnected) {
+        try {
+          const { data, error } = await supabase
+            .from('receipts')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            receipts = data;
+          }
+        } catch(e) {}
+      }
+
+      if (receipts.length === 0) {
+        try {
+          receipts = JSON.parse(localStorage.getItem('pos_local_receipts') || '[]');
+        } catch(e) {}
+      }
+
+      if (receipts.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">История операций пуста</p>';
         return;
       }
 
-      try {
-        const { data, error } = await supabase
-          .from('receipts')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error || !data) {
-          container.innerHTML = '<p style="color: var(--error); text-align: center; padding: 20px;">Ошибка загрузки истории</p>';
-          return;
-        }
-
-        if (data.length === 0) {
-          container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">История операций пуста</p>';
-          return;
-        }
-
-        container.innerHTML = data.map(item => {
-          const isTopup = item.type === 'topup';
-          const dateStr = new Date(item.created_at).toLocaleString('ru-RU', {
-            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-          });
-          return `
-            <div class="history-item">
-              <div class="history-info">
-                <h4>${isTopup ? '➕ Пополнение' : '🧾 Чек оплаты'}</h4>
-                <p>${dateStr}</p>
-              </div>
-              <div class="history-amount ${isTopup ? 'topup' : ''}">
-                ${isTopup ? '+' : '-'}${Number(item.amount).toLocaleString('ru-RU')} ₽
-              </div>
+      container.innerHTML = receipts.map(item => {
+        const isTopup = item.type === 'topup';
+        const dateStr = new Date(item.created_at).toLocaleString('ru-RU', {
+          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+        return `
+          <div class="history-item">
+            <div class="history-info">
+              <h4>${isTopup ? '➕ Пополнение' : '🧾 Чек оплаты'}</h4>
+              <p>${dateStr}</p>
             </div>
-          `;
-        }).join('');
-      } catch(e) {
-        container.innerHTML = '<p style="color: var(--error); text-align: center; padding: 20px;">Сетевая ошибка загрузки чеков</p>';
-      }
+            <div class="history-amount ${isTopup ? 'topup' : ''}">
+              ${isTopup ? '+' : '-'}${Number(item.amount).toLocaleString('ru-RU')} ₽
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     function closeSuccessOverlay() {
@@ -1315,20 +1433,39 @@
       document.getElementById('errorFullscreenModal').classList.remove('active');
     }
 
-    function openCustomerDisplayWindow() {
+    function openSimulatedDisplayModal() {
       terminalAudio.playTap();
-      alert('Дисплей покупателя активен и связывается через каналBroadcastChannel.');
+      const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
+      document.getElementById('simDisplayAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+      document.getElementById('customerSimModal').classList.add('active');
+    }
+
+    function closeSimulatedDisplayModal() {
+      document.getElementById('customerSimModal').classList.remove('active');
+    }
+
+    function customerSimConfirm() {
+      const amountText = document.getElementById('simDisplayAmount').textContent.replace(/\D/g, '');
+      const amount = parseInt(amountText || '0', 10);
+      displayChannel.postMessage({ type: 'CUSTOMER_CONFIRMED', amount: amount });
+      closeSimulatedDisplayModal();
+    }
+
+    function customerSimReject() {
+      displayChannel.postMessage({ type: 'CUSTOMER_REJECTED' });
+      closeSimulatedDisplayModal();
     }
 
     function testDisplayPing() {
       terminalAudio.playTap();
       displayChannel.postMessage({ type: 'TEST_PING' });
-      alert('Сигнал проверки отправлен на Дисплей Покупателя!');
+      showToast('📡 Тестовый сигнал отправлен на экран!');
     }
 
     function changeTerminalId() {
       const select = document.getElementById('terminalSelect');
       document.getElementById('terminalIdSubtitle').textContent = select.options[select.selectedIndex].text;
+      showToast('Терминал переключен: ' + select.options[select.selectedIndex].text);
     }
 
     function toggleDisplayMode() {
@@ -1336,7 +1473,6 @@
       document.getElementById('btnAskDisplay').style.display = enabled ? 'flex' : 'none';
     }
 
-    // Keyboard Hotkeys
     document.addEventListener('keydown', (e) => {
       const errModal = document.getElementById('errorFullscreenModal');
       const succModal = document.getElementById('successFullscreenModal');
@@ -1352,6 +1488,7 @@
         closeSuccessOverlay();
         closeErrorOverlay();
         cancelDisplayRequest();
+        closeSimulatedDisplayModal();
       } else if (!isNaN(e.key) && currentTab !== 'history' && currentTab !== 'settings') {
         appendDigit(currentTab, e.key);
       } else if (e.key === 'Backspace' && currentTab !== 'history' && currentTab !== 'settings') {
