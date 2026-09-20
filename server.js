@@ -55,13 +55,12 @@ app.get('/api/displays', (req, res) => {
 
 app.post('/api/create-transaction', (req, res) => {
   const { amount, targetDisplayId } = req.body;
-  const txId = 'tx_' + Math.random().toString(36.substring(2, 9)) + Date.now().toString(36);
+  const txId = 'tx_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
   
   const host = req.headers.host || 'localhost:10000';
   const protocol = req.headers['x-forwarded-proto'] || 'http';
   const payUrl = `${protocol}://${host}/pay?amount=${amount}&tx=${txId}`;
   
-  // Генерация QR-кода через публичное API
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payUrl)}`;
 
   const transaction = {
