@@ -68,14 +68,13 @@ app.post('/api/create-transaction', (req, res) => {
     amount: parseInt(amount, 10),
     qrCode: qrCodeUrl,
     payUrl: payUrl,
-    targetDisplayId: targetDisplayId || null, // Сохраняем привязку к дисплею
+    targetDisplayId: targetDisplayId || null,
     createdAt: Date.now(),
     status: 'pending'
   };
 
   pendingTransactions[txId] = transaction;
 
-  // Отправка QR-кода конкретному дисплею или всем, если дисплей не выбран
   if (targetDisplayId) {
     io.to(targetDisplayId).emit('show_qr', transaction);
   } else {
@@ -104,7 +103,6 @@ app.post('/api/process-payment', (req, res) => {
   if (clientBalance < tx.amount) {
     tx.status = 'failed';
     
-    // Уведомление о неудаче: только на целевой дисплей или всем при отсутствии привязки
     if (tx.targetDisplayId) {
       io.to(tx.targetDisplayId).emit('payment_failed', { transaction: tx, reason: 'insufficient_funds' });
     } else {
@@ -124,14 +122,12 @@ app.post('/api/process-payment', (req, res) => {
     createdAt: Date.now()
   });
 
-  // Уведомление об успехе: только на целевой дисплей (или всем, если дисплей не был выбран)
   if (tx.targetDisplayId) {
     io.to(tx.targetDisplayId).emit('payment_success', { transaction: tx, newBalance: clientBalance });
   } else {
     io.emit('payment_success', { transaction: tx, newBalance: clientBalance });
   }
 
-  // Баланс и общие события терминала рассылаем глобально, чтобы терминал обновлял интерфейс
   io.emit('client_balance_updated', { balance: clientBalance });
 
   res.json({ success: true, newBalance: clientBalance });
@@ -168,6 +164,10 @@ app.post('/api/cancel-transaction', (req, res) => {
 
 io.on('connection', (socket) => {
   socket.on('register_display', (data) => {
+    if (!data || !data.id) {
+      return;
+    }
+
     const existing = clientDisplays.find(d => d.id === data.id);
     if (existing) {
       existing.socketId = socket.id;
