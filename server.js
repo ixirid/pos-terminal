@@ -159,16 +159,49 @@ app.post('/api/create-transaction', (req, res) => {
   res.json({ success: true, transaction });
 });
 
-// Получение активной транзакции методом GET (для быстрой оплаты / карты)
+// Получение активной транзакции и автоматическое проведение оплаты картой (GET-шорткат)
 app.get('/api/shortcut/pay-active', (req, res) => {
-  // Ищем последнюю активную транзакцию со статусом pending
   const activeTx = Object.values(pendingTransactions).filter(tx => tx.status === 'pending');
   if (activeTx.length === 0) {
     return res.status(404).json({ success: false, error: 'No active transactions found' });
   }
-  // Возвращаем самую свежую активную транзакцию
-  const latestTx = activeTx[activeTx.length - 1];
-  res.json({ success: true, transaction: latestTx });
+  
+  const tx = activeTx[activeTx.length - 1];
+
+  if (clientBalance < tx.amount) {
+    tx.status = 'failed';
+    const failPayload = { transaction: tx, reason: 'insufficient_funds' };
+    
+    if (tx.targetDisplayId) {
+      io.to(tx.targetDisplayId).emit('payment_failed', failPayload);
+    } else {
+      io.emit('payment_failed', failPayload);
+    }
+
+    return res.status(400).json({ success: false, error: 'insufficient_funds', transaction: tx });
+  }
+
+  clientBalance -= tx.amount;
+  tx.status = 'success';
+
+  history.unshift({
+    id: tx.id,
+    amount: tx.amount,
+    type: 'charge',
+    createdAt: Date.now()
+  });
+
+  const successPayload = { transaction: tx, newBalance: clientBalance };
+  
+  if (tx.targetDisplayId) {
+    io.to(tx.targetDisplayId).emit('payment_success', successPayload);
+  } else {
+    io.emit('payment_success', successPayload);
+  }
+
+  io.emit('client_balance_updated', { balance: clientBalance });
+
+  res.json({ success: true, transaction: tx, newBalance: clientBalance });
 });
 
 // Получение статуса транзакции
@@ -180,7 +213,7 @@ app.get('/api/transaction/:txId', (req, res) => {
   res.json({ transaction: tx, balance: clientBalance });
 });
 
-// Обработка проведения оплаты (Списание средств / Оплата картой)
+// Обработка проведения оплаты (Списание средств через POST)
 app.post('/api/process-payment', (req, res) => {
   const { txId } = req.body;
   const tx = pendingTransactions[txId];
