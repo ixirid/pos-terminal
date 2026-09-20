@@ -20,7 +20,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 let clientDisplays = []; // Список подключенных дисплеев покупателя
 let pendingTransactions = {}; // Активные транзакции по ID
 let history = []; // История операций (оплаты, пополнения)
-let clientBalance = 0; // Баланс счета клиента
+let clientBalance = 10000; // Баланс счета клиента (по умолчанию с запасом для тестов)
 
 // Загрузка конфигурационного файла (если есть)
 const CONFIG_PATH = path.join(__dirname, 'config.json');
@@ -98,7 +98,13 @@ app.post('/api/displays/:id/block', (req, res) => {
   if (display) {
     display.isBlocked = !!isBlocked;
     io.emit('update_displays', clientDisplays);
-    io.to(display.socketId || id).emit('display_block_status', { isBlocked: display.isBlocked });
+    
+    // Отправляем событие и в комнату дисплея, и напрямую по socketId для гарантированной доставки
+    io.to(display.id).emit('display_block_status', { id: display.id, isBlocked: display.isBlocked });
+    if (display.socketId) {
+      io.to(display.socketId).emit('display_block_status', { id: display.id, isBlocked: display.isBlocked });
+    }
+
     return res.json({ success: true, displays: clientDisplays });
   }
   res.status(404).json({ success: false, error: 'Display not found' });
@@ -114,7 +120,7 @@ app.get('/api/receipt/:id', (req, res) => {
   res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Чек #${item.id}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Кассовый чек #${item.id}</h2><p>Тип операции: ${item.type === 'charge' ? 'Оплата' : 'Пополнение'}</p><p>Сумма: <b>${item.amount} ₽</b></p><p>Дата: ${new Date(item.createdAt).toLocaleString()}</p></body></html>`);
 });
 
-// Создание новой транзакции
+// Создание новой транзакции (Оплата)
 app.post('/api/create-transaction', (req, res) => {
   const { amount, targetDisplayId } = req.body;
   
@@ -143,6 +149,7 @@ app.post('/api/create-transaction', (req, res) => {
 
   pendingTransactions[txId] = transaction;
 
+  // Отправка события на конкретный дисплей или на все сразу
   if (targetDisplayId) {
     io.to(targetDisplayId).emit('show_qr', transaction);
     io.to(targetDisplayId).emit('transaction_created', transaction);
@@ -163,7 +170,7 @@ app.get('/api/transaction/:txId', (req, res) => {
   res.json({ transaction: tx, balance: clientBalance });
 });
 
-// Обработка проведения оплаты
+// Обработка проведения оплаты (Списание средств / Оплата картой)
 app.post('/api/process-payment', (req, res) => {
   const { txId } = req.body;
   const tx = pendingTransactions[txId];
@@ -272,14 +279,17 @@ io.on('connection', (socket) => {
     io.emit('update_displays', clientDisplays);
   });
 
-  // Дублирующий обработчик замка через socket для надежности
+  // Обработчик блокировки/разблокировки через socket
   socket.on('toggle_display_lock', (data) => {
     const { id, isBlocked } = data;
     const display = clientDisplays.find(d => d.id === id);
     if (display) {
       display.isBlocked = !!isBlocked;
       io.emit('update_displays', clientDisplays);
-      io.to(display.socketId || id).emit('display_block_status', { isBlocked: display.isBlocked });
+      io.to(display.id).emit('display_block_status', { id: display.id, isBlocked: display.isBlocked });
+      if (display.socketId) {
+        io.to(display.socketId).emit('display_block_status', { id: display.id, isBlocked: display.isBlocked });
+      }
     }
   });
 
