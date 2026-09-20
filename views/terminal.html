@@ -341,35 +341,6 @@
       background: var(--surface-hover);
     }
 
-    .target-selector-box {
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 8px 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .target-selector-box span {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-muted);
-    }
-
-    .target-selector-box select {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 700;
-      outline: none;
-      cursor: pointer;
-    }
-
     .numpad-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -751,44 +722,6 @@
         </div>
       </div>
 
-      <!-- TAB 2: TOPUP -->
-      <div class="tab-content" id="tabTopup">
-        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-          
-          <div class="amount-display-wrapper">
-            <span class="amount-label">Сумма пополнения счета</span>
-            <div class="amount-input-container">
-              <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
-              <span class="amount-currency" style="color: var(--accent);">₽</span>
-            </div>
-          </div>
-
-          <div class="quick-presets">
-            <button class="preset-btn" onclick="addPreset('topup', 100)">+100</button>
-            <button class="preset-btn" onclick="addPreset('topup', 500)">+500</button>
-            <button class="preset-btn" onclick="addPreset('topup', 1000)">+1 000</button>
-            <button class="preset-btn" onclick="addPreset('topup', 5000)">+5 000</button>
-          </div>
-
-          <div class="numpad-grid">
-            <button class="num-btn" onclick="appendDigit('topup', '1')">1</button>
-            <button class="num-btn" onclick="appendDigit('topup', '2')">2</button>
-            <button class="num-btn" onclick="appendDigit('topup', '3')">3</button>
-            <button class="num-btn" onclick="appendDigit('topup', '4')">4</button>
-            <button class="num-btn" onclick="appendDigit('topup', '5')">5</button>
-            <button class="num-btn" onclick="appendDigit('topup', '6')">6</button>
-            <button class="num-btn" onclick="appendDigit('topup', '7')">7</button>
-            <button class="num-btn" onclick="appendDigit('topup', '8')">8</button>
-            <button class="num-btn" onclick="appendDigit('topup', '9')">9</button>
-            <button class="num-btn clear" onclick="clearInput('topup')">C</button>
-            <button class="num-btn" onclick="appendDigit('topup', '0')">0</button>
-            <button class="num-btn action" onclick="backspace('topup')">⌫</button>
-          </div>
-
-          <button class="btn-primary" style="background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);" onclick="initiateTopupTransaction()">➕ Внести на счет (Тихий режим) [Enter]</button>
-        </div>
-      </div>
-
       <!-- TAB 3: HISTORY -->
       <div class="tab-content" id="tabHistory">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -821,7 +754,6 @@
 
           <div style="display: flex; gap: 8px; margin-top: 10px;">
             <button class="btn-secondary" onclick="sendWelcomeScreen()">👋 Заставка "Добро Пожаловать"</button>
-            <button class="btn-secondary" onclick="resetLocalBalance()" style="color: #f87171; border-color: rgba(239,68,68,0.3);">🗑 Сбросить баланс (0 ₽)</button>
           </div>
 
         </div>
@@ -852,7 +784,7 @@
 
       <div class="qr-card-box">
         <img id="pendingQrImage" src="" alt="QR Code">
-        <p style="font-size: 11px; color: #6b7280; font-weight: 700; margin-top: 8px;">СБП / Оплата по QR</p>
+        <p style="font-size: 11px; color: #6b7280; font-weight: 700; margin-top: 8px;">Оплата по Карте / QR</p>
       </div>
 
       <div style="text-align: center;">
@@ -862,7 +794,6 @@
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-        <button class="btn-primary" onclick="completePendingPayment()">✓ Подтвердить оплату (Клиент оплатил) [Enter]</button>
         <button class="btn-secondary" onclick="cancelPendingPayment()" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);">✕ Отменить операцию [Esc]</button>
       </div>
     </div>
@@ -891,9 +822,6 @@
   </div>
 
   <script>
-    /**
-     * Web Audio API Synthesizer for touch taps and payment notifications
-     */
     class TerminalAudioController {
       constructor() {
         this.ctx = null;
@@ -966,7 +894,7 @@
 
   <script>
     let socket = null;
-    let currentBalance = parseInt(localStorage.getItem('pos_terminal_balance') || '0', 10);
+    let currentBalance = parseInt(localStorage.getItem('pos_terminal_balance') || '5000', 10);
     let activeDisplaysList = [];
     let blockedDisplays = new Set(JSON.parse(localStorage.getItem('pos_blocked_displays') || '[]'));
     let pendingTransaction = null;
@@ -976,6 +904,13 @@
       initSocketConnection();
       renderHistory();
       refreshDisplaysList();
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'pos_terminal_balance') {
+          currentBalance = parseInt(e.newValue || '0', 10);
+          updateBalanceDisplay();
+        }
+      });
     });
 
     function initSocketConnection() {
@@ -993,7 +928,6 @@
           });
 
           socket.on('displays_update', (displays) => {
-            // Filter only client customer displays (connected to /display route)
             activeDisplaysList = (displays || []).filter(d => d && d.isCustomerDisplay !== false && d.online !== false);
             renderDisplaysList(activeDisplaysList);
           });
@@ -1040,7 +974,6 @@
       document.getElementById('currentBalanceDisplay').textContent = currentBalance.toLocaleString('ru-RU') + ' ₽';
     }
 
-    // Tab Switcher
     function switchTab(tabName) {
       if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
       const tabs = ['charge', 'topup', 'history', 'displays'];
@@ -1054,7 +987,6 @@
       if (tabName === 'displays') refreshDisplaysList();
     }
 
-    // Numpad Digit Input
     function appendDigit(type, digit) {
       if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
       const input = document.getElementById(type + 'Amount');
@@ -1066,14 +998,12 @@
       input.value = Number(val).toLocaleString('ru-RU');
     }
 
-    // Clear Numpad Input
     function clearInput(type) {
       if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
       const input = document.getElementById(type + 'Amount');
       if (input) input.value = '0';
     }
 
-    // Backspace Numpad
     function backspace(type) {
       if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
       const input = document.getElementById(type + 'Amount');
@@ -1087,7 +1017,6 @@
       }
     }
 
-    // Quick Presets (+100, +500, etc.)
     function addPreset(type, amount) {
       if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
       const input = document.getElementById(type + 'Amount');
@@ -1097,7 +1026,6 @@
       input.value = current.toLocaleString('ru-RU');
     }
 
-    // Modal Helpers
     function openModal(id) {
       const modal = document.getElementById(id);
       if (modal) modal.classList.add('active');
@@ -1118,7 +1046,6 @@
       closeModal('errorFullscreenModal');
     }
 
-    // Send Test QR to Display
     function sendTestToDisplay(displayId) {
       if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
       if (socket && socket.connected) {
@@ -1211,18 +1138,15 @@
     function startQRPaymentFlow(tx, displayTarget) {
       if (blockedDisplays.has(displayTarget) || (displayTarget === 'all' && activeDisplaysList.length > 0 && activeDisplaysList.every(d => blockedDisplays.has(d.id)))) {
         terminalAudio.playError();
-        document.getElementById('errorOverlaySubtitle').textContent = `Ошибка: Дисплей (${displayTarget === 'all' ? 'Все экраны' : displayTarget}) заблокирован! Сначала разблокируйте его в вкладке "Дисплеи".`;
+        document.getElementById('errorOverlaySubtitle').textContent = `Ошибка: Дисплей (${displayTarget === 'all' ? 'Все экраны' : displayTarget}) заблокирован!`;
         openModal('errorFullscreenModal');
         return;
       }
 
       tx.displayTarget = displayTarget;
+      const payUrl = `${window.location.origin}/pay?amount=${tx.amount}&tx=${tx.txId}`;
+      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payUrl)}`;
 
-      // Dynamic QR Code payload creation (SBP / Payment Link)
-      const qrPayload = `https://qr.nspk.ru/pay?tx=${tx.txId}&amount=${tx.amount}&merchant=POS_TERMINAL`;
-      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPayload)}`;
-
-      // Update pending modal on POS
       document.getElementById('pendingQrImage').src = qrImageUrl;
       document.getElementById('pendingModalAmount').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
       
@@ -1233,12 +1157,12 @@
       };
       document.getElementById('pendingModalTargetDisplay').textContent = 'Отправлено на: ' + (displayLabels[displayTarget] || displayTarget);
 
-      // Emit WebSockets event to display customer screen
       if (socket && socket.connected) {
         socket.emit('display_show_qr', {
           txId: tx.txId,
           amount: tx.amount,
           targetDisplay: displayTarget,
+          payUrl: payUrl,
           qrUrl: qrImageUrl
         });
       }
@@ -1262,7 +1186,6 @@
       updateBalanceDisplay();
       saveReceiptLocally(tx.type, tx.amount, tx.displayTarget);
 
-      // Notify customer displays via WebSockets
       if (socket && socket.connected) {
         socket.emit('process_transaction', {
           type: tx.type,
@@ -1300,10 +1223,6 @@
       const amount = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
       if (amount <= 0) return;
 
-      executeTopupSilently(amount);
-    }
-
-    function executeTopupSilently(amount) {
       currentBalance += amount;
       clearInput('topup');
       localStorage.setItem('pos_terminal_balance', currentBalance);
@@ -1323,12 +1242,6 @@
 
       terminalAudio.playSuccess();
       openModal('successFullscreenModal');
-    }
-
-    function clearPhantomDisplays() {
-      terminalAudio.playTap();
-      activeDisplaysList = activeDisplaysList.filter(d => d.online !== false);
-      renderDisplaysList(activeDisplaysList);
     }
 
     function saveReceiptLocally(type, amount, targetDisplay) {
@@ -1478,13 +1391,6 @@
       if (socket && socket.connected) {
         socket.emit('display_show_welcome', { targetDisplay: 'all' });
       }
-    }
-
-    function resetLocalBalance() {
-      terminalAudio.playTap();
-      currentBalance = 0;
-      localStorage.setItem('pos_terminal_balance', currentBalance);
-      updateBalanceDisplay();
     }
 
     /* KEYBOARD HOTKEYS SUPPORT */
