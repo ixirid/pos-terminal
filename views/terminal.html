@@ -650,7 +650,7 @@
       <div class="balance-banner">
         <div class="balance-info">
           <label>Баланс клиента</label>
-          <div class="balance-value" id="currentBalanceDisplay">10 000 ₽</div>
+          <div class="balance-value" id="currentBalanceDisplay">0 ₽</div>
         </div>
         <div class="display-target-badge" id="headerTargetBadge" onclick="switchTab('displays')">
           <span>🖥 Дисплеи покупателя:</span>
@@ -703,13 +703,51 @@
           <!-- ACTION BUTTONS: DIRECT OR DISPLAY SELECT -->
           <div style="display: flex; gap: 10px; width: 100%; flex-shrink: 0;">
             <button class="btn-primary" style="flex: 1.2;" onclick="initiateChargeTransaction('all')">
-              📱 Списать (Все) [Enter]
+              📱 Списать [Enter]
             </button>
             <button class="btn-secondary" style="flex: 0.9; padding: 12px; font-size: 13px; font-weight: 800; color: #fff; background: var(--surface-card); border: 1px solid var(--accent); display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="openAskDisplayModal()">
               🖥 Выбрать дисплей
             </button>
           </div>
 
+        </div>
+      </div>
+
+      <!-- TAB 2: TOPUP -->
+      <div class="tab-content" id="tabTopup">
+        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          
+          <div class="amount-display-wrapper">
+            <span class="amount-label">Сумма пополнения счета</span>
+            <div class="amount-input-container">
+              <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
+              <span class="amount-currency" style="color: var(--accent);">₽</span>
+            </div>
+          </div>
+
+          <div class="quick-presets">
+            <button class="preset-btn" onclick="addPreset('topup', 100)">+100</button>
+            <button class="preset-btn" onclick="addPreset('topup', 500)">+500</button>
+            <button class="preset-btn" onclick="addPreset('topup', 1000)">+1 000</button>
+            <button class="preset-btn" onclick="addPreset('topup', 5000)">+5 000</button>
+          </div>
+
+          <div class="numpad-grid">
+            <button class="num-btn" onclick="appendDigit('topup', '1')">1</button>
+            <button class="num-btn" onclick="appendDigit('topup', '2')">2</button>
+            <button class="num-btn" onclick="appendDigit('topup', '3')">3</button>
+            <button class="num-btn" onclick="appendDigit('topup', '4')">4</button>
+            <button class="num-btn" onclick="appendDigit('topup', '5')">5</button>
+            <button class="num-btn" onclick="appendDigit('topup', '6')">6</button>
+            <button class="num-btn" onclick="appendDigit('topup', '7')">7</button>
+            <button class="num-btn" onclick="appendDigit('topup', '8')">8</button>
+            <button class="num-btn" onclick="appendDigit('topup', '9')">9</button>
+            <button class="num-btn clear" onclick="clearInput('topup')">C</button>
+            <button class="num-btn" onclick="appendDigit('topup', '0')">0</button>
+            <button class="num-btn action" onclick="backspace('topup')">⌫</button>
+          </div>
+
+          <button class="btn-primary" style="background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);" onclick="initiateTopupTransaction()">➕ Внести на счет [Enter]</button>
         </div>
       </div>
 
@@ -770,9 +808,10 @@
 
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <h4 style="font-size: 13px; font-weight: 700; color: #fff;">Подключенные экраны клиентов:</h4>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn-secondary" id="btnBlockAllDisplays" onclick="toggleBlockAllDisplays()" style="width: auto; padding: 6px 12px; font-size: 14px;" title="Заблокировать / Разблокировать все">🔒</button>
               <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 11px;" onclick="refreshDisplaysList()">🔄 Обновить</button>
-              <a href="/display" target="_blank" class="client-link-btn" style="font-size: 11px; padding: 4px 8px;">+ Открыть клиентский экран</a>
+              <a href="/display" target="_blank" class="client-link-btn" style="font-size: 11px; padding: 4px 8px;">+ Открыть экран</a>
             </div>
           </div>
 
@@ -782,9 +821,7 @@
 
           <div style="display: flex; gap: 8px; margin-top: 10px;">
             <button class="btn-secondary" onclick="sendWelcomeScreen()">👋 Заставка "Добро Пожаловать"</button>
-            <button class="btn-secondary" id="btnBlockAllDisplays" onclick="toggleBlockAllDisplays()" style="color: #f87171; border-color: rgba(239,68,68,0.3);">🔒 Заблокировать все</button>
-            <button class="btn-secondary" onclick="clearPhantomDisplays()" style="color: var(--warning); border-color: rgba(245,158,11,0.3);">🧹 Очистить фантомы</button>
-            <button class="btn-secondary" onclick="resetLocalBalance()" style="color: #f87171; border-color: rgba(239,68,68,0.3);">🗑 Сбросить (10 000 ₽)</button>
+            <button class="btn-secondary" onclick="resetLocalBalance()" style="color: #f87171; border-color: rgba(239,68,68,0.3);">🗑 Сбросить баланс (0 ₽)</button>
           </div>
 
         </div>
@@ -929,7 +966,7 @@
 
   <script>
     let socket = null;
-    let currentBalance = parseInt(localStorage.getItem('pos_terminal_balance') || '10000', 10);
+    let currentBalance = parseInt(localStorage.getItem('pos_terminal_balance') || '0', 10);
     let activeDisplaysList = [];
     let blockedDisplays = new Set(JSON.parse(localStorage.getItem('pos_blocked_displays') || '[]'));
     let pendingTransaction = null;
@@ -1001,6 +1038,97 @@
 
     function updateBalanceDisplay() {
       document.getElementById('currentBalanceDisplay').textContent = currentBalance.toLocaleString('ru-RU') + ' ₽';
+    }
+
+    // Tab Switcher
+    function switchTab(tabName) {
+      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
+      const tabs = ['charge', 'topup', 'history', 'displays'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+        const content = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (btn) btn.classList.toggle('active', t === tabName);
+        if (content) content.classList.toggle('active', t === tabName);
+      });
+      if (tabName === 'history') renderHistory();
+      if (tabName === 'displays') refreshDisplaysList();
+    }
+
+    // Numpad Digit Input
+    function appendDigit(type, digit) {
+      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
+      const input = document.getElementById(type + 'Amount');
+      if (!input) return;
+      let val = input.value.replace(/\D/g, '');
+      if (val === '0') val = '';
+      if (val.length >= 7) return;
+      val += digit;
+      input.value = Number(val).toLocaleString('ru-RU');
+    }
+
+    // Clear Numpad Input
+    function clearInput(type) {
+      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
+      const input = document.getElementById(type + 'Amount');
+      if (input) input.value = '0';
+    }
+
+    // Backspace Numpad
+    function backspace(type) {
+      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
+      const input = document.getElementById(type + 'Amount');
+      if (!input) return;
+      let val = input.value.replace(/\D/g, '');
+      if (val.length <= 1) {
+        input.value = '0';
+      } else {
+        val = val.slice(0, -1);
+        input.value = Number(val).toLocaleString('ru-RU');
+      }
+    }
+
+    // Quick Presets (+100, +500, etc.)
+    function addPreset(type, amount) {
+      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
+      const input = document.getElementById(type + 'Amount');
+      if (!input) return;
+      let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
+      current += amount;
+      input.value = current.toLocaleString('ru-RU');
+    }
+
+    // Modal Helpers
+    function openModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.remove('active');
+    }
+
+    function closeSuccessOverlay() {
+      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
+      closeModal('successFullscreenModal');
+    }
+
+    function closeErrorOverlay() {
+      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
+      closeModal('errorFullscreenModal');
+    }
+
+    // Send Test QR to Display
+    function sendTestToDisplay(displayId) {
+      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
+      if (socket && socket.connected) {
+        socket.emit('display_show_qr', {
+          txId: 'TEST-' + Date.now(),
+          amount: 100,
+          targetDisplay: displayId,
+          qrUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=TEST'
+        });
+      }
     }
 
     function openAskDisplayModal() {
@@ -1191,7 +1319,7 @@
       document.getElementById('successModalTitle').textContent = 'Баланс пополнен!';
       document.getElementById('successOverlayAmount').textContent = '+' + amount.toLocaleString('ru-RU') + ' ₽';
       document.getElementById('successOverlayRemaining').textContent = 'Новый баланс: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successOverlayTargetDisplay').textContent = 'Тихий режим (без окна на дисплее)';
+      document.getElementById('successOverlayTargetDisplay').textContent = '';
 
       terminalAudio.playSuccess();
       openModal('successFullscreenModal');
@@ -1253,23 +1381,8 @@
       }
 
       if (!clientDisplays || clientDisplays.length === 0) {
-        const isDisp1Blocked = blockedDisplays.has('display_1');
-        container.innerHTML = `
-          <div class="display-card-item">
-            <div>
-              <strong style="font-size: 14px; color: #fff;">🖥 Дисплей Покупателя #1 (/display)</strong>
-              <p style="font-size: 11px; color: ${isDisp1Blocked ? 'var(--error)' : 'var(--primary)'}; font-weight: 700;">
-                ${isDisp1Blocked ? '🔒 Заблокирован' : '● Подключен (Локально)'}
-              </p>
-            </div>
-            <div style="display: flex; gap: 6px;">
-              <button class="btn-secondary" style="width: auto; padding: 6px 10px; font-size: 11px; color: ${isDisp1Blocked ? 'var(--primary)' : '#f87171'};" onclick="toggleBlockDisplay('display_1')">
-                ${isDisp1Blocked ? '🔓 Разблок' : '🔒 Блок'}
-              </button>
-              <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 11px;" onclick="sendTestToDisplay('display_1')">Тест</button>
-            </div>
-          </div>
-        `;
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет подключенных экранов</p>`;
+        updateBlockAllButtonText();
         return;
       }
 
@@ -1279,13 +1392,13 @@
           <div class="display-card-item">
             <div>
               <strong style="font-size: 14px; color: #fff;">🖥 ${d.name || ('Дисплей ' + d.id)} (/display)</strong>
-              <p style="font-size: 11px; color: ${isBlocked ? 'var(--error)' : (d.online ? 'var(--primary)' : 'var(--text-muted)')}; font-weight: 700;">
-                ${isBlocked ? '🔒 Заблокирован' : (d.online ? '● Онлайн' : '○ Офлайн')}
+              <p style="font-size: 11px; color: ${isBlocked ? 'var(--error)' : 'var(--primary)'}; font-weight: 700;">
+                ${isBlocked ? '🔒 Заблокирован' : '● Онлайн'}
               </p>
             </div>
             <div style="display: flex; gap: 6px;">
-              <button class="btn-secondary" style="width: auto; padding: 6px 10px; font-size: 11px; color: ${isBlocked ? 'var(--primary)' : '#f87171'};" onclick="toggleBlockDisplay('${d.id}')">
-                ${isBlocked ? '🔓 Разблок' : '🔒 Блок'}
+              <button class="btn-secondary" style="width: auto; padding: 6px 10px; font-size: 14px;" onclick="toggleBlockDisplay('${d.id}')" title="${isBlocked ? 'Разблокировать' : 'Заблокировать'}">
+                ${isBlocked ? '🔓' : '🔒'}
               </button>
               <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 11px;" onclick="sendTestToDisplay('${d.id}')">Тест</button>
             </div>
@@ -1320,8 +1433,8 @@
 
     function toggleBlockAllDisplays() {
       terminalAudio.playTap();
-      const idsToTarget = activeDisplaysList.length > 0 ? activeDisplaysList.map(d => d.id) : ['display_1'];
-      const allBlocked = idsToTarget.every(id => blockedDisplays.has(id));
+      const idsToTarget = activeDisplaysList.length > 0 ? activeDisplaysList.map(d => d.id) : [];
+      const allBlocked = idsToTarget.length > 0 && idsToTarget.every(id => blockedDisplays.has(id));
 
       if (allBlocked) {
         idsToTarget.forEach(id => blockedDisplays.delete(id));
@@ -1346,16 +1459,16 @@
     function updateBlockAllButtonText() {
       const btn = document.getElementById('btnBlockAllDisplays');
       if (!btn) return;
-      const idsToTarget = activeDisplaysList.length > 0 ? activeDisplaysList.map(d => d.id) : ['display_1'];
-      const allBlocked = idsToTarget.every(id => blockedDisplays.has(id));
+      const idsToTarget = activeDisplaysList.length > 0 ? activeDisplaysList.map(d => d.id) : [];
+      const allBlocked = idsToTarget.length > 0 && idsToTarget.every(id => blockedDisplays.has(id));
 
       if (allBlocked) {
-        btn.textContent = '🔓 Разблокировать все';
-        btn.style.color = 'var(--primary)';
+        btn.textContent = '🔓';
+        btn.title = 'Разблокировать все';
         btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
       } else {
-        btn.textContent = '🔒 Заблокировать все';
-        btn.style.color = '#f87171';
+        btn.textContent = '🔒';
+        btn.title = 'Заблокировать все';
         btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
       }
     }
@@ -1363,13 +1476,13 @@
     function sendWelcomeScreen() {
       terminalAudio.playTap();
       if (socket && socket.connected) {
-        socket.emit('display_show_welcome', { targetDisplay: targetDisplaySetting });
+        socket.emit('display_show_welcome', { targetDisplay: 'all' });
       }
     }
 
     function resetLocalBalance() {
       terminalAudio.playTap();
-      currentBalance = 10000;
+      currentBalance = 0;
       localStorage.setItem('pos_terminal_balance', currentBalance);
       updateBalanceDisplay();
     }
