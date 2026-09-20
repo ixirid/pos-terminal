@@ -3,21 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>POS Терминал Кассы — Мультидисплейное Управление</title>
-  
-  <!-- Socket.io Client JS -->
+  <title>POS Терминал Кассы — Премиум Управление</title>
+  <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
-  
   <style>
     :root {
       --primary: #10b981;
       --primary-glow: rgba(16, 185, 129, 0.35);
       --primary-dark: #059669;
       --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.35);
       --error: #ef4444;
       --error-glow: rgba(239, 68, 68, 0.35);
-      --warning: #f59e0b;
       --bg-base: #090d16;
       --surface: #111827;
       --surface-card: #1f2937;
@@ -47,13 +43,13 @@
       overflow-x: hidden;
     }
 
-    /* HEADER STYLES */
+    /* Шапка без лишних кнопок */
     .pos-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 20px;
-      background: rgba(17, 24, 39, 0.85);
+      padding: 12px 16px;
+      background: rgba(17, 24, 39, 0.95);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border-color);
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -63,25 +59,25 @@
     .brand-title {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .brand-icon {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       background: linear-gradient(135deg, var(--primary) 0%, #047857 100%);
       color: #fff;
-      font-size: 22px;
+      font-size: 18px;
       font-weight: 800;
-      border-radius: 12px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 15px var(--primary-glow);
+      box-shadow: 0 0 12px var(--primary-glow);
     }
 
     .brand-text h1 {
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 800;
       letter-spacing: -0.5px;
       color: #fff;
@@ -94,132 +90,51 @@
       margin-top: 1px;
     }
 
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .client-link-btn {
-      padding: 8px 12px;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: var(--primary);
-      border-radius: 10px;
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: 700;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-
-    .client-link-btn:hover {
-      background: rgba(16, 185, 129, 0.22);
-    }
-
     .status-badge-online {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       background: rgba(16, 185, 129, 0.1);
-      padding: 8px 10px;
+      padding: 6px 12px;
       border-radius: 20px;
-      border: 1px solid rgba(16, 185, 129, 0.25);
+      border: 1px solid rgba(16, 185, 129, 0.2);
       color: var(--primary);
       font-size: 12px;
       font-weight: 700;
-    }
-
-    .status-badge-offline {
-      background: rgba(245, 158, 11, 0.1);
-      border-color: rgba(245, 158, 11, 0.25);
-      color: var(--warning);
+      white-space: nowrap;
     }
 
     .pulse-dot-green {
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       background: var(--primary);
       border-radius: 50%;
       box-shadow: 0 0 8px var(--primary);
       animation: pulse 1.5s infinite;
     }
 
-    .pulse-dot-amber {
-      width: 6px;
-      height: 6px;
-      background: var(--warning);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--warning);
-    }
-
-    /* MAIN CONTAINER & PANELS */
+    /* Растянутый на весь экран контейнер */
     .pos-container {
       flex: 1;
       display: flex;
       justify-content: center;
       align-items: stretch;
-      padding: 12px 14px;
-      max-width: 640px;
-      margin: 0 auto;
+      padding: 12px;
       width: 100%;
+      max-width: 100%;
     }
 
     .pos-main-panel {
       width: 100%;
+      max-width: 650px; /* Ограничение для удобства работы на ПК, на мобилках растянется на 100% */
       background: var(--surface);
       border: 1px solid var(--border-color);
-      border-radius: 20px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      border-radius: 16px;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
       overflow: hidden;
       display: flex;
       flex-direction: column;
       position: relative;
-    }
-
-    .balance-banner {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
-      border-bottom: 1px solid var(--border-color);
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .balance-info label {
-      font-size: 10px;
-      font-weight: 800;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-    }
-
-    .balance-value {
-      font-size: 20px;
-      font-weight: 900;
-      color: #fff;
-    }
-
-    .display-target-badge {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--accent);
-      background: rgba(59, 130, 246, 0.15);
-      padding: 6px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s ease;
-    }
-
-    .display-target-badge:hover {
-      background: rgba(59, 130, 246, 0.25);
     }
 
     .tabs-header {
@@ -227,8 +142,8 @@
       grid-template-columns: repeat(4, 1fr);
       background: rgba(0, 0, 0, 0.25);
       border-bottom: 1px solid var(--border-color);
-      padding: 4px;
-      gap: 4px;
+      padding: 6px;
+      gap: 6px;
       flex-shrink: 0;
     }
 
@@ -239,13 +154,14 @@
       padding: 10px 4px;
       font-size: 12px;
       font-weight: 700;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 4px;
+      white-space: nowrap;
     }
 
     .tab-btn.active {
@@ -257,7 +173,7 @@
 
     .tab-content {
       display: none;
-      padding: 16px;
+      padding: 14px;
       flex-direction: column;
       gap: 12px;
       flex: 1;
@@ -268,16 +184,15 @@
       display: flex;
     }
 
-    /* NUMPAD & DISPLAY CONTROLS */
     .amount-display-wrapper {
       background: rgba(0, 0, 0, 0.3);
       border: 1px solid var(--border-color);
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 12px 16px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+      gap: 2px;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
       flex-shrink: 0;
     }
 
@@ -300,17 +215,16 @@
       background: transparent;
       border: none;
       color: #fff;
-      font-size: 38px;
+      font-size: 36px;
       font-weight: 900;
       text-align: right;
       width: 100%;
       outline: none;
       letter-spacing: -1px;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     }
 
     .amount-currency {
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 800;
       color: var(--primary);
     }
@@ -329,10 +243,9 @@
       padding: 10px 4px;
       font-size: 13px;
       font-weight: 700;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
       transition: all 0.15s ease;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
       text-align: center;
     }
 
@@ -354,15 +267,14 @@
       color: #fff;
       height: 100%;
       min-height: 52px;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 700;
-      border-radius: 14px;
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.1s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .num-btn:active {
@@ -389,9 +301,9 @@
       padding: 14px;
       font-size: 15px;
       font-weight: 800;
-      border-radius: 14px;
+      border-radius: 12px;
       cursor: pointer;
-      box-shadow: 0 8px 20px var(--primary-glow);
+      box-shadow: 0 4px 14px var(--primary-glow);
       transition: all 0.15s ease;
       display: flex;
       align-items: center;
@@ -403,23 +315,21 @@
 
     .btn-primary:active {
       transform: scale(0.98);
-      filter: brightness(0.95);
     }
 
     .btn-secondary {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
       color: var(--text-muted);
-      padding: 12px;
+      padding: 11px;
       font-size: 13px;
       font-weight: 700;
-      border-radius: 14px;
+      border-radius: 12px;
       cursor: pointer;
       transition: all 0.2s ease;
       width: 100%;
     }
 
-    /* FULLSCREEN MODALS */
     .fullscreen-overlay {
       position: fixed;
       inset: 0;
@@ -430,50 +340,12 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 20px;
       text-align: center;
-      animation: fadeInOverlay 0.2s ease-out;
     }
 
     .fullscreen-overlay.active {
       display: flex !important;
-    }
-
-    @keyframes fadeInOverlay {
-      from { opacity: 0; transform: scale(1.03); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    .modal-card {
-      background: var(--surface);
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      padding: 24px;
-      width: 100%;
-      max-width: 440px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .qr-card-box {
-      background: #ffffff;
-      padding: 16px;
-      border-radius: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    }
-
-    .qr-card-box img {
-      width: 200px;
-      height: 200px;
-      display: block;
-      border-radius: 8px;
     }
 
     .check-icon-circle {
@@ -486,7 +358,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 12px auto;
+      margin-bottom: 16px;
       box-shadow: 0 0 30px var(--primary-glow);
     }
 
@@ -500,36 +372,65 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 12px auto;
+      margin-bottom: 16px;
       box-shadow: 0 0 30px var(--error-glow);
     }
 
-    .display-choice-list {
-      display: flex;
+    .qr-display-panel {
+      display: none;
       flex-direction: column;
-      gap: 10px;
-      max-height: 260px;
-      overflow-y: auto;
-    }
-
-    .display-choice-btn {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 14px;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
       align-items: center;
-      justify-content: space-between;
-      transition: all 0.2s ease;
+      justify-content: center;
+      text-align: center;
+      padding: 10px 0;
+      flex: 1;
     }
 
-    .display-choice-btn:hover {
-      background: var(--surface-hover);
-      border-color: var(--accent);
+    .qr-display-panel.active {
+      display: flex !important;
+    }
+
+    .qr-box {
+      background: #ffffff;
+      padding: 14px;
+      border-radius: 16px;
+      margin: 12px 0;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .qr-box img {
+      width: 180px;
+      height: 180px;
+      display: block;
+    }
+
+    .qr-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.12);
+      padding: 6px 12px;
+      border-radius: 30px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--primary);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.35); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
     }
 
     .history-list {
@@ -538,23 +439,21 @@
       gap: 8px;
       overflow-y: auto;
       flex: 1;
-      max-height: 400px;
-      padding-right: 4px;
     }
 
     .history-item {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 12px 16px;
+      border-radius: 12px;
+      padding: 10px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .history-info h4 {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
       color: #fff;
     }
@@ -562,33 +461,176 @@
     .history-info p {
       font-size: 11px;
       color: var(--text-muted);
-      margin-top: 2px;
     }
 
     .history-amount {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       color: var(--primary);
+      text-align: right;
     }
 
     .history-amount.topup {
       color: var(--accent);
     }
 
-    .display-card-item {
+    .receipt-download-btn {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .displays-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .display-card {
       background: var(--surface-card);
       border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 14px;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .display-card.blocked {
+      opacity: 0.6;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .display-card-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    @keyframes pulse {
-      0% { transform: scale(0.95); opacity: 0.8; }
-      50% { transform: scale(1.35); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.8; }
+    .display-name-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .display-title-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      outline: none;
+      width: 150px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .icon-btn.danger {
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      padding-top: 6px;
+    }
+
+    .select-terminal-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 1100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .select-terminal-modal.active {
+      display: flex !important;
+    }
+
+    .terminal-selector-card {
+      background: var(--surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 380px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+    }
+
+    .terminal-option-item {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .terminal-option-item.blocked {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-main);
+      background: var(--surface-card);
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    .checkbox-label input {
+      accent-color: var(--primary);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -599,48 +641,27 @@
       <div class="brand-icon">₽</div>
       <div class="brand-text">
         <h1>POS Терминал</h1>
-        <p id="systemModeSubtext">Мультидисплейная система</p>
+        <p id="serverInfoText">Подключение...</p>
       </div>
     </div>
-
-    <div class="header-actions">
-      <a href="/display" target="_blank" class="client-link-btn" title="Открыть клиентский экран покупателя">
-        🖥 Экран клиента ↗
-      </a>
-      <div id="statusBadge" class="status-badge-online">
-        <span id="statusBadgeDot" class="pulse-dot-green"></span>
-        <span id="statusBadgeText">Сокеты</span>
-      </div>
+    <div class="status-badge-online">
+      <span class="pulse-dot-green"></span>
+      <span>Онлайн</span>
     </div>
   </header>
 
   <main class="pos-container">
     <section class="pos-main-panel">
-
-      <!-- BALANCE STATUS BANNER -->
-      <div class="balance-banner">
-        <div class="balance-info">
-          <label>Баланс клиента</label>
-          <div class="balance-value" id="currentBalanceDisplay">0 ₽</div>
-        </div>
-        <div class="display-target-badge" id="headerTargetBadge" onclick="switchTab('displays')">
-          <span>🖥 Дисплеи покупателя:</span>
-          <strong id="headerTargetText">0 подключено</strong>
-        </div>
-      </div>
-
-      <!-- TABS NAVIGATION -->
       <nav class="tabs-header">
-        <button class="tab-btn active" id="tabBtnCharge" onclick="switchTab('charge')">💸 Списание</button>
-        <button class="tab-btn" id="tabBtnTopup" onclick="switchTab('topup')">➕ Пополнение</button>
+        <button class="tab-btn active" id="tabBtnCharge" onclick="switchTab('charge')">💸 Оплата</button>
+        <button class="tab-btn" id="tabBtnTopup" onclick="switchTab('topup')">➕ Баланс</button>
         <button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">📜 Чеки</button>
-        <button class="tab-btn" id="tabBtnDisplays" onclick="switchTab('displays')">🖥 Дисплеи</button>
+        <button class="tab-btn" id="tabBtnSettings" onclick="switchTab('settings')">⚙️ Дисплеи</button>
       </nav>
 
-      <!-- TAB 1: CHARGE -->
+      <!-- ВКЛАДКА 1: ОПЛАТА -->
       <div class="tab-content active" id="tabCharge">
-        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-          
+        <div id="chargeFormView" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма к оплате</span>
             <div class="amount-input-container">
@@ -648,6 +669,11 @@
               <span class="amount-currency">₽</span>
             </div>
           </div>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="askTerminalCheckbox" checked onchange="toggleAskTerminalSetting(this)">
+            <span>Спрашивать дисплей перед отправкой оплаты</span>
+          </label>
 
           <div class="quick-presets">
             <button class="preset-btn" onclick="addPreset('charge', 100)">+100</button>
@@ -671,28 +697,30 @@
             <button class="num-btn action" onclick="backspace('charge')">⌫</button>
           </div>
 
-          <!-- ACTION BUTTONS: DIRECT OR DISPLAY SELECT -->
-          <div style="display: flex; gap: 10px; width: 100%; flex-shrink: 0;">
-            <button class="btn-primary" style="flex: 1.2;" onclick="initiateChargeTransaction('all')">
-              📱 Списать [Enter]
-            </button>
-            <button class="btn-secondary" style="flex: 0.9; padding: 12px; font-size: 13px; font-weight: 800; color: #fff; background: var(--surface-card); border: 1px solid var(--accent); display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="openAskDisplayModal()">
-              🖥 Выбрать дисплей
-            </button>
-          </div>
+          <button class="btn-primary" onclick="initiateTransactionFlow()">Сгенерировать QR-код [Enter]</button>
+        </div>
 
+        <div class="qr-display-panel" id="qrDisplayPanel">
+          <div class="qr-status-badge">
+            <span class="pulse-dot"></span>
+            <span>Ожидание оплаты клиентом...</span>
+          </div>
+          <h2 style="font-size: 18px; margin-bottom: 6px; color: #fff;">Сумма: <span id="qrAmountDisplay" style="color: var(--primary);">0 ₽</span></h2>
+          <div class="qr-box">
+            <img id="qrImage" src="" alt="QR-код">
+          </div>
+          <button class="btn-secondary" onclick="cancelTransaction()">Отменить оплату [Esc]</button>
         </div>
       </div>
 
-      <!-- TAB 2: TOPUP -->
+      <!-- ВКЛАДКА 2: ПОПОЛНЕНИЕ -->
       <div class="tab-content" id="tabTopup">
         <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
-          
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма пополнения счета</span>
             <div class="amount-input-container">
               <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
-              <span class="amount-currency" style="color: var(--accent);">₽</span>
+              <span class="amount-currency">₽</span>
             </div>
           </div>
 
@@ -718,711 +746,430 @@
             <button class="num-btn action" onclick="backspace('topup')">⌫</button>
           </div>
 
-          <button class="btn-primary" style="background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);" onclick="initiateTopupTransaction()">➕ Внести на счет [Enter]</button>
+          <button class="btn-primary" onclick="submitTopup()">Внести на счет [Enter]</button>
         </div>
       </div>
 
-      <!-- TAB 3: HISTORY -->
+      <!-- ВКЛАДКА 3: ИСТОРИЯ ЧЕКОВ -->
       <div class="tab-content" id="tabHistory">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">История операций</h3>
-          <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="renderHistory()">Обновить</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <h3 style="font-size: 14px; font-weight: 800; color: #fff;">История операций</h3>
+          <button class="btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px;" onclick="loadHistory()">Обновить</button>
         </div>
         <div class="history-list" id="historyListContainer">
-          <p style="color: var(--text-muted); text-align: center; padding: 20px;">История пуста</p>
+          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Загрузка истории...</p>
         </div>
       </div>
 
-      <!-- TAB 4: DISPLAYS MANAGEMENT -->
-      <div class="tab-content" id="tabDisplays">
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          
-          <h3 style="font-size: 15px; font-weight: 800; color: #fff;">Дисплеи Покупателя (/display)</h3>
-
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <h4 style="font-size: 13px; font-weight: 700; color: #fff;">Подключенные экраны клиентов:</h4>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <button class="btn-secondary" id="btnBlockAllDisplays" onclick="toggleBlockAllDisplays()" style="width: auto; padding: 6px 12px; font-size: 14px;" title="Заблокировать / Разблокировать все">🔒</button>
-              <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 11px;" onclick="refreshDisplaysList()">🔄 Обновить</button>
-              <a href="/display" target="_blank" class="client-link-btn" style="font-size: 11px; padding: 4px 8px;">+ Открыть экран</a>
-            </div>
-          </div>
-
-          <div id="displaysListContainer" style="display: flex; flex-direction: column; gap: 8px;">
-            <!-- Dynamically populated customer displays -->
-          </div>
-
-          <div style="display: flex; gap: 8px; margin-top: 10px;">
-            <button class="btn-secondary" onclick="sendWelcomeScreen()">👋 Заставка "Добро Пожаловать"</button>
-          </div>
-
+      <!-- ВКЛАДКА 4: НАСТРОЙКИ ДИСПЛЕЕВ -->
+      <div class="tab-content" id="tabSettings">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <h3 style="font-size: 14px; font-weight: 800; color: #fff;">Управление дисплеями</h3>
+          <button class="btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px;" onclick="loadDisplays()">Обновить</button>
+        </div>
+        <div class="displays-list" id="displaysListContainer">
+          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Поиск дисплеев...</p>
         </div>
       </div>
-
     </section>
   </main>
 
-  <!-- ASK / SELECT DISPLAY MODAL -->
-  <div class="fullscreen-overlay" id="askDisplayModal">
-    <div class="modal-card">
-      <h2 style="font-size: 20px; font-weight: 800; color: #fff;">Выберите целевой дисплей</h2>
-      <p style="font-size: 13px; color: var(--text-muted);" id="askDisplayModalSubtitle">На какой экран отправить QR-код для оплаты?</p>
-      
-      <div class="display-choice-list" id="displayChoicesContainer">
-        <!-- Dynamically populated without phantom displays -->
-      </div>
-
-      <button class="btn-secondary" onclick="closeModal('askDisplayModal')" style="margin-top: 8px;">Отмена [Esc]</button>
-    </div>
-  </div>
-
-  <!-- PENDING QR PAYMENT MODAL (Wait for Customer Scan) -->
-  <div class="fullscreen-overlay" id="pendingPaymentModal">
-    <div class="modal-card" style="max-width: 480px;">
-      <h2 style="font-size: 20px; font-weight: 800; color: #fff;">📱 Ожидание оплаты покупателем</h2>
-      <p style="font-size: 13px; color: var(--text-muted);" id="pendingModalSubtitle">QR-код отображен на экране клиента</p>
-
-      <div class="qr-card-box">
-        <img id="pendingQrImage" src="" alt="QR Code">
-        <p style="font-size: 11px; color: #6b7280; font-weight: 700; margin-top: 8px;">Оплата по Карте / QR</p>
-      </div>
-
-      <div style="text-align: center;">
-        <span style="font-size: 13px; color: var(--text-muted);">К оплате:</span>
-        <div style="font-size: 32px; font-weight: 900; color: var(--primary);" id="pendingModalAmount">0 ₽</div>
-        <p style="font-size: 12px; color: var(--accent);" id="pendingModalTargetDisplay">Экран: Все дисплеи</p>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-        <button class="btn-secondary" onclick="cancelPendingPayment()" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);">✕ Отменить операцию [Esc]</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- SUCCESS MODAL -->
+  <!-- ПОЛНОЭКРАННОЕ ОКНО УСПЕХА -->
   <div class="fullscreen-overlay" id="successFullscreenModal">
-    <div class="modal-card">
-      <div class="check-icon-circle">✓</div>
-      <h2 style="font-size: 24px; font-weight: 800; color: #fff;" id="successModalTitle">Операция завершена!</h2>
-      <p style="color: var(--text-muted); font-size: 15px;">Сумма: <strong id="successOverlayAmount" style="color: #fff;">0 ₽</strong></p>
-      <p style="color: var(--primary); font-size: 15px; font-weight: 700;" id="successOverlayRemaining">Новый баланс: 0 ₽</p>
-      <p style="font-size: 12px; color: var(--accent);" id="successOverlayTargetDisplay">Дисплей: Все экраны</p>
-      <button class="btn-primary" onclick="closeSuccessOverlay()" style="margin-top: 8px;">Готово [Enter]</button>
-    </div>
+    <div class="check-icon-circle">✓</div>
+    <h2 style="font-size: 26px; margin-bottom: 6px; color: #fff;">Оплата успешно завершена!</h2>
+    <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 6px;">Сумма: <strong id="successOverlayAmount" style="color: #fff;">0 ₽</strong></p>
+    <p style="color: var(--primary); font-size: 15px; font-weight: 700; margin-bottom: 20px;" id="successOverlayRemaining">Остаток на карте: 0 ₽</p>
+    <button class="btn-primary" onclick="closeSuccessOverlay()" style="max-width: 260px;">Новая операция [Enter]</button>
   </div>
 
-  <!-- ERROR MODAL -->
+  <!-- ПОЛНОЭКРАННОЕ ОКНО ОШИБКИ -->
   <div class="fullscreen-overlay" id="errorFullscreenModal">
-    <div class="modal-card">
-      <div class="error-circle">✕</div>
-      <h2 style="font-size: 24px; font-weight: 800; color: #fff;">Ошибка оплаты</h2>
-      <p style="color: #fca5a5; font-size: 15px;" id="errorOverlaySubtitle">Недостаточно средств на балансе!</p>
-      <button class="btn-primary" onclick="closeErrorOverlay()" style="margin-top: 8px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 8px 20px var(--error-glow);">Закрыть [Enter]</button>
+    <div class="error-circle">✕</div>
+    <h2 style="font-size: 26px; margin-bottom: 6px; color: #fff;">Ошибка оплаты</h2>
+    <p style="color: #fca5a5; font-size: 16px; margin-bottom: 20px;" id="errorOverlaySubtitle">Недостаточно средств на балансе!</p>
+    <button class="btn-primary" onclick="closeErrorOverlay()" style="max-width: 260px; background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); box-shadow: 0 4px 14px var(--error-glow);">Закрыть [Enter]</button>
+  </div>
+
+  <!-- МОДАЛКА ВЫБОРА ДИСПЛЕЯ -->
+  <div class="select-terminal-modal" id="selectTerminalModal">
+    <div class="terminal-selector-card">
+      <h3 style="font-size: 16px; font-weight: 800; color: #fff;">Выберите дисплей</h3>
+      <p style="font-size: 12px; color: var(--text-muted);">Куда отправить QR-код оплаты?</p>
+      <div id="terminalSelectorList" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;"></div>
+      <button class="btn-secondary" onclick="closeTerminalSelector()">Отмена</button>
     </div>
   </div>
 
+  <script src="/js/audio.js"></script>
   <script>
-    class TerminalAudioController {
-      constructor() {
-        this.ctx = null;
-      }
+    const socket = io();
+    let currentTab = 'charge';
+    let askTerminalEnabled = true;
+    let pendingAmountForTx = 0;
+    let activeDisplaysData = [];
 
-      initCtx() {
-        if (!this.ctx) {
-          const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtxClass) this.ctx = new AudioCtxClass();
+    fetch('/api/info')
+      .then(res => res.json())
+      .then(data => {
+        if (data.config) {
+          if (data.config.serverIp) {
+            document.getElementById('serverInfoText').textContent = `IP: ${data.config.serverIp}`;
+          }
+          if (data.config.askTerminal !== undefined) {
+            askTerminalEnabled = data.config.askTerminal;
+            document.getElementById('askTerminalCheckbox').checked = askTerminalEnabled;
+          }
         }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
-      }
+        if (data.history) renderHistory(data.history);
+        if (data.displays) renderDisplays(data.displays);
+      })
+      .catch(e => {});
 
-      playTap() {
-        try {
-          this.initCtx();
-          if (!this.ctx) return;
-          const now = this.ctx.currentTime;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(650, now);
-          gain.gain.setValueAtTime(0.05, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(now);
-          osc.stop(now + 0.05);
-        } catch (e) {}
-      }
-
-      playSuccess() {
-        try {
-          this.initCtx();
-          if (!this.ctx) return;
-          const now = this.ctx.currentTime;
-          const osc1 = this.ctx.createOscillator(), gain1 = this.ctx.createGain();
-          osc1.frequency.setValueAtTime(1318.51, now); gain1.gain.setValueAtTime(0.2, now);
-          gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-          osc1.connect(gain1); gain1.connect(this.ctx.destination);
-          osc1.start(now); osc1.stop(now + 0.2);
-
-          const osc2 = this.ctx.createOscillator(), gain2 = this.ctx.createGain();
-          osc2.frequency.setValueAtTime(1975.53, now + 0.1); gain2.gain.setValueAtTime(0.25, now + 0.1);
-          gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-          osc2.connect(gain2); gain2.connect(this.ctx.destination);
-          osc2.start(now + 0.1); osc2.stop(now + 0.35);
-        } catch (e) {}
-      }
-
-      playError() {
-        try {
-          this.initCtx();
-          if (!this.ctx) return;
-          const now = this.ctx.currentTime;
-          const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
-          osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now);
-          gain.gain.setValueAtTime(0.2, now);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-          osc.connect(gain); gain.connect(this.ctx.destination);
-          osc.start(now); osc.stop(now + 0.25);
-        } catch (e) {}
+    function switchTab(tab) {
+      if (window.terminalAudio) terminalAudio.playTap();
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      if (tab === 'charge') {
+        document.getElementById('tabBtnCharge').classList.add('active');
+        document.getElementById('tabCharge').classList.add('active');
+      } else if (tab === 'topup') {
+        document.getElementById('tabBtnTopup').classList.add('active');
+        document.getElementById('tabTopup').classList.add('active');
+      } else if (tab === 'history') {
+        document.getElementById('tabBtnHistory').classList.add('active');
+        document.getElementById('tabHistory').classList.add('active');
+        loadHistory();
+      } else if (tab === 'settings') {
+        document.getElementById('tabBtnSettings').classList.add('active');
+        document.getElementById('tabSettings').classList.add('active');
+        loadDisplays();
       }
     }
 
-    const terminalAudio = new TerminalAudioController();
-  </script>
-
-  <script>
-    let socket = null;
-    let currentBalance = parseInt(localStorage.getItem('pos_terminal_balance') || '5000', 10);
-    let activeDisplaysList = [];
-    let blockedDisplays = new Set(JSON.parse(localStorage.getItem('pos_blocked_displays') || '[]'));
-    let pendingTransaction = null;
-
-    window.addEventListener('DOMContentLoaded', () => {
-      updateBalanceDisplay();
-      initSocketConnection();
-      renderHistory();
-      refreshDisplaysList();
-
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'pos_terminal_balance') {
-          currentBalance = parseInt(e.newValue || '0', 10);
-          updateBalanceDisplay();
-        }
-      });
-    });
-
-    function initSocketConnection() {
-      if (typeof io !== 'undefined') {
-        try {
-          socket = io();
-
-          socket.on('connect', () => {
-            setSocketStatus(true, 'Сокеты Онлайн');
-            socket.emit('request_displays_list');
-          });
-
-          socket.on('disconnect', () => {
-            setSocketStatus(false, 'Автономный режим');
-          });
-
-          socket.on('displays_update', (displays) => {
-            activeDisplaysList = (displays || []).filter(d => d && d.isCustomerDisplay !== false && d.online !== false);
-            renderDisplaysList(activeDisplaysList);
-          });
-
-          socket.on('balance_updated', (data) => {
-            if (data && typeof data.balance === 'number') {
-              currentBalance = data.balance;
-              localStorage.setItem('pos_terminal_balance', currentBalance);
-              updateBalanceDisplay();
-            }
-          });
-        } catch (e) {
-          setSocketStatus(false, 'Локально');
-        }
-      } else {
-        setSocketStatus(false, 'Автономно');
-      }
-    }
-
-    function refreshDisplaysList() {
-      if (socket && socket.connected) {
-        socket.emit('get_active_displays');
-      }
-      renderDisplaysList(activeDisplaysList);
-    }
-
-    function setSocketStatus(online, label) {
-      const badge = document.getElementById('statusBadge');
-      const dot = document.getElementById('statusBadgeDot');
-      const text = document.getElementById('statusBadgeText');
-
-      if (online) {
-        badge.className = 'status-badge-online';
-        dot.className = 'pulse-dot-green';
-        text.textContent = label;
-      } else {
-        badge.className = 'status-badge-online status-badge-offline';
-        dot.className = 'pulse-dot-amber';
-        text.textContent = label;
-      }
-    }
-
-    function updateBalanceDisplay() {
-      document.getElementById('currentBalanceDisplay').textContent = currentBalance.toLocaleString('ru-RU') + ' ₽';
-    }
-
-    function switchTab(tabName) {
-      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
-      const tabs = ['charge', 'topup', 'history', 'displays'];
-      tabs.forEach(t => {
-        const btn = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
-        const content = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
-        if (btn) btn.classList.toggle('active', t === tabName);
-        if (content) content.classList.toggle('active', t === tabName);
-      });
-      if (tabName === 'history') renderHistory();
-      if (tabName === 'displays') refreshDisplaysList();
+    function toggleAskTerminalSetting(checkbox) {
+      askTerminalEnabled = checkbox.checked;
+      fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ askTerminal: askTerminalEnabled })
+      }).catch(e => {});
     }
 
     function appendDigit(type, digit) {
-      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
-      const input = document.getElementById(type + 'Amount');
-      if (!input) return;
+      if (window.terminalAudio) terminalAudio.playTap();
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const input = document.getElementById(inputId);
       let val = input.value.replace(/\D/g, '');
-      if (val === '0') val = '';
-      if (val.length >= 7) return;
-      val += digit;
-      input.value = Number(val).toLocaleString('ru-RU');
-    }
-
-    function clearInput(type) {
-      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
-      const input = document.getElementById(type + 'Amount');
-      if (input) input.value = '0';
+      if (val === '0' || val === '') {
+        val = digit;
+      } else {
+        if (val.length < 7) val += digit;
+      }
+      input.value = parseInt(val, 10).toLocaleString('ru-RU');
     }
 
     function backspace(type) {
-      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
-      const input = document.getElementById(type + 'Amount');
-      if (!input) return;
+      if (window.terminalAudio) terminalAudio.playTap();
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const input = document.getElementById(inputId);
       let val = input.value.replace(/\D/g, '');
-      if (val.length <= 1) {
-        input.value = '0';
-      } else {
-        val = val.slice(0, -1);
-        input.value = Number(val).toLocaleString('ru-RU');
-      }
+      val = val.slice(0, -1);
+      input.value = (val === '' ? '0' : parseInt(val, 10)).toLocaleString('ru-RU');
+    }
+
+    function clearInput(type) {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      document.getElementById(inputId).value = '0';
     }
 
     function addPreset(type, amount) {
-      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
-      const input = document.getElementById(type + 'Amount');
-      if (!input) return;
+      if (window.terminalAudio) terminalAudio.playTap();
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const input = document.getElementById(inputId);
       let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
       current += amount;
       input.value = current.toLocaleString('ru-RU');
     }
 
-    function openModal(id) {
-      const modal = document.getElementById(id);
-      if (modal) modal.classList.add('active');
+    function initiateTransactionFlow() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const amountVal = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
+      if (amountVal <= 0) return;
+      pendingAmountForTx = amountVal;
+
+      if (!askTerminalEnabled) {
+        createQrTransaction(null);
+        return;
+      }
+
+      fetch('/api/displays')
+        .then(res => res.json())
+        .then(data => {
+          activeDisplaysData = data.displays || [];
+          renderTerminalSelector(activeDisplaysData);
+          document.getElementById('selectTerminalModal').classList.add('active');
+        })
+        .catch(err => {
+          createQrTransaction(null);
+        });
     }
 
-    function closeModal(id) {
-      const modal = document.getElementById(id);
-      if (modal) modal.classList.remove('active');
+    function renderTerminalSelector(displays) {
+      const container = document.getElementById('terminalSelectorList');
+      if (!displays || displays.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 10px;">Нет дисплеев.</p>`;
+        setTimeout(() => {
+          closeTerminalSelector();
+          createQrTransaction(null);
+        }, 800);
+        return;
+      }
+
+      container.innerHTML = displays.map(d => {
+        const isBlocked = d.isBlocked;
+        return `
+          <div class="terminal-option-item ${isBlocked ? 'blocked' : ''}" data-id="${d.id}" data-blocked="${isBlocked}">
+            <div>
+              <div style="font-weight: 700; color: #fff; font-size: 13px;">${d.name} ${isBlocked ? '🔒' : ''}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">IP: ${d.ip || 'Неизвестно'}</div>
+            </div>
+            <div style="font-size: 11px; color: var(--primary); font-weight: 700;">${isBlocked ? 'Заблокирован' : 'Выбрать →'}</div>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.terminal-option-item').forEach(item => {
+        const isBlocked = item.getAttribute('data-blocked') === 'true';
+        if (!isBlocked) {
+          item.addEventListener('click', () => {
+            const displayId = item.getAttribute('data-id');
+            createQrTransaction(displayId);
+          });
+        }
+      });
+    }
+
+    function closeTerminalSelector() {
+      document.getElementById('selectTerminalModal').classList.remove('active');
+    }
+
+    function createQrTransaction(targetDisplayId) {
+      closeTerminalSelector();
+      fetch('/api/create-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: pendingAmountForTx, targetDisplayId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          renderQrView(data.transaction);
+        }
+      })
+      .catch(err => console.error(err));
+    }
+
+    function renderQrView(tx) {
+      document.getElementById('chargeFormView').style.display = 'none';
+      document.getElementById('qrDisplayPanel').classList.add('active');
+      document.getElementById('qrAmountDisplay').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
+      document.getElementById('qrImage').src = tx.qrCode;
+    }
+
+    function cancelTransaction() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      fetch('/api/cancel-transaction', { method: 'POST' }).catch(e => {});
+      resetChargeView();
+    }
+
+    function resetChargeView() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      document.getElementById('chargeAmount').value = '0';
+      document.getElementById('chargeFormView').style.display = 'flex';
+      document.getElementById('qrDisplayPanel').classList.remove('active');
+      document.getElementById('successFullscreenModal').classList.remove('active');
+      document.getElementById('errorFullscreenModal').classList.remove('active');
     }
 
     function closeSuccessOverlay() {
-      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
-      closeModal('successFullscreenModal');
+      if (window.terminalAudio) terminalAudio.playTap();
+      document.getElementById('successFullscreenModal').classList.remove('active');
+      resetChargeView();
     }
 
     function closeErrorOverlay() {
-      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
-      closeModal('errorFullscreenModal');
+      if (window.terminalAudio) terminalAudio.playTap();
+      document.getElementById('errorFullscreenModal').classList.remove('active');
+      resetChargeView();
     }
 
-    function sendTestToDisplay(displayId) {
-      if (typeof terminalAudio !== 'undefined') terminalAudio.playTap();
-      if (socket && socket.connected) {
-        socket.emit('display_show_qr', {
-          txId: 'TEST-' + Date.now(),
-          amount: 100,
-          targetDisplay: displayId,
-          qrUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=TEST'
-        });
-      }
+    function submitTopup() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const amountVal = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
+      if (amountVal <= 0) return;
+
+      fetch('/api/topup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amountVal })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          if (window.terminalAudio) terminalAudio.playSuccess();
+          clearInput('topup');
+          switchTab('charge');
+        }
+      });
     }
 
-    function openAskDisplayModal() {
-      terminalAudio.playTap();
-      const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) return;
-
-      if (amount > currentBalance) {
-        terminalAudio.playError();
-        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств на балансе! Доступно: ${currentBalance.toLocaleString('ru-RU')} ₽`;
-        openModal('errorFullscreenModal');
-        return;
-      }
-
-      pendingTransaction = { 
-        type: 'charge', 
-        amount: amount, 
-        txId: 'TX-' + Date.now()
-      };
-
-      const container = document.getElementById('displayChoicesContainer');
-      
-      let html = `
-        <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('all')">
-          <span>🌐 Все подключенные экраны</span>
-          <span style="font-size: 12px; color: var(--accent);">Отправить всем</span>
-        </button>
-      `;
-
-      if (activeDisplaysList.length > 0) {
-        activeDisplaysList.forEach(d => {
-          html += `
-            <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('${d.id}')">
-              <span>🖥 ${d.name || ('Дисплей ' + d.id)}</span>
-              <span style="font-size: 12px; color: var(--primary);">Онлайн (/display)</span>
-            </button>
-          `;
-        });
-      } else {
-        html += `
-          <button class="display-choice-btn" onclick="confirmDisplayTargetAndExecute('display_1')">
-            <span>🖥 Дисплей #1 (/display)</span>
-            <span style="font-size: 12px; color: var(--primary);">По умолчанию</span>
-          </button>
-        `;
-      }
-
-      container.innerHTML = html;
-      openModal('askDisplayModal');
+    function loadHistory() {
+      fetch('/api/history')
+        .then(res => res.json())
+        .then(data => {
+          renderHistory(data.history || []);
+        })
+        .catch(e => {});
     }
 
-    function initiateChargeTransaction(defaultTarget) {
-      terminalAudio.playTap();
-      const amount = parseInt(document.getElementById('chargeAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) return;
-
-      if (amount > currentBalance) {
-        terminalAudio.playError();
-        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств на балансе! Доступно: ${currentBalance.toLocaleString('ru-RU')} ₽`;
-        openModal('errorFullscreenModal');
-        return;
-      }
-
-      pendingTransaction = { 
-        type: 'charge', 
-        amount: amount, 
-        txId: 'TX-' + Date.now()
-      };
-
-      startQRPaymentFlow(pendingTransaction, defaultTarget || 'all');
-    }
-
-    function confirmDisplayTargetAndExecute(chosenDisplayTarget) {
-      closeModal('askDisplayModal');
-      if (pendingTransaction) {
-        startQRPaymentFlow(pendingTransaction, chosenDisplayTarget);
-      }
-    }
-
-    function startQRPaymentFlow(tx, displayTarget) {
-      if (blockedDisplays.has(displayTarget) || (displayTarget === 'all' && activeDisplaysList.length > 0 && activeDisplaysList.every(d => blockedDisplays.has(d.id)))) {
-        terminalAudio.playError();
-        document.getElementById('errorOverlaySubtitle').textContent = `Ошибка: Дисплей (${displayTarget === 'all' ? 'Все экраны' : displayTarget}) заблокирован!`;
-        openModal('errorFullscreenModal');
-        return;
-      }
-
-      tx.displayTarget = displayTarget;
-      const payUrl = `${window.location.origin}/pay?amount=${tx.amount}&tx=${tx.txId}`;
-      const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payUrl)}`;
-
-      document.getElementById('pendingQrImage').src = qrImageUrl;
-      document.getElementById('pendingModalAmount').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
-      
-      const displayLabels = {
-        'all': '🌐 Все экраны',
-        'display_1': '🖥 Дисплей #1',
-        'display_2': '🖥 Дисплей #2'
-      };
-      document.getElementById('pendingModalTargetDisplay').textContent = 'Отправлено на: ' + (displayLabels[displayTarget] || displayTarget);
-
-      if (socket && socket.connected) {
-        socket.emit('display_show_qr', {
-          txId: tx.txId,
-          amount: tx.amount,
-          targetDisplay: displayTarget,
-          payUrl: payUrl,
-          qrUrl: qrImageUrl
-        });
-      }
-
-      openModal('pendingPaymentModal');
-    }
-
-    function completePendingPayment() {
-      if (!pendingTransaction) return;
-      const tx = pendingTransaction;
-
-      currentBalance -= tx.amount;
-      clearInput('charge');
-      closeModal('pendingPaymentModal');
-
-      document.getElementById('successModalTitle').textContent = 'Списание выполнено!';
-      document.getElementById('successOverlayAmount').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successOverlayRemaining').textContent = 'Остаток на карте: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
-
-      localStorage.setItem('pos_terminal_balance', currentBalance);
-      updateBalanceDisplay();
-      saveReceiptLocally(tx.type, tx.amount, tx.displayTarget);
-
-      if (socket && socket.connected) {
-        socket.emit('process_transaction', {
-          type: tx.type,
-          amount: tx.amount,
-          newBalance: currentBalance,
-          targetDisplay: tx.displayTarget
-        });
-      }
-
-      const displayLabels = {
-        'all': '🌐 Все экраны',
-        'display_1': '🖥 Дисплей #1',
-        'display_2': '🖥 Дисплей #2'
-      };
-      document.getElementById('successOverlayTargetDisplay').textContent = 'Отправлено на: ' + (displayLabels[tx.displayTarget] || tx.displayTarget);
-
-      terminalAudio.playSuccess();
-      openModal('successFullscreenModal');
-      pendingTransaction = null;
-    }
-
-    function cancelPendingPayment() {
-      terminalAudio.playTap();
-      closeModal('pendingPaymentModal');
-
-      if (pendingTransaction && socket && socket.connected) {
-        socket.emit('display_show_welcome', { targetDisplay: pendingTransaction.displayTarget });
-      }
-
-      pendingTransaction = null;
-    }
-
-    function initiateTopupTransaction() {
-      terminalAudio.playTap();
-      const amount = parseInt(document.getElementById('topupAmount').value.replace(/\D/g, '') || '0', 10);
-      if (amount <= 0) return;
-
-      currentBalance += amount;
-      clearInput('topup');
-      localStorage.setItem('pos_terminal_balance', currentBalance);
-      updateBalanceDisplay();
-      saveReceiptLocally('topup', amount, 'silent');
-
-      if (socket && socket.connected) {
-        socket.emit('sync_balance_only', {
-          newBalance: currentBalance
-        });
-      }
-
-      document.getElementById('successModalTitle').textContent = 'Баланс пополнен!';
-      document.getElementById('successOverlayAmount').textContent = '+' + amount.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successOverlayRemaining').textContent = 'Новый баланс: ' + currentBalance.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('successOverlayTargetDisplay').textContent = '';
-
-      terminalAudio.playSuccess();
-      openModal('successFullscreenModal');
-    }
-
-    function saveReceiptLocally(type, amount, targetDisplay) {
-      try {
-        const history = JSON.parse(localStorage.getItem('pos_local_receipts') || '[]');
-        history.unshift({
-          id: Date.now(),
-          type: type,
-          amount: amount,
-          targetDisplay: targetDisplay,
-          created_at: new Date().toISOString()
-        });
-        localStorage.setItem('pos_local_receipts', JSON.stringify(history.slice(0, 50)));
-      } catch(e) {}
-    }
-
-    function renderHistory() {
+    function renderHistory(history) {
       const container = document.getElementById('historyListContainer');
-      const receipts = JSON.parse(localStorage.getItem('pos_local_receipts') || '[]');
-
-      if (receipts.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">История операций пуста</p>';
+      if (!history || history.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">История пуста</p>`;
         return;
       }
 
-      container.innerHTML = receipts.map(item => {
+      container.innerHTML = history.map(item => {
         const isTopup = item.type === 'topup';
-        const dateStr = new Date(item.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const dateStr = new Date(item.createdAt || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         return `
           <div class="history-item">
             <div class="history-info">
-              <h4>${isTopup ? '➕ Пополнение' : '💸 Списание (QR)'}</h4>
-              <p>${dateStr} • ${item.targetDisplay || 'all'}</p>
+              <h4>${isTopup ? '➕ Пополнение' : '🧾 Оплата'} <span style="font-size: 10px; color: var(--text-muted);">#${item.id}</span></h4>
+              <p>${dateStr}</p>
+              ${!isTopup ? `<a href="/api/receipt/${item.id}" target="_blank" class="receipt-download-btn">📥 Чек</a>` : ''}
             </div>
             <div class="history-amount ${isTopup ? 'topup' : ''}">
-              ${isTopup ? '+' : '-'}${Number(item.amount).toLocaleString('ru-RU')} ₽
+              ${isTopup ? '+' : ''}${item.amount.toLocaleString('ru-RU')} ₽
             </div>
           </div>
         `;
       }).join('');
     }
 
-    function renderDisplaysList(displays) {
+    function loadDisplays() {
+      fetch('/api/displays')
+        .then(res => res.json())
+        .then(data => {
+          renderDisplays(data.displays || []);
+        })
+        .catch(e => {});
+    }
+
+    function renderDisplays(displays) {
       const container = document.getElementById('displaysListContainer');
-      const headerText = document.getElementById('headerTargetText');
-
-      const clientDisplays = (displays || []).filter(d => d.online !== false);
-      if (headerText) {
-        headerText.textContent = clientDisplays.length + ' подключено';
-      }
-
-      if (!clientDisplays || clientDisplays.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет подключенных экранов</p>`;
-        updateBlockAllButtonText();
+      if (!displays || displays.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет дисплеев</p>`;
         return;
       }
 
-      container.innerHTML = clientDisplays.map(d => {
-        const isBlocked = blockedDisplays.has(d.id);
-        return `
-          <div class="display-card-item">
-            <div>
-              <strong style="font-size: 14px; color: #fff;">🖥 ${d.name || ('Дисплей ' + d.id)} (/display)</strong>
-              <p style="font-size: 11px; color: ${isBlocked ? 'var(--error)' : 'var(--primary)'}; font-weight: 700;">
-                ${isBlocked ? '🔒 Заблокирован' : '● Онлайн'}
-              </p>
+      container.innerHTML = displays.map(d => `
+        <div class="display-card ${d.isBlocked ? 'blocked' : ''}" id="disp_${d.id}">
+          <div class="display-card-top">
+            <div class="display-name-group">
+              <input type="text" class="display-title-input" value="${d.name}" id="input_name_${d.id}" onchange="updateDisplayName('${d.id}')">
+              ${d.isBlocked ? '<span style="font-size: 10px; background: rgba(239,68,68,0.2); color: #f87171; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Блок</span>' : '<span style="font-size: 10px; background: rgba(16,185,129,0.2); color: var(--primary); padding: 2px 6px; border-radius: 4px; font-weight: 700;">Активен</span>'}
             </div>
-            <div style="display: flex; gap: 6px;">
-              <button class="btn-secondary" style="width: auto; padding: 6px 10px; font-size: 14px;" onclick="toggleBlockDisplay('${d.id}')" title="${isBlocked ? 'Разблокировать' : 'Заблокировать'}">
-                ${isBlocked ? '🔓' : '🔒'}
+            <div class="display-actions-group">
+              <button class="icon-btn ${d.isBlocked ? '' : 'danger'}" title="${d.isBlocked ? 'Разблокировать' : 'Заблокировать'}" onclick="toggleBlockDisplay('${d.id}', ${!d.isBlocked})">
+                ${d.isBlocked ? '🔓' : '🔒'}
               </button>
-              <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 11px;" onclick="sendTestToDisplay('${d.id}')">Тест</button>
             </div>
           </div>
-        `;
-      }).join('');
-
-      updateBlockAllButtonText();
+          <div class="setting-row">
+            <span>ID: ${d.id}</span>
+            <span>IP: ${d.ip || 'localhost'}</span>
+          </div>
+        </div>
+      `).join('');
     }
 
-    function toggleBlockDisplay(displayId) {
-      terminalAudio.playTap();
-      const isBlocked = blockedDisplays.has(displayId);
-
-      if (isBlocked) {
-        blockedDisplays.delete(displayId);
-      } else {
-        blockedDisplays.add(displayId);
-      }
-
-      localStorage.setItem('pos_blocked_displays', JSON.stringify(Array.from(blockedDisplays)));
-
-      if (socket && socket.connected) {
-        socket.emit('display_block', {
-          targetDisplay: displayId,
-          blocked: !isBlocked
-        });
-      }
-
-      renderDisplaysList(activeDisplaysList);
+    function updateDisplayName(id) {
+      const newName = document.getElementById(`input_name_${id}`).value;
+      fetch(`/api/displays/${id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName })
+      }).catch(e => {});
     }
 
-    function toggleBlockAllDisplays() {
-      terminalAudio.playTap();
-      const idsToTarget = activeDisplaysList.length > 0 ? activeDisplaysList.map(d => d.id) : [];
-      const allBlocked = idsToTarget.length > 0 && idsToTarget.every(id => blockedDisplays.has(id));
-
-      if (allBlocked) {
-        idsToTarget.forEach(id => blockedDisplays.delete(id));
-        blockedDisplays.delete('all');
-      } else {
-        idsToTarget.forEach(id => blockedDisplays.add(id));
-        blockedDisplays.add('all');
-      }
-
-      localStorage.setItem('pos_blocked_displays', JSON.stringify(Array.from(blockedDisplays)));
-
-      if (socket && socket.connected) {
-        socket.emit('display_block', {
-          targetDisplay: 'all',
-          blocked: !allBlocked
-        });
-      }
-
-      renderDisplaysList(activeDisplaysList);
+    function toggleBlockDisplay(id, blockStatus) {
+      fetch(`/api/displays/${id}/block`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isBlocked: blockStatus })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) loadDisplays();
+      }).catch(e => {});
     }
 
-    function updateBlockAllButtonText() {
-      const btn = document.getElementById('btnBlockAllDisplays');
-      if (!btn) return;
-      const idsToTarget = activeDisplaysList.length > 0 ? activeDisplaysList.map(d => d.id) : [];
-      const allBlocked = idsToTarget.length > 0 && idsToTarget.every(id => blockedDisplays.has(id));
-
-      if (allBlocked) {
-        btn.textContent = '🔓';
-        btn.title = 'Разблокировать все';
-        btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-      } else {
-        btn.textContent = '🔒';
-        btn.title = 'Заблокировать все';
-        btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+    socket.on('payment_success', (data) => {
+      if (window.terminalAudio) window.terminalAudio.playSuccess();
+      document.getElementById('qrDisplayPanel').classList.remove('active');
+      document.getElementById('errorFullscreenModal').classList.remove('active');
+      
+      const successModal = document.getElementById('successFullscreenModal');
+      successModal.classList.add('active');
+      
+      document.getElementById('successOverlayAmount').textContent = data.transaction.amount.toLocaleString('ru-RU') + ' ₽';
+      if (data.newBalance !== undefined) {
+        document.getElementById('successOverlayRemaining').textContent = 'Остаток на карте: ' + data.newBalance.toLocaleString('ru-RU') + ' ₽';
       }
-    }
+    });
 
-    function sendWelcomeScreen() {
-      terminalAudio.playTap();
-      if (socket && socket.connected) {
-        socket.emit('display_show_welcome', { targetDisplay: 'all' });
+    socket.on('payment_failed', (data) => {
+      if (window.terminalAudio) window.terminalAudio.playError();
+      document.getElementById('qrDisplayPanel').classList.remove('active');
+      document.getElementById('successFullscreenModal').classList.remove('active');
+      
+      const errorModal = document.getElementById('errorFullscreenModal');
+      errorModal.classList.add('active');
+      
+      if (data.reason === 'insufficient_funds') {
+        document.getElementById('errorOverlaySubtitle').textContent = `Недостаточно средств! Требуется: ${data.transaction.amount.toLocaleString('ru-RU')} ₽`;
       }
-    }
+    });
 
-    /* KEYBOARD HOTKEYS SUPPORT */
+    socket.on('transaction_cancelled', () => {
+      resetChargeView();
+    });
+
     document.addEventListener('keydown', (e) => {
-      const askModal = document.getElementById('askDisplayModal');
-      const pendModal = document.getElementById('pendingPaymentModal');
       const errModal = document.getElementById('errorFullscreenModal');
       const succModal = document.getElementById('successFullscreenModal');
+      const qrPanel = document.getElementById('qrDisplayPanel');
 
       if (e.key === 'Enter') {
-        if (askModal.classList.contains('active')) confirmDisplayTargetAndExecute('all');
-        else if (pendModal.classList.contains('active')) completePendingPayment();
-        else if (errModal.classList.contains('active')) closeErrorOverlay();
+        if (errModal.classList.contains('active')) closeErrorOverlay();
         else if (succModal.classList.contains('active')) closeSuccessOverlay();
+        else if (qrPanel.classList.contains('active')) {}
         else {
-          const activeTab = document.querySelector('.tab-btn.active').id;
-          if (activeTab === 'tabBtnCharge') initiateChargeTransaction();
-          else if (activeTab === 'tabBtnTopup') initiateTopupTransaction();
+          if (currentTab === 'charge') initiateTransactionFlow();
+          else if (currentTab === 'topup') submitTopup();
         }
       } else if (e.key === 'Escape') {
-        closeModal('askDisplayModal');
-        if (pendModal.classList.contains('active')) cancelPendingPayment();
-        closeSuccessOverlay();
-        closeErrorOverlay();
-      } else if (!isNaN(e.key) && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
-        const activeTab = document.querySelector('.tab-btn.active').id;
-        const type = activeTab === 'tabBtnCharge' ? 'charge' : 'topup';
-        appendDigit(type, e.key);
-      } else if (e.key === 'Backspace' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
-        const activeTab = document.querySelector('.tab-btn.active').id;
-        const type = activeTab === 'tabBtnCharge' ? 'charge' : 'topup';
-        backspace(type);
+        cancelTransaction();
+        closeTerminalSelector();
+      } else if (!isNaN(e.key) && currentTab !== 'history' && currentTab !== 'settings') {
+        appendDigit(currentTab, e.key);
+      } else if (e.key === 'Backspace' && currentTab !== 'history' && currentTab !== 'settings') {
+        backspace(currentTab);
       }
     });
   </script>
