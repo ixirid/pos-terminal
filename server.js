@@ -178,6 +178,7 @@ app.get('/api/shortcut/pay-active', (req, res) => {
       io.emit('payment_failed', failPayload);
     }
 
+    io.emit('transaction_failed', { transaction: tx });
     return res.status(400).json({ success: false, error: 'insufficient_funds', transaction: tx });
   }
 
@@ -198,6 +199,10 @@ app.get('/api/shortcut/pay-active', (req, res) => {
   } else {
     io.emit('payment_success', successPayload);
   }
+
+  // Убираем QR-код с терминала/кассы и всех экранов
+  io.emit('transaction_completed', { transaction: tx });
+  io.emit('transaction_cancelled');
 
   io.emit('client_balance_updated', { balance: clientBalance });
 
@@ -232,6 +237,7 @@ app.post('/api/process-payment', (req, res) => {
       io.emit('payment_failed', failPayload);
     }
 
+    io.emit('transaction_failed', { transaction: tx });
     return res.json({ success: false, error: 'insufficient_funds' });
   }
 
@@ -251,6 +257,9 @@ app.post('/api/process-payment', (req, res) => {
   } else {
     io.emit('payment_success', successPayload);
   }
+
+  io.emit('transaction_completed', { transaction: tx });
+  io.emit('transaction_cancelled');
 
   io.emit('client_balance_updated', { balance: clientBalance });
 
