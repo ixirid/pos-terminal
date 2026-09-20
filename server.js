@@ -25,14 +25,14 @@ app.use(express.static(path.join(__dirname)));
 const activeDisplays = new Map(); // id -> { id, name, socketId, online, blocked }
 const pendingTransactions = new Map(); // txId -> { txId, amount, payUrl, createdAt }
 
-// POS Terminal main page (fallback to pay.html if index.html is missing)
+// POS Terminal main page (fallback to terminal.html if index.html is missing)
 app.get('/', (req, res) => {
-  const indexPath = path.join(__dirname, 'terminal.html');
+  const terminalPath = path.join(__dirname, 'terminal.html');
   const payPath = path.join(__dirname, 'pay.html');
   
-  require('fs').access(indexPath, (err) => {
+  require('fs').access(terminalPath, (err) => {
     if (!err) {
-      res.sendFile(indexPath);
+      res.sendFile(terminalPath);
     } else {
       require('fs').access(payPath, (err2) => {
         if (!err2) {
