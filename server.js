@@ -20,7 +20,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 let clientDisplays = []; // Список подключенных дисплеев покупателя
 let pendingTransactions = {}; // Активные транзакции по ID
 let history = []; // История операций (оплаты, пополнения)
-let clientBalance = 10000; // Баланс счета клиента (по умолчанию с запасом для тестов)
+let clientBalance = 0; // Баланс счета клиента (по умолчанию с запасом для тестов)
 
 // Загрузка конфигурационного файла (если есть)
 const CONFIG_PATH = path.join(__dirname, 'config.json');
