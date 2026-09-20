@@ -163,25 +163,26 @@ app.post('/api/cancel-transaction', (req, res) => {
 });
 
 io.on('connection', (socket) => {
+  // Автоматический fallback: если данные или id не пришли, используем socket.id
   socket.on('register_display', (data) => {
-    if (!data || !data.id) {
-      return;
-    }
+    const displayId = (data && data.id) ? data.id : socket.id;
+    const displayName = (data && data.name) ? data.name : `Дисплей ${clientDisplays.length + 1}`;
 
-    const existing = clientDisplays.find(d => d.id === data.id);
+    const existing = clientDisplays.find(d => d.id === displayId || d.socketId === socket.id);
     if (existing) {
       existing.socketId = socket.id;
       existing.ip = socket.handshake.address;
+      existing.name = displayName;
     } else {
       clientDisplays.push({
-        id: data.id,
+        id: displayId,
         socketId: socket.id,
-        name: data.name || `Дисплей ${clientDisplays.length + 1}`,
+        name: displayName,
         ip: socket.handshake.address,
         locked: false
       });
     }
-    socket.join(data.id);
+    socket.join(displayId);
     io.emit('update_displays', clientDisplays);
   });
 
