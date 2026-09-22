@@ -17,12 +17,12 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Хранилище состояния приложения в памяти
-let clientDisplays = []; // Список подключенных дисплеев покупателя
-let pendingTransactions = {}; // Активные транзакции по ID
-let history = []; // История операций (оплаты, пополнения)
-let clientBalance = 0; // Баланс счета клиента (по умолчанию с запасом для тестов)
+let clientDisplays = []; 
+let pendingTransactions = {}; 
+let history = []; 
+let clientBalance = 0; // Единый общий баланс системы
 
-// Загрузка конфигурационного файла (если есть)
+// Загрузка конфигурационного файла
 const CONFIG_PATH = path.join(__dirname, 'config.json');
 let config = { serverIp: 'localhost', askTerminal: true };
 if (fs.existsSync(CONFIG_PATH)) {
@@ -33,13 +33,10 @@ if (fs.existsSync(CONFIG_PATH)) {
   }
 }
 
-// Вспомогательная функция для отправки событий только кассе и конкретному дисплею (если он указан)
 function sendTargetedEvent(eventName, payload, targetDisplayId) {
   if (!targetDisplayId) {
-    // Если дисплей не выбран — отправляем всем
     io.emit(eventName, payload);
   } else {
-    // Если дисплей выбран — отправляем ТОЛЬКО кассе (не-дисплеям) и целевому дисплею
     for (let [socketId, sock] of io.sockets.sockets) {
       const isDisplay = clientDisplays.some(d => d.socketId === socketId);
       const isTarget = clientDisplays.some(d => d.id === targetDisplayId && d.socketId === socketId);
@@ -71,7 +68,6 @@ app.get('/pay', (req, res) => {
 
 // ==================== API ЭНДПОИНТЫ ====================
 
-// Получение общей информации о системе
 app.get('/api/info', (req, res) => {
   res.json({
     config,
@@ -81,12 +77,10 @@ app.get('/api/info', (req, res) => {
   });
 });
 
-// Получение списка всех активных дисплеев
 app.get('/api/displays', (req, res) => {
   res.json({ displays: clientDisplays });
 });
 
-// Обновление настроек
 app.post('/api/settings', (req, res) => {
   if (req.body.askTerminal !== undefined) {
     config.askTerminal = req.body.askTerminal;
@@ -95,7 +89,6 @@ app.post('/api/settings', (req, res) => {
   res.json({ success: true, config });
 });
 
-// Обновление имени дисплея через REST
 app.post('/api/displays/:id/update', (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
@@ -108,7 +101,6 @@ app.post('/api/displays/:id/update', (req, res) => {
   res.status(404).json({ success: false, error: 'Display not found' });
 });
 
-// Блокировка дисплея через REST
 app.post('/api/displays/:id/block', (req, res) => {
   const { id } = req.params;
   const { isBlocked } = req.body;
@@ -127,17 +119,16 @@ app.post('/api/displays/:id/block', (req, res) => {
   res.status(404).json({ success: false, error: 'Display not found' });
 });
 
-// Получение чека
 app.get('/api/receipt/:id', (req, res) => {
   const txId = req.params.id;
-  const item = history.find(h => h.id === txId);
+  const item = history.find(h => String(h.id) === String(txId));
   if (!item) {
     return res.status(404).send('Чек не найден');
   }
   res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Чек #${item.id}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Кассовый чек #${item.id}</h2><p>Тип операции: ${item.type === 'charge' ? 'Оплата' : 'Пополнение'}</p><p>Сумма: <b>${item.amount} ₽</b></p><p>Дата: ${new Date(item.createdAt).toLocaleString()}</p></body></html>`);
 });
 
-// Создание новой транзакции (Оплата)
+// Создание транзакции (Генерация QR-кода)
 app.post('/api/create-transaction', (req, res) => {
   const { amount, targetDisplayId } = req.body;
   
@@ -148,10 +139,11 @@ app.post('/api/create-transaction', (req, res) => {
 
   const txId = 'tx_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
   
-  const host = req.headers.host || 'localhost:10000';
-  const protocol = req.headers['x-forwarded-proto'] || 'http';
-  const payUrl = `${protocol}://${host}/pay?amount=${parsedAmount}&tx=${txId}`;
+  // Автоматическое определение хоста на Render
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:10000';
+  const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
   
+  const payUrl = `${protocol}://${host}/pay?tx=${txId}&id=${txId}&amount=${parsedAmount}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payUrl)}`;
 
   const transaction = {
@@ -165,15 +157,15 @@ app.post('/api/create-transaction', (req, res) => {
   };
 
   pendingTransactions[txId] = transaction;
+  console.log(`[TX CREATED] ID: ${txId}, URL: ${payUrl}`);
 
-  // Рассылаем QR только на кассу и целевой дисплей
   sendTargetedEvent('show_qr', transaction, targetDisplayId);
   sendTargetedEvent('transaction_created', transaction, targetDisplayId);
 
   res.json({ success: true, transaction });
 });
 
-// Получение активной транзакции и автоматическое проведение оплаты картой (GET-шорткат)
+// Шорткат оплаты картой
 app.get('/api/shortcut/pay-active', (req, res) => {
   const activeTx = Object.values(pendingTransactions).filter(tx => tx.status === 'pending');
   if (activeTx.length === 0) {
@@ -186,9 +178,7 @@ app.get('/api/shortcut/pay-active', (req, res) => {
     tx.status = 'failed';
     const failPayload = { transaction: tx, reason: 'insufficient_funds' };
     
-    // Ошибка (крестик) только на кассу и нужный дисплей
     sendTargetedEvent('payment_failed', failPayload, tx.targetDisplayId);
-
     return res.status(400).json({ success: false, error: 'insufficient_funds', transaction: tx });
   }
 
@@ -203,10 +193,9 @@ app.get('/api/shortcut/pay-active', (req, res) => {
   });
 
   const successPayload = { transaction: tx, newBalance: clientBalance };
-  
-  // Успех (галочка) только на кассу и нужный дисплей
   sendTargetedEvent('payment_success', successPayload, tx.targetDisplayId);
 
+  // Оповещаем весь проект об обновлении общего баланса
   io.emit('client_balance_updated', { balance: clientBalance });
 
   res.json({ success: true, transaction: tx, newBalance: clientBalance });
@@ -214,17 +203,21 @@ app.get('/api/shortcut/pay-active', (req, res) => {
 
 // Получение статуса транзакции
 app.get('/api/transaction/:txId', (req, res) => {
-  const tx = pendingTransactions[req.params.txId];
+  const reqId = String(req.params.txId);
+  const tx = pendingTransactions[reqId] || Object.values(pendingTransactions).find(t => String(t.id) === reqId);
+  
   if (!tx) {
     return res.status(404).json({ error: 'Transaction not found' });
   }
+  
   res.json({ transaction: tx, balance: clientBalance });
 });
 
-// Обработка проведения оплаты (Списание средств через POST)
+// Проведение оплаты (POST)
 app.post('/api/process-payment', (req, res) => {
   const { txId } = req.body;
-  const tx = pendingTransactions[txId];
+  const reqId = String(txId);
+  const tx = pendingTransactions[reqId] || Object.values(pendingTransactions).find(t => String(t.id) === reqId);
 
   if (!tx || tx.status !== 'pending') {
     return res.status(400).json({ success: false, error: 'Invalid or expired transaction' });
@@ -232,7 +225,6 @@ app.post('/api/process-payment', (req, res) => {
 
   if (clientBalance < tx.amount) {
     tx.status = 'failed';
-    
     const failPayload = { transaction: tx, reason: 'insufficient_funds' };
     sendTargetedEvent('payment_failed', failPayload, tx.targetDisplayId);
 
@@ -257,7 +249,7 @@ app.post('/api/process-payment', (req, res) => {
   res.json({ success: true, newBalance: clientBalance });
 });
 
-// Пополнение баланса клиента
+// Пополнение единого баланса
 app.post('/api/topup', (req, res) => {
   const { amount } = req.body;
   const topupAmount = parseInt(amount, 10);
@@ -280,12 +272,10 @@ app.post('/api/topup', (req, res) => {
   res.json({ success: true, newBalance: clientBalance });
 });
 
-// Получение истории операций
 app.get('/api/history', (req, res) => {
   res.json({ history });
 });
 
-// Отмена активных транзакций
 app.post('/api/cancel-transaction', (req, res) => {
   pendingTransactions = {};
   io.emit('transaction_cancelled');
@@ -297,7 +287,13 @@ app.post('/api/cancel-transaction', (req, res) => {
 io.on('connection', (socket) => {
   console.log(`Клиент подключился через WebSocket: ${socket.id}`);
 
-  // Регистрация дисплея
+  // При любом подключении сразу же отправляем текущий общий баланс
+  socket.emit('client_balance_updated', { balance: clientBalance });
+
+  socket.on('get_balance', () => {
+    socket.emit('client_balance_updated', { balance: clientBalance });
+  });
+
   socket.on('register_display', (data) => {
     const displayId = (data && data.id) ? data.id : ('socket_' + socket.id);
     const displayName = (data && data.name) ? data.name : `Дисплей (${socket.id.substring(0, 4)})`;
@@ -322,7 +318,6 @@ io.on('connection', (socket) => {
     io.emit('update_displays', clientDisplays);
   });
 
-  // Обработчик блокировки/разблокировки через socket
   socket.on('toggle_display_lock', (data) => {
     const { id, isBlocked } = data;
     const display = clientDisplays.find(d => d.id === id);
@@ -343,7 +338,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Запуск сервера
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`POS сервер успешно запущен и работает на порту ${PORT}`);
