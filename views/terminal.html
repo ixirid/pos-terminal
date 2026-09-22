@@ -1263,12 +1263,16 @@
     function renderTelegramInvoices(invoices) {
       const container = document.getElementById('telegramInvoicesContainer');
       if (!container) return;
-      if (!invoices || invoices.length === 0) {
+
+      // Безопасная проверка: если пришел не массив, пытаемся достать вложенное поле или делаем пустым массивом
+      const safeInvoices = Array.isArray(invoices) ? invoices : (invoices?.invoices || []);
+
+      if (safeInvoices.length === 0) {
         container.innerHTML = `<p style="color: var(--text-muted); text-align: center; font-size: 11px; padding: 10px;">Счетов пока нет</p>`;
         return;
       }
 
-      container.innerHTML = invoices.map(inv => {
+      container.innerHTML = safeInvoices.map(inv => {
         const isSuccess = inv.status === 'success';
         const isFailed = inv.status === 'failed';
         const statusColor = isSuccess ? 'var(--primary)' : (isFailed ? 'var(--error)' : '#f59e0b');
