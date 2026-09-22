@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
@@ -16,11 +17,16 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// === КОНФИГУРАЦИЯ TELEGRAM БОТА ===
+const BOT_TOKEN = '8924717997:AAGQZu72iUz_QMiyK8ShflO977hSctOFycs';
+
 // Хранилище состояния приложения в памяти
 let clientDisplays = []; 
 let pendingTransactions = {}; 
 let history = []; 
-let clientBalance = 0; // Единый общий баланс системы (начальный баланс 0)
+let clientBalance = 0; // Единый общий баланс системы (0 по умолчанию)
+let telegramUsers = {}; // { username_lowercase: chatId }
+let telegramInvoices = []; // История счетов Telegram [{ id, txId, username, amount, status, createdAt }]
 
 // === ФАЙЛОВОЕ ХРАНИЛИЩЕ ДЛЯ СОХРАНЕНИЯ БАЛАНСА И ИСТОРИИ ===
 const DB_PATH = path.join(__dirname, 'db.json');
@@ -29,12 +35,10 @@ function loadDbData() {
   if (fs.existsSync(DB_PATH)) {
     try {
       const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-      if (typeof data.balance === 'number') {
-        clientBalance = data.balance;
-      }
-      if (Array.isArray(data.history)) {
-        history = data.history;
-      }
+      if (typeof data.balance === 'number') clientBalance = data.balance;
+      if (Array.isArray(data.history)) history = data.history;
+      if (data.telegramUsers) telegramUsers = data.telegramUsers;
+      if (Array.isArray(data.telegramInvoices)) telegramInvoices = data.telegramInvoices;
     } catch (e) {
       console.error('Ошибка чтения db.json:', e);
     }
@@ -47,7 +51,9 @@ function saveDbData() {
   try {
     fs.writeFileSync(DB_PATH, JSON.stringify({
       balance: clientBalance,
-      history: history
+      history: history,
+      telegramUsers: telegramUsers,
+      telegramInvoices: telegramInvoices
     }, null, 2), 'utf8');
   } catch (e) {
     console.error('Ошибка записи в db.json:', e);
@@ -56,6 +62,79 @@ function saveDbData() {
 
 // Загружаем сохранённые данные при старте сервера
 loadDbData();
+
+// === TELEGRAM BOT API МЕТОДЫ ===
+function tgApiCall(method, payload) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(payload);
+    const options = {
+      hostname: 'api.telegram.org',
+      path: `/bot${BOT_TOKEN}/${method}`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(data)
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(body));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
+}
+
+function sendTelegramMessage(chatId, text, replyMarkup = null) {
+  const payload = { chat_id: chatId, text: text, parse_mode: 'HTML' };
+  if (replyMarkup) payload.reply_markup = replyMarkup;
+  return tgApiCall('sendMessage', payload);
+}
+
+// Long Polling для обработки сообщений боту
+let tgUpdateOffset = 0;
+async function pollTelegramUpdates() {
+  try {
+    const res = await tgApiCall('getUpdates', { offset: tgUpdateOffset, timeout: 10 });
+    if (res && res.ok && Array.isArray(res.result)) {
+      for (const update of res.result) {
+        tgUpdateOffset = update.update_id + 1;
+        if (update.message && update.message.text) {
+          const msg = update.message;
+          const chatId = msg.chat.id;
+          const text = msg.text.trim();
+          
+          if (msg.from && msg.from.username) {
+            const username = msg.from.username.toLowerCase();
+            telegramUsers[username] = chatId;
+            saveDbData();
+          }
+
+          if (text.startsWith('/start')) {
+            await sendTelegramMessage(
+              chatId,
+              `👋 <b>Приветствую!</b>\n\nВы успешно привязали свой аккаунт к кассовой системе.\nТеперь кассир сможет отправлять вам счета на оплату прямо сюда.`
+            );
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // Тихо игнорируем ошибки сети при поллинге
+  }
+  setTimeout(pollTelegramUpdates, 1000);
+}
+pollTelegramUpdates();
 
 // Загрузка конфигурационного файла
 const CONFIG_PATH = path.join(__dirname, 'config.json');
@@ -78,6 +157,25 @@ function sendTargetedEvent(eventName, payload, targetDisplayId) {
       
       if (!isDisplay || isTarget) {
         sock.emit(eventName, payload);
+      }
+    }
+  }
+}
+
+function updateTelegramInvoiceStatus(txId, status, reason = null) {
+  const inv = telegramInvoices.find(i => i.txId === txId || i.id === txId);
+  if (inv) {
+    inv.status = status; // 'paid', 'failed_insufficient', 'cancelled'
+    saveDbData();
+    io.emit('telegram_invoices_updated', { invoices: telegramInvoices });
+
+    // Уведомление пользователю в Telegram
+    const chatId = telegramUsers[inv.username.toLowerCase()];
+    if (chatId) {
+      if (status === 'paid') {
+        sendTelegramMessage(chatId, `✅ <b>Оплата прошла успешно!</b>\n\nСумма: <b>${inv.amount} ₽</b>\nЧек #${inv.id}`);
+      } else if (status === 'failed_insufficient') {
+        sendTelegramMessage(chatId, `❌ <b>Ошибка оплаты!</b>\n\nНедостаточно средств на балансе для списания <b>${inv.amount} ₽</b>.`);
       }
     }
   }
@@ -108,7 +206,8 @@ app.get('/api/info', (req, res) => {
     config,
     history,
     displays: clientDisplays,
-    balance: clientBalance
+    balance: clientBalance,
+    telegramInvoices
   });
 });
 
@@ -174,7 +273,6 @@ app.post('/api/create-transaction', (req, res) => {
 
   const txId = 'tx_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
   
-  // Автоматическое определение хоста на Render
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:10000';
   const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
   
@@ -192,12 +290,81 @@ app.post('/api/create-transaction', (req, res) => {
   };
 
   pendingTransactions[txId] = transaction;
-  console.log(`[TX CREATED] ID: ${txId}, URL: ${payUrl}`);
 
   sendTargetedEvent('show_qr', transaction, targetDisplayId);
   sendTargetedEvent('transaction_created', transaction, targetDisplayId);
 
   res.json({ success: true, transaction });
+});
+
+// === API ДЛЯ TELEGRAM ИНВОЙСОВ ===
+
+app.post('/api/bot/send-invoice', async (req, res) => {
+  const { username, amount } = req.body;
+  const parsedAmount = parseInt(amount, 10);
+
+  if (!username || isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({ success: false, error: 'Некорректный username или сумма' });
+  }
+
+  const cleanUsername = username.replace('@', '').trim().toLowerCase();
+  const chatId = telegramUsers[cleanUsername];
+
+  if (!chatId) {
+    return res.status(404).json({
+      success: false,
+      error: `Пользователь @${cleanUsername} ещё не запустил бота. Попросите его написать /start боту.`
+    });
+  }
+
+  const txId = 'tx_tg_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:10000';
+  const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+  const payUrl = `${protocol}://${host}/pay?tx=${txId}&id=${txId}&amount=${parsedAmount}`;
+
+  const transaction = {
+    id: txId,
+    amount: parsedAmount,
+    payUrl: payUrl,
+    createdAt: Date.now(),
+    status: 'pending'
+  };
+
+  pendingTransactions[txId] = transaction;
+
+  const invoiceRecord = {
+    id: txId,
+    txId: txId,
+    username: cleanUsername,
+    amount: parsedAmount,
+    status: 'pending', // 'pending', 'paid', 'failed_insufficient'
+    createdAt: Date.now()
+  };
+
+  telegramInvoices.unshift(invoiceRecord);
+  saveDbData();
+
+  // Отправляем сообщение клиенту в Telegram с Inline-кнопкой
+  try {
+    await sendTelegramMessage(
+      chatId,
+      `🧾 <b>Вам выставлен счёт на оплату!</b>\n\nСумма: <b>${parsedAmount} ₽</b>\n\nНажмите кнопку ниже для перехода к оплате:`,
+      {
+        inline_keyboard: [[
+          { text: `💳 Оплатить ${parsedAmount} ₽`, url: payUrl }
+        ]]
+      }
+    );
+
+    io.emit('telegram_invoices_updated', { invoices: telegramInvoices });
+    res.json({ success: true, invoice: invoiceRecord });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Не удалось отправить сообщение в Telegram' });
+  }
+});
+
+app.get('/api/bot/invoices', (req, res) => {
+  res.json({ invoices: telegramInvoices });
 });
 
 // Шорткат оплаты картой
@@ -213,6 +380,7 @@ app.get('/api/shortcut/pay-active', (req, res) => {
     tx.status = 'failed';
     const failPayload = { transaction: tx, reason: 'insufficient_funds' };
     
+    updateTelegramInvoiceStatus(tx.id, 'failed_insufficient');
     sendTargetedEvent('payment_failed', failPayload, tx.targetDisplayId);
     return res.status(400).json({ success: false, error: 'insufficient_funds', transaction: tx });
   }
@@ -227,12 +395,12 @@ app.get('/api/shortcut/pay-active', (req, res) => {
     createdAt: Date.now()
   });
 
-  saveDbData(); // Сохраняем измененный баланс и историю в файл
+  saveDbData();
+  updateTelegramInvoiceStatus(tx.id, 'paid');
 
   const successPayload = { transaction: tx, newBalance: clientBalance };
   sendTargetedEvent('payment_success', successPayload, tx.targetDisplayId);
 
-  // Оповещаем весь проект об обновлении общего баланса
   io.emit('client_balance_updated', { balance: clientBalance });
 
   res.json({ success: true, transaction: tx, newBalance: clientBalance });
@@ -263,6 +431,8 @@ app.post('/api/process-payment', (req, res) => {
   if (clientBalance < tx.amount) {
     tx.status = 'failed';
     const failPayload = { transaction: tx, reason: 'insufficient_funds' };
+    
+    updateTelegramInvoiceStatus(tx.id, 'failed_insufficient');
     sendTargetedEvent('payment_failed', failPayload, tx.targetDisplayId);
 
     return res.json({ success: false, error: 'insufficient_funds' });
@@ -278,7 +448,8 @@ app.post('/api/process-payment', (req, res) => {
     createdAt: Date.now()
   });
 
-  saveDbData(); // Сохраняем измененный баланс и историю в файл
+  saveDbData();
+  updateTelegramInvoiceStatus(tx.id, 'paid');
 
   const successPayload = { transaction: tx, newBalance: clientBalance };
   sendTargetedEvent('payment_success', successPayload, tx.targetDisplayId);
@@ -307,7 +478,7 @@ app.post('/api/topup', (req, res) => {
     createdAt: Date.now()
   });
 
-  saveDbData(); // Сохраняем измененный баланс и историю в файл
+  saveDbData();
 
   io.emit('client_balance_updated', { balance: clientBalance });
   res.json({ success: true, newBalance: clientBalance });
@@ -328,8 +499,8 @@ app.post('/api/cancel-transaction', (req, res) => {
 io.on('connection', (socket) => {
   console.log(`Клиент подключился через WebSocket: ${socket.id}`);
 
-  // При любом подключении сразу же отправляем текущий общий баланс
   socket.emit('client_balance_updated', { balance: clientBalance });
+  socket.emit('telegram_invoices_updated', { invoices: telegramInvoices });
 
   socket.on('get_balance', () => {
     socket.emit('client_balance_updated', { balance: clientBalance });
