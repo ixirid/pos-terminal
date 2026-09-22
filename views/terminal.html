@@ -113,7 +113,6 @@
       animation: pulse 1.5s infinite;
     }
 
-    /* Растянутый на весь экран контейнер */
     .pos-container {
       flex: 1;
       display: flex;
@@ -139,7 +138,7 @@
 
     .tabs-header {
       display: grid;
-      grid-template-columns: repeat(5, 1fr); /* ИЗМЕНЕНО ДЛЯ 5 ВКЛАДОК */
+      grid-template-columns: repeat(5, 1fr);
       background: rgba(0, 0, 0, 0.25);
       border-bottom: 1px solid var(--border-color);
       padding: 6px;
@@ -679,7 +678,6 @@
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма к оплате</span>
             <div class="amount-input-container">
-              <!-- ИЗМЕНЕНО: значение по умолчанию установлено в 0[cite: 9] -->
               <input type="text" id="chargeAmount" class="amount-input" value="0" readonly>
               <span class="amount-currency">₽</span>
             </div>
@@ -724,6 +722,7 @@
           <div class="qr-box">
             <img id="qrImage" src="" alt="QR-код">
           </div>
+          <button class="btn-secondary" id="copyPayUrlBtn" onclick="copyPayUrl()" style="margin-bottom: 8px;">📋 Скопировать ссылку</button>
           <button class="btn-secondary" onclick="cancelTransaction()">Отменить оплату [Esc]</button>
         </div>
       </div>
@@ -734,7 +733,6 @@
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма пополнения счета</span>
             <div class="amount-input-container">
-              <!-- ИЗМЕНЕНО: значение по умолчанию установлено в 0[cite: 9] -->
               <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
               <span class="amount-currency">₽</span>
             </div>
@@ -862,8 +860,8 @@
     let askTerminalEnabled = true;
     let pendingAmountForTx = 0;
     let activeDisplaysData = [];
+    let currentPayUrl = '';
     
-    // Переменные для Автотерминала
     let isAutoMode = false;
     let autoAmountVal = 0;
     let autoTargetDisplayId = null;
@@ -900,7 +898,7 @@
       } else if (tab === 'auto') {
         document.getElementById('tabBtnAuto').classList.add('active');
         document.getElementById('tabAuto').classList.add('active');
-        loadDisplays(); // Обновляем список для автотерминала
+        loadDisplays();
       } else if (tab === 'history') {
         document.getElementById('tabBtnHistory').classList.add('active');
         document.getElementById('tabHistory').classList.add('active');
@@ -923,7 +921,6 @@
 
     function appendDigit(type, digit) {
       if (window.terminalAudio) terminalAudio.playTap();
-      // Определяем нужный инпут на основе вкладки
       const inputId = type === 'charge' ? 'chargeAmount' : (type === 'topup' ? 'topupAmount' : 'autoAmount');
       const input = document.getElementById(inputId);
       let val = input.value.replace(/\D/g, '');
@@ -952,14 +949,13 @@
 
     function addPreset(type, amount) {
       if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount'; // В авто нет пресетов по дизайну
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
       const input = document.getElementById(inputId);
       let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
       current += amount;
       input.value = current.toLocaleString('ru-RU');
     }
 
-    // ЛОГИКА АВТОТЕРМИНАЛА
     function toggleAutoMode() {
       if (!isAutoMode) {
         autoAmountVal = parseInt(document.getElementById('autoAmount').value.replace(/\D/g, '') || '0', 10);
@@ -987,7 +983,7 @@
         btn.style.boxShadow = '0 4px 14px var(--primary-glow)';
         
         document.getElementById('autoStatusText').textContent = 'Автотерминал выключен';
-        cancelTransaction(); // Отменяем транзакцию на дисплее при остановке
+        cancelTransaction();
       }
     }
 
@@ -998,7 +994,6 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: autoAmountVal, targetDisplayId: autoTargetDisplayId })
       }).catch(err => console.error(err));
-      // Внимание: мы НЕ вызываем renderQrView(), чтобы QR не появлялся на кассе
     }
 
     function initiateTransactionFlow() {
@@ -1084,6 +1079,47 @@
       document.getElementById('qrDisplayPanel').classList.add('active');
       document.getElementById('qrAmountDisplay').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
       document.getElementById('qrImage').src = tx.qrCode;
+      
+      // Формируем прямую ссылку на оплату
+      currentPayUrl = tx.payUrl || `${window.location.origin}/pay?tx=${tx.id}`;
+    }
+
+    function copyPayUrl() {
+      if (!currentPayUrl) return;
+
+      const btn = document.getElementById('copyPayUrlBtn');
+
+      const setSuccessState = () => {
+        const oldText = btn.textContent;
+        btn.textContent = '✓ Ссылка скопирована!';
+        btn.style.borderColor = 'var(--primary)';
+        btn.style.color = 'var(--primary)';
+        setTimeout(() => {
+          btn.textContent = oldText;
+          btn.style.borderColor = '';
+          btn.style.color = '';
+        }, 2000);
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(currentPayUrl).then(setSuccessState).catch(() => fallbackCopy());
+      } else {
+        fallbackCopy();
+      }
+
+      function fallbackCopy() {
+        const tempInput = document.createElement('input');
+        tempInput.value = currentPayUrl;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        try {
+          document.execCommand('copy');
+          setSuccessState();
+        } catch (e) {
+          alert('Не удалось скопировать ссылку');
+        }
+        document.body.removeChild(tempInput);
+      }
     }
 
     function cancelTransaction() {
@@ -1094,6 +1130,7 @@
 
     function resetChargeView() {
       if (window.terminalAudio) terminalAudio.playTap();
+      currentPayUrl = '';
       document.getElementById('chargeAmount').value = '0';
       document.getElementById('chargeFormView').style.display = 'flex';
       document.getElementById('qrDisplayPanel').classList.remove('active');
@@ -1179,7 +1216,6 @@
     function renderDisplays(displays) {
       const container = document.getElementById('displaysListContainer');
       
-      // Обновляем список для автотерминала
       const autoSelect = document.getElementById('autoDisplaySelect');
       if (autoSelect) {
         if (displays && displays.length > 0) {
@@ -1236,9 +1272,7 @@
     socket.on('payment_success', (data) => {
       if (window.terminalAudio) window.terminalAudio.playSuccess();
       
-      // Если включен Автотерминал - пропускаем окна на кассе и вызываем следующую оплату с задержкой 
       if (isAutoMode) {
-        // Даем 3 секунды клиенту посмотреть на зеленую галочку на дисплее, затем шлем новый QR
         setTimeout(() => {
           triggerAutoTransaction();
         }, 3000); 
@@ -1260,7 +1294,6 @@
     socket.on('payment_failed', (data) => {
       if (window.terminalAudio) window.terminalAudio.playError();
       
-      // Если включен Автотерминал - также пропускаем окна на кассе
       if (isAutoMode) {
         setTimeout(() => {
           triggerAutoTransaction();
