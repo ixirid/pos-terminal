@@ -304,24 +304,16 @@ app.post('/api/bot/send-invoice', async (req, res) => {
   const parsedAmount = parseInt(amount, 10);
 
   if (!username || isNaN(parsedAmount) || parsedAmount <= 0) {
-    return res.status(400).json({ success: false, error: 'Некорректный username, ID или сумма' });
+    return res.status(400).json({ success: false, error: 'Некорректный username или сумма' });
   }
 
-  const inputVal = String(username).trim();
-  let chatId = null;
-
-  // Проверяем: ввели цифровой ID или юзернейм
-  if (/^\d+$/.test(inputVal)) {
-    chatId = inputVal; // Если ввели чистый ID
-  } else {
-    const cleanUsername = inputVal.replace('@', '').toLowerCase();
-    chatId = telegramUsers[cleanUsername]; // Ищем по юзернейму
-  }
+  const cleanUsername = username.replace('@', '').trim().toLowerCase();
+  const chatId = telegramUsers[cleanUsername];
 
   if (!chatId) {
     return res.status(404).json({
       success: false,
-      error: `Пользователь "${inputVal}" не найден. Убедитесь, что он написал /start боту.`
+      error: `Пользователь @${cleanUsername} ещё не запустил бота. Попросите его написать /start боту.`
     });
   }
 
@@ -343,9 +335,9 @@ app.post('/api/bot/send-invoice', async (req, res) => {
   const invoiceRecord = {
     id: txId,
     txId: txId,
-    username: inputVal,
+    username: cleanUsername,
     amount: parsedAmount,
-    status: 'pending', 
+    status: 'pending', // 'pending', 'paid', 'failed_insufficient'
     createdAt: Date.now()
   };
 
