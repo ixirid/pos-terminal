@@ -930,6 +930,7 @@
         }
         if (data.history) renderHistory(data.history);
         if (data.displays) renderDisplays(data.displays);
+        if (data.telegramInvoices) renderTelegramInvoices(data.telegramInvoices);
       })
       .catch(e => {});
 
@@ -1285,15 +1286,15 @@
       }
 
       container.innerHTML = invoices.map(inv => {
-        const isSuccess = inv.status === 'success';
-        const isFailed = inv.status === 'failed';
+        const isSuccess = inv.status === 'success' || inv.status === 'paid';
+        const isFailed = inv.status === 'failed' || inv.status === 'failed_insufficient';
         const statusColor = isSuccess ? 'var(--primary)' : (isFailed ? 'var(--error)' : '#f59e0b');
         const statusText = isSuccess ? 'Оплачен' : (isFailed ? 'Ошибка' : 'Ожидает');
 
         return `
           <div class="history-item">
             <div class="history-info">
-              <h4>✈️ ${inv.user} <span style="font-size: 10px; color: var(--text-muted);">#${inv.id}</span></h4>
+              <h4>✈️ ${inv.username || inv.user} <span style="font-size: 10px; color: var(--text-muted);">#${inv.id}</span></h4>
               <p>Статус: <b style="color: ${statusColor};">${statusText}</b></p>
             </div>
             <div class="history-amount">
@@ -1403,13 +1404,14 @@
       renderDisplays(displays);
     });
 
-    socket.on('telegram_invoices_updated', (invoices) => {
-      renderTelegramInvoices(invoices);
+    socket.on('telegram_invoices_updated', (data) => {
+      renderTelegramInvoices(data.invoices || []);
     });
 
     socket.on('payment_success', (data) => {
       if (window.terminalAudio) window.terminalAudio.playSuccess();
       loadTelegramInvoices();
+      loadHistory();
       
       if (isAutoMode) {
         setTimeout(() => {
