@@ -1229,28 +1229,44 @@
 
     function sendTelegramInvoice() {
       if (window.terminalAudio) terminalAudio.playTap();
-      const user = document.getElementById('telegramUser').value.trim();
+      const userInputValue = document.getElementById('telegramUser').value.trim();
       const amountVal = parseInt(document.getElementById('telegramAmount').value.replace(/\D/g, '') || '0', 10);
 
-      if (!user) { alert('Укажите @username или Telegram ID'); return; }
+      if (!userInputValue) { alert('Укажите @username или Telegram ID'); return; }
       if (amountVal <= 0) { alert('Укажите сумму для отправки'); return; }
+
+      const payload = {
+        user: userInputValue,
+        username: userInputValue,
+        amount: amountVal
+      };
 
       fetch('/api/bot/send-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user, amount: amountVal })
+        body: JSON.stringify(payload)
       })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || `Ошибка сервера: ${res.status}`);
+        }
+        return data;
+      })
       .then(data => {
         if (data.success) {
           if (window.terminalAudio) terminalAudio.playSuccess();
           clearInput('telegram');
+          document.getElementById('telegramUser').value = '';
           loadTelegramInvoices();
         } else {
           alert(data.error || 'Ошибка отправки счета');
         }
       })
-      .catch(err => alert('Ошибка соединения с сервером'));
+      .catch(err => {
+        console.error('Telegram invoice error:', err);
+        alert(err.message || 'Ошибка соединения с сервером');
+      });
     }
 
     function loadTelegramInvoices() {
@@ -1263,16 +1279,12 @@
     function renderTelegramInvoices(invoices) {
       const container = document.getElementById('telegramInvoicesContainer');
       if (!container) return;
-
-      // Безопасная проверка: если пришел не массив, пытаемся достать вложенное поле или делаем пустым массивом
-      const safeInvoices = Array.isArray(invoices) ? invoices : (invoices?.invoices || []);
-
-      if (safeInvoices.length === 0) {
+      if (!invoices || invoices.length === 0) {
         container.innerHTML = `<p style="color: var(--text-muted); text-align: center; font-size: 11px; padding: 10px;">Счетов пока нет</p>`;
         return;
       }
 
-      container.innerHTML = safeInvoices.map(inv => {
+      container.innerHTML = invoices.map(inv => {
         const isSuccess = inv.status === 'success';
         const isFailed = inv.status === 'failed';
         const statusColor = isSuccess ? 'var(--primary)' : (isFailed ? 'var(--error)' : '#f59e0b');
