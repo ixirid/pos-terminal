@@ -34,22 +34,34 @@ class TerminalAudio {
       } catch (e) {}
 
       this.isUnlocked = true;
-
-      document.removeEventListener('touchstart', unlockAudio);
-      document.removeEventListener('click', unlockAudio);
-      document.removeEventListener('keydown', unlockAudio);
     };
 
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-    document.addEventListener('click', unlockAudio, { once: true });
-    document.addEventListener('keydown', unlockAudio, { once: true });
+    // Вешаем слушатели без once: true, чтобы контекст мог пробуждаться при каждом клике
+    document.addEventListener('touchstart', unlockAudio);
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
+
+    // Восстановление контекста при возврате на вкладку или снятии с блокировки (iOS)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.ensureContextActive();
+      }
+    });
+
+    window.addEventListener('pageshow', () => {
+      this.ensureContextActive();
+    });
+  }
+
+  ensureContextActive() {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
   }
 
   playTone(frequency, type, duration, gainValue = 0.1) {
+    this.ensureContextActive();
     if (!this.ctx) return;
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
 
     try {
       const osc = this.ctx.createOscillator();
@@ -76,20 +88,14 @@ class TerminalAudio {
   }
 
   playSuccess() {
-    if (!this.ctx) return;
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
+    this.ensureContextActive();
     setTimeout(() => this.playTone(523.25, 'triangle', 0.1, 0.15), 0);
     setTimeout(() => this.playTone(659.25, 'triangle', 0.1, 0.15), 100);
     setTimeout(() => this.playTone(783.99, 'triangle', 0.2, 0.2), 200);
   }
 
   playError() {
-    if (!this.ctx) return;
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
+    this.ensureContextActive();
     setTimeout(() => this.playTone(300, 'sawtooth', 0.15, 0.15), 0);
     setTimeout(() => this.playTone(200, 'sawtooth', 0.25, 0.2), 120);
   }
