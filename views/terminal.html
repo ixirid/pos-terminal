@@ -139,7 +139,7 @@
 
     .tabs-header {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr); /* ИЗМЕНЕНО ДЛЯ 5 ВКЛАДОК */
       background: rgba(0, 0, 0, 0.25);
       border-bottom: 1px solid var(--border-color);
       padding: 6px;
@@ -151,8 +151,8 @@
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 10px 4px;
-      font-size: 12px;
+      padding: 10px 2px;
+      font-size: 11px;
       font-weight: 700;
       border-radius: 10px;
       cursor: pointer;
@@ -632,6 +632,19 @@
       height: 16px;
       cursor: pointer;
     }
+
+    .auto-terminal-select {
+      width: 100%; 
+      padding: 10px 14px; 
+      background: var(--surface-card); 
+      color: white; 
+      border: 1px solid var(--border-color); 
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      outline: none;
+      appearance: none;
+    }
   </style>
 </head>
 <body>
@@ -655,6 +668,7 @@
       <nav class="tabs-header">
         <button class="tab-btn active" id="tabBtnCharge" onclick="switchTab('charge')">💸 Оплата</button>
         <button class="tab-btn" id="tabBtnTopup" onclick="switchTab('topup')">➕ Баланс</button>
+        <button class="tab-btn" id="tabBtnAuto" onclick="switchTab('auto')">🚌 Авто</button>
         <button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">📜 Чеки</button>
         <button class="tab-btn" id="tabBtnSettings" onclick="switchTab('settings')">⚙️ Дисплеи</button>
       </nav>
@@ -665,7 +679,7 @@
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма к оплате</span>
             <div class="amount-input-container">
-              <!-- ИЗМЕНЕНО: значение по умолчанию установлено в 0[cite: 4] -->
+              <!-- ИЗМЕНЕНО: значение по умолчанию установлено в 0[cite: 9] -->
               <input type="text" id="chargeAmount" class="amount-input" value="0" readonly>
               <span class="amount-currency">₽</span>
             </div>
@@ -720,7 +734,7 @@
           <div class="amount-display-wrapper">
             <span class="amount-label">Сумма пополнения счета</span>
             <div class="amount-input-container">
-              <!-- ИЗМЕНЕНО: значение по умолчанию установлено в 0[cite: 4] -->
+              <!-- ИЗМЕНЕНО: значение по умолчанию установлено в 0[cite: 9] -->
               <input type="text" id="topupAmount" class="amount-input" value="0" readonly>
               <span class="amount-currency">₽</span>
             </div>
@@ -752,7 +766,45 @@
         </div>
       </div>
 
-      <!-- ВКЛАДКА 3: ИСТОРИЯ ЧЕКОВ -->
+      <!-- ВКЛАДКА 3: АВТОТЕРМИНАЛ -->
+      <div class="tab-content" id="tabAuto">
+        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          <div class="amount-display-wrapper">
+            <span class="amount-label">Сумма для авто-списания</span>
+            <div class="amount-input-container">
+              <input type="text" id="autoAmount" class="amount-input" value="0" readonly>
+              <span class="amount-currency">₽</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 4px;">
+            <label style="color: var(--text-muted); font-size: 11px; font-weight: 700; margin-bottom: 4px; display: block;">ЦЕЛЕВОЙ ДИСПЛЕЙ:</label>
+            <select id="autoDisplaySelect" class="auto-terminal-select">
+              <option value="">Загрузка дисплеев...</option>
+            </select>
+          </div>
+
+          <div class="numpad-grid">
+            <button class="num-btn" onclick="appendDigit('auto', '1')">1</button>
+            <button class="num-btn" onclick="appendDigit('auto', '2')">2</button>
+            <button class="num-btn" onclick="appendDigit('auto', '3')">3</button>
+            <button class="num-btn" onclick="appendDigit('auto', '4')">4</button>
+            <button class="num-btn" onclick="appendDigit('auto', '5')">5</button>
+            <button class="num-btn" onclick="appendDigit('auto', '6')">6</button>
+            <button class="num-btn" onclick="appendDigit('auto', '7')">7</button>
+            <button class="num-btn" onclick="appendDigit('auto', '8')">8</button>
+            <button class="num-btn" onclick="appendDigit('auto', '9')">9</button>
+            <button class="num-btn clear" onclick="clearInput('auto')">C</button>
+            <button class="num-btn" onclick="appendDigit('auto', '0')">0</button>
+            <button class="num-btn action" onclick="backspace('auto')">⌫</button>
+          </div>
+
+          <button id="btnAutoToggle" class="btn-primary" onclick="toggleAutoMode()">▶ Запустить Автотерминал</button>
+          <p id="autoStatusText" style="color: var(--text-muted); text-align: center; font-size: 12px; margin-top: 5px;">Автотерминал выключен</p>
+        </div>
+      </div>
+
+      <!-- ВКЛАДКА 4: ИСТОРИЯ ЧЕКОВ -->
       <div class="tab-content" id="tabHistory">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <h3 style="font-size: 14px; font-weight: 800; color: #fff;">История операций</h3>
@@ -763,7 +815,7 @@
         </div>
       </div>
 
-      <!-- ВКЛАДКА 4: НАСТРОЙКИ ДИСПЛЕЕВ -->
+      <!-- ВКЛАДКА 5: НАСТРОЙКИ ДИСПЛЕЕВ -->
       <div class="tab-content" id="tabSettings">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <h3 style="font-size: 14px; font-weight: 800; color: #fff;">Управление дисплеями</h3>
@@ -810,6 +862,11 @@
     let askTerminalEnabled = true;
     let pendingAmountForTx = 0;
     let activeDisplaysData = [];
+    
+    // Переменные для Автотерминала
+    let isAutoMode = false;
+    let autoAmountVal = 0;
+    let autoTargetDisplayId = null;
 
     fetch('/api/info')
       .then(res => res.json())
@@ -840,6 +897,10 @@
       } else if (tab === 'topup') {
         document.getElementById('tabBtnTopup').classList.add('active');
         document.getElementById('tabTopup').classList.add('active');
+      } else if (tab === 'auto') {
+        document.getElementById('tabBtnAuto').classList.add('active');
+        document.getElementById('tabAuto').classList.add('active');
+        loadDisplays(); // Обновляем список для автотерминала
       } else if (tab === 'history') {
         document.getElementById('tabBtnHistory').classList.add('active');
         document.getElementById('tabHistory').classList.add('active');
@@ -862,7 +923,8 @@
 
     function appendDigit(type, digit) {
       if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      // Определяем нужный инпут на основе вкладки
+      const inputId = type === 'charge' ? 'chargeAmount' : (type === 'topup' ? 'topupAmount' : 'autoAmount');
       const input = document.getElementById(inputId);
       let val = input.value.replace(/\D/g, '');
       if (val === '0' || val === '') {
@@ -875,7 +937,7 @@
 
     function backspace(type) {
       if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const inputId = type === 'charge' ? 'chargeAmount' : (type === 'topup' ? 'topupAmount' : 'autoAmount');
       const input = document.getElementById(inputId);
       let val = input.value.replace(/\D/g, '');
       val = val.slice(0, -1);
@@ -884,17 +946,59 @@
 
     function clearInput(type) {
       if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const inputId = type === 'charge' ? 'chargeAmount' : (type === 'topup' ? 'topupAmount' : 'autoAmount');
       document.getElementById(inputId).value = '0';
     }
 
     function addPreset(type, amount) {
       if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
+      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount'; // В авто нет пресетов по дизайну
       const input = document.getElementById(inputId);
       let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
       current += amount;
       input.value = current.toLocaleString('ru-RU');
+    }
+
+    // ЛОГИКА АВТОТЕРМИНАЛА
+    function toggleAutoMode() {
+      if (!isAutoMode) {
+        autoAmountVal = parseInt(document.getElementById('autoAmount').value.replace(/\D/g, '') || '0', 10);
+        autoTargetDisplayId = document.getElementById('autoDisplaySelect').value;
+
+        if (autoAmountVal <= 0) { alert('Введите сумму для авто-списания'); return; }
+        if (!autoTargetDisplayId) { alert('Выберите дисплей из списка'); return; }
+
+        isAutoMode = true;
+        
+        const btn = document.getElementById('btnAutoToggle');
+        btn.innerHTML = '⏹ Остановить Автотерминал';
+        btn.style.background = 'linear-gradient(135deg, var(--error) 0%, #b91c1c 100%)';
+        btn.style.boxShadow = '0 4px 14px var(--error-glow)';
+        
+        document.getElementById('autoStatusText').innerHTML = `Автотерминал <b>АКТИВЕН</b><br>Сумма: ${autoAmountVal.toLocaleString('ru-RU')} ₽`;
+        
+        triggerAutoTransaction();
+      } else {
+        isAutoMode = false;
+        
+        const btn = document.getElementById('btnAutoToggle');
+        btn.innerHTML = '▶ Запустить Автотерминал';
+        btn.style.background = 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)';
+        btn.style.boxShadow = '0 4px 14px var(--primary-glow)';
+        
+        document.getElementById('autoStatusText').textContent = 'Автотерминал выключен';
+        cancelTransaction(); // Отменяем транзакцию на дисплее при остановке
+      }
+    }
+
+    function triggerAutoTransaction() {
+      if (!isAutoMode) return;
+      fetch('/api/create-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: autoAmountVal, targetDisplayId: autoTargetDisplayId })
+      }).catch(err => console.error(err));
+      // Внимание: мы НЕ вызываем renderQrView(), чтобы QR не появлялся на кассе
     }
 
     function initiateTransactionFlow() {
@@ -1074,6 +1178,17 @@
 
     function renderDisplays(displays) {
       const container = document.getElementById('displaysListContainer');
+      
+      // Обновляем список для автотерминала
+      const autoSelect = document.getElementById('autoDisplaySelect');
+      if (autoSelect) {
+        if (displays && displays.length > 0) {
+          autoSelect.innerHTML = displays.map(d => `<option value="${d.id}" ${d.isBlocked ? 'disabled' : ''}>${d.name} ${d.isBlocked ? '(Заблокирован)' : ''}</option>`).join('');
+        } else {
+          autoSelect.innerHTML = '<option value="">Нет доступных дисплеев</option>';
+        }
+      }
+
       if (!displays || displays.length === 0) {
         container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет дисплеев</p>`;
         return;
@@ -1120,6 +1235,16 @@
 
     socket.on('payment_success', (data) => {
       if (window.terminalAudio) window.terminalAudio.playSuccess();
+      
+      // Если включен Автотерминал - пропускаем окна на кассе и вызываем следующую оплату с задержкой 
+      if (isAutoMode) {
+        // Даем 3 секунды клиенту посмотреть на зеленую галочку на дисплее, затем шлем новый QR
+        setTimeout(() => {
+          triggerAutoTransaction();
+        }, 3000); 
+        return; 
+      }
+
       document.getElementById('qrDisplayPanel').classList.remove('active');
       document.getElementById('errorFullscreenModal').classList.remove('active');
       
@@ -1134,6 +1259,15 @@
 
     socket.on('payment_failed', (data) => {
       if (window.terminalAudio) window.terminalAudio.playError();
+      
+      // Если включен Автотерминал - также пропускаем окна на кассе
+      if (isAutoMode) {
+        setTimeout(() => {
+          triggerAutoTransaction();
+        }, 3000); 
+        return; 
+      }
+
       document.getElementById('qrDisplayPanel').classList.remove('active');
       document.getElementById('successFullscreenModal').classList.remove('active');
       
@@ -1146,7 +1280,7 @@
     });
 
     socket.on('transaction_cancelled', () => {
-      resetChargeView();
+      if (!isAutoMode) resetChargeView();
     });
 
     document.addEventListener('keydown', (e) => {
