@@ -43,7 +43,6 @@
       overflow-x: hidden;
     }
 
-    /* Шапка без лишних кнопок */
     .pos-header {
       display: flex;
       justify-content: space-between;
@@ -138,11 +137,11 @@
 
     .tabs-header {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       background: rgba(0, 0, 0, 0.25);
       border-bottom: 1px solid var(--border-color);
       padding: 6px;
-      gap: 6px;
+      gap: 4px;
       flex-shrink: 0;
     }
 
@@ -151,7 +150,7 @@
       border: none;
       color: var(--text-muted);
       padding: 10px 2px;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       border-radius: 10px;
       cursor: pointer;
@@ -159,7 +158,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 3px;
       white-space: nowrap;
     }
 
@@ -668,6 +667,7 @@
         <button class="tab-btn active" id="tabBtnCharge" onclick="switchTab('charge')">💸 Оплата</button>
         <button class="tab-btn" id="tabBtnTopup" onclick="switchTab('topup')">➕ Баланс</button>
         <button class="tab-btn" id="tabBtnAuto" onclick="switchTab('auto')">🚌 Авто</button>
+        <button class="tab-btn" id="tabBtnTelegram" onclick="switchTab('telegram')">✈️ Telegram</button>
         <button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">📜 Чеки</button>
         <button class="tab-btn" id="tabBtnSettings" onclick="switchTab('settings')">⚙️ Дисплеи</button>
       </nav>
@@ -802,7 +802,57 @@
         </div>
       </div>
 
-      <!-- ВКЛАДКА 4: ИСТОРИЯ ЧЕКОВ -->
+      <!-- ВКЛАДКА 4: TELEGRAM СЧЕТА -->
+      <div class="tab-content" id="tabTelegram">
+        <div style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          <div>
+            <label style="color: var(--text-muted); font-size: 11px; font-weight: 700; margin-bottom: 4px; display: block;">ПОЛЬЗОВАТЕЛЬ TELEGRAM (@username или ID):</label>
+            <input type="text" id="telegramUser" class="display-title-input" style="width: 100%; height: 38px;" placeholder="@username или ID">
+          </div>
+
+          <div class="amount-display-wrapper">
+            <span class="amount-label">Сумма счета</span>
+            <div class="amount-input-container">
+              <input type="text" id="telegramAmount" class="amount-input" value="0" readonly>
+              <span class="amount-currency">₽</span>
+            </div>
+          </div>
+
+          <div class="quick-presets">
+            <button class="preset-btn" onclick="addPreset('telegram', 100)">+100</button>
+            <button class="preset-btn" onclick="addPreset('telegram', 500)">+500</button>
+            <button class="preset-btn" onclick="addPreset('telegram', 1000)">+1 000</button>
+            <button class="preset-btn" onclick="addPreset('telegram', 5000)">+5 000</button>
+          </div>
+
+          <div class="numpad-grid">
+            <button class="num-btn" onclick="appendDigit('telegram', '1')">1</button>
+            <button class="num-btn" onclick="appendDigit('telegram', '2')">2</button>
+            <button class="num-btn" onclick="appendDigit('telegram', '3')">3</button>
+            <button class="num-btn" onclick="appendDigit('telegram', '4')">4</button>
+            <button class="num-btn" onclick="appendDigit('telegram', '5')">5</button>
+            <button class="num-btn" onclick="appendDigit('telegram', '6')">6</button>
+            <button class="num-btn" onclick="appendDigit('telegram', '7')">7</button>
+            <button class="num-btn" onclick="appendDigit('telegram', '8')">8</button>
+            <button class="num-btn" onclick="appendDigit('telegram', '9')">9</button>
+            <button class="num-btn clear" onclick="clearInput('telegram')">C</button>
+            <button class="num-btn" onclick="appendDigit('telegram', '0')">0</button>
+            <button class="num-btn action" onclick="backspace('telegram')">⌫</button>
+          </div>
+
+          <button class="btn-primary" onclick="sendTelegramInvoice()">Отправить счет в Telegram [Enter]</button>
+
+          <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <h4 style="font-size: 12px; font-weight: 800; color: #fff;">Отправленные счета</h4>
+            <button class="btn-secondary" style="width: auto; padding: 2px 8px; font-size: 10px;" onclick="loadTelegramInvoices()">Обновить</button>
+          </div>
+          <div class="history-list" id="telegramInvoicesContainer" style="max-height: 110px;">
+            <p style="color: var(--text-muted); text-align: center; font-size: 11px; padding: 10px;">Загрузка...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ВКЛАДКА 5: ИСТОРИЯ ЧЕКОВ -->
       <div class="tab-content" id="tabHistory">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <h3 style="font-size: 14px; font-weight: 800; color: #fff;">История операций</h3>
@@ -813,7 +863,7 @@
         </div>
       </div>
 
-      <!-- ВКЛАДКА 5: НАСТРОЙКИ ДИСПЛЕЕВ -->
+      <!-- ВКЛАДКА 6: НАСТРОЙКИ ДИСПЛЕЕВ -->
       <div class="tab-content" id="tabSettings">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <h3 style="font-size: 14px; font-weight: 800; color: #fff;">Управление дисплеями</h3>
@@ -899,6 +949,10 @@
         document.getElementById('tabBtnAuto').classList.add('active');
         document.getElementById('tabAuto').classList.add('active');
         loadDisplays();
+      } else if (tab === 'telegram') {
+        document.getElementById('tabBtnTelegram').classList.add('active');
+        document.getElementById('tabTelegram').classList.add('active');
+        loadTelegramInvoices();
       } else if (tab === 'history') {
         document.getElementById('tabBtnHistory').classList.add('active');
         document.getElementById('tabHistory').classList.add('active');
@@ -919,10 +973,17 @@
       }).catch(e => {});
     }
 
+    function getInputId(type) {
+      if (type === 'charge') return 'chargeAmount';
+      if (type === 'topup') return 'topupAmount';
+      if (type === 'auto') return 'autoAmount';
+      if (type === 'telegram') return 'telegramAmount';
+      return 'chargeAmount';
+    }
+
     function appendDigit(type, digit) {
       if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : (type === 'topup' ? 'topupAmount' : 'autoAmount');
-      const input = document.getElementById(inputId);
+      const input = document.getElementById(getInputId(type));
       let val = input.value.replace(/\D/g, '');
       if (val === '0' || val === '') {
         val = digit;
@@ -934,8 +995,7 @@
 
     function backspace(type) {
       if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : (type === 'topup' ? 'topupAmount' : 'autoAmount');
-      const input = document.getElementById(inputId);
+      const input = document.getElementById(getInputId(type));
       let val = input.value.replace(/\D/g, '');
       val = val.slice(0, -1);
       input.value = (val === '' ? '0' : parseInt(val, 10)).toLocaleString('ru-RU');
@@ -943,14 +1003,12 @@
 
     function clearInput(type) {
       if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : (type === 'topup' ? 'topupAmount' : 'autoAmount');
-      document.getElementById(inputId).value = '0';
+      document.getElementById(getInputId(type)).value = '0';
     }
 
     function addPreset(type, amount) {
       if (window.terminalAudio) terminalAudio.playTap();
-      const inputId = type === 'charge' ? 'chargeAmount' : 'topupAmount';
-      const input = document.getElementById(inputId);
+      const input = document.getElementById(getInputId(type));
       let current = parseInt(input.value.replace(/\D/g, '') || '0', 10);
       current += amount;
       input.value = current.toLocaleString('ru-RU');
@@ -1080,7 +1138,6 @@
       document.getElementById('qrAmountDisplay').textContent = tx.amount.toLocaleString('ru-RU') + ' ₽';
       document.getElementById('qrImage').src = tx.qrCode;
       
-      // Формируем прямую ссылку на оплату
       currentPayUrl = tx.payUrl || `${window.location.origin}/pay?tx=${tx.id}`;
     }
 
@@ -1168,6 +1225,67 @@
           switchTab('charge');
         }
       });
+    }
+
+    function sendTelegramInvoice() {
+      if (window.terminalAudio) terminalAudio.playTap();
+      const user = document.getElementById('telegramUser').value.trim();
+      const amountVal = parseInt(document.getElementById('telegramAmount').value.replace(/\D/g, '') || '0', 10);
+
+      if (!user) { alert('Укажите @username или Telegram ID'); return; }
+      if (amountVal <= 0) { alert('Укажите сумму для отправки'); return; }
+
+      fetch('/api/bot/send-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user, amount: amountVal })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          if (window.terminalAudio) terminalAudio.playSuccess();
+          clearInput('telegram');
+          loadTelegramInvoices();
+        } else {
+          alert(data.error || 'Ошибка отправки счета');
+        }
+      })
+      .catch(err => alert('Ошибка соединения с сервером'));
+    }
+
+    function loadTelegramInvoices() {
+      fetch('/api/bot/invoices')
+        .then(res => res.json())
+        .then(data => renderTelegramInvoices(data.invoices || []))
+        .catch(e => {});
+    }
+
+    function renderTelegramInvoices(invoices) {
+      const container = document.getElementById('telegramInvoicesContainer');
+      if (!container) return;
+      if (!invoices || invoices.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; font-size: 11px; padding: 10px;">Счетов пока нет</p>`;
+        return;
+      }
+
+      container.innerHTML = invoices.map(inv => {
+        const isSuccess = inv.status === 'success';
+        const isFailed = inv.status === 'failed';
+        const statusColor = isSuccess ? 'var(--primary)' : (isFailed ? 'var(--error)' : '#f59e0b');
+        const statusText = isSuccess ? 'Оплачен' : (isFailed ? 'Ошибка' : 'Ожидает');
+
+        return `
+          <div class="history-item">
+            <div class="history-info">
+              <h4>✈️ ${inv.user} <span style="font-size: 10px; color: var(--text-muted);">#${inv.id}</span></h4>
+              <p>Статус: <b style="color: ${statusColor};">${statusText}</b></p>
+            </div>
+            <div class="history-amount">
+              ${inv.amount.toLocaleString('ru-RU')} ₽
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     function loadHistory() {
@@ -1269,8 +1387,13 @@
       renderDisplays(displays);
     });
 
+    socket.on('telegram_invoices_updated', (invoices) => {
+      renderTelegramInvoices(invoices);
+    });
+
     socket.on('payment_success', (data) => {
       if (window.terminalAudio) window.terminalAudio.playSuccess();
+      loadTelegramInvoices();
       
       if (isAutoMode) {
         setTimeout(() => {
@@ -1293,6 +1416,7 @@
 
     socket.on('payment_failed', (data) => {
       if (window.terminalAudio) window.terminalAudio.playError();
+      loadTelegramInvoices();
       
       if (isAutoMode) {
         setTimeout(() => {
@@ -1328,6 +1452,7 @@
         else {
           if (currentTab === 'charge') initiateTransactionFlow();
           else if (currentTab === 'topup') submitTopup();
+          else if (currentTab === 'telegram') sendTelegramInvoice();
         }
       } else if (e.key === 'Escape') {
         cancelTransaction();
