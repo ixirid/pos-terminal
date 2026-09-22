@@ -119,32 +119,50 @@
   </div>
 
   <script>
-    const txId = window.location.pathname.split('/').pop();
+    // Извлекаем txId из параметров URL (?tx=... или ?id=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const txId = urlParams.get('tx') || urlParams.get('id');
 
-    fetch(`/api/transaction/${txId}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.found && data.transaction) {
-          document.getElementById('txAmount').textContent = data.transaction.amount.toLocaleString('ru-RU') + ' ₽';
-          if (data.clientBalance !== undefined) {
-            document.getElementById('clientBalanceVal').textContent = data.clientBalance.toLocaleString('ru-RU') + ' ₽';
+    if (!txId) {
+      showError('Некорректная ссылка на оплату');
+    } else {
+      loadTransactionData();
+    }
+
+    function loadTransactionData() {
+      fetch(`/api/transaction/${txId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.transaction) {
+            if (data.transaction.status !== 'pending') {
+              showError('Транзакция уже обработана или отменена');
+              return;
+            }
+
+            document.getElementById('txAmount').textContent = data.transaction.amount.toLocaleString('ru-RU') + ' ₽';
+            if (data.balance !== undefined) {
+              document.getElementById('clientBalanceVal').textContent = data.balance.toLocaleString('ru-RU') + ' ₽';
+            }
+          } else {
+            showError('Транзакция не найдена или истекла');
           }
-        } else {
-          document.getElementById('payCardContainer').innerHTML = `<h2 style="color: #fff; font-size: 20px;">Транзакция не найдена или уже завершена</h2><br><a href="/client" class="back-home-btn">На главную</a>`;
-        }
-      })
-      .catch(e => {
-        document.getElementById('payCardContainer').innerHTML = `<h2 style="color: #fff; font-size: 20px;">Ошибка загрузки транзакции</h2>`;
-      });
+        })
+        .catch(e => {
+          showError('Ошибка загрузки данных о платеже');
+        });
+    }
 
     function confirmPayment() {
+      if (!txId) return;
+
       const btn = document.getElementById('payBtn');
       btn.disabled = true;
       btn.textContent = 'Обработка...';
 
-      fetch(`/api/pay/${txId}`, {
+      fetch('/api/process-payment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ txId })
       })
       .then(res => res.json())
       .then(data => {
@@ -152,11 +170,12 @@
           document.getElementById('payCardContainer').innerHTML = `
             <div style="font-size: 50px; color: var(--primary); margin-bottom: 12px;">✓</div>
             <h2 style="font-size: 24px; color: #fff; margin-bottom: 8px;">Оплата успешна!</h2>
-            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Остаток на карте: <strong style="color: var(--primary);">${data.newBalance.toLocaleString('ru-RU')} ₽</strong></p>
-            <a href="/client" class="back-home-btn" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: #fff;">Вернуться на главную</a>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Остаток на карте: <strong style="color: var(--primary);">${(data.newBalance || 0).toLocaleString('ru-RU')} ₽</strong></p>
+            <a href="/client" class="back-home-btn" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: #fff;">Вернуться в портал</a>
           `;
         } else {
-          alert(data.error || 'Ошибка оплаты');
+          const errMsg = data.error === 'insufficient_funds' ? 'Недостаточно средств на балансе' : (data.error || 'Ошибка оплаты');
+          alert(errMsg);
           btn.disabled = false;
           btn.textContent = 'Подтвердить оплату';
         }
@@ -166,6 +185,14 @@
         btn.disabled = false;
         btn.textContent = 'Подтвердить оплату';
       });
+    }
+
+    function showError(msg) {
+      document.getElementById('payCardContainer').innerHTML = `
+        <div style="font-size: 40px; color: var(--error); margin-bottom: 12px;">✕</div>
+        <h2 style="color: #fff; font-size: 18px; margin-bottom: 16px;">${msg}</h2>
+        <a href="/client" class="back-home-btn">На главную</a>
+      `;
     }
   </script>
 </body>
