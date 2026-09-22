@@ -20,7 +20,42 @@ app.use(express.static(path.join(__dirname, 'public')));
 let clientDisplays = []; 
 let pendingTransactions = {}; 
 let history = []; 
-let clientBalance = 0; // Единый общий баланс системы
+let clientBalance = 0; // Единый общий баланс системы (начальный баланс 0)
+
+// === ФАЙЛОВОЕ ХРАНИЛИЩЕ ДЛЯ СОХРАНЕНИЯ БАЛАНСА И ИСТОРИИ ===
+const DB_PATH = path.join(__dirname, 'db.json');
+
+function loadDbData() {
+  if (fs.existsSync(DB_PATH)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+      if (typeof data.balance === 'number') {
+        clientBalance = data.balance;
+      }
+      if (Array.isArray(data.history)) {
+        history = data.history;
+      }
+    } catch (e) {
+      console.error('Ошибка чтения db.json:', e);
+    }
+  } else {
+    saveDbData();
+  }
+}
+
+function saveDbData() {
+  try {
+    fs.writeFileSync(DB_PATH, JSON.stringify({
+      balance: clientBalance,
+      history: history
+    }, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Ошибка записи в db.json:', e);
+  }
+}
+
+// Загружаем сохранённые данные при старте сервера
+loadDbData();
 
 // Загрузка конфигурационного файла
 const CONFIG_PATH = path.join(__dirname, 'config.json');
@@ -192,6 +227,8 @@ app.get('/api/shortcut/pay-active', (req, res) => {
     createdAt: Date.now()
   });
 
+  saveDbData(); // Сохраняем измененный баланс и историю в файл
+
   const successPayload = { transaction: tx, newBalance: clientBalance };
   sendTargetedEvent('payment_success', successPayload, tx.targetDisplayId);
 
@@ -241,6 +278,8 @@ app.post('/api/process-payment', (req, res) => {
     createdAt: Date.now()
   });
 
+  saveDbData(); // Сохраняем измененный баланс и историю в файл
+
   const successPayload = { transaction: tx, newBalance: clientBalance };
   sendTargetedEvent('payment_success', successPayload, tx.targetDisplayId);
 
@@ -267,6 +306,8 @@ app.post('/api/topup', (req, res) => {
     type: 'topup',
     createdAt: Date.now()
   });
+
+  saveDbData(); // Сохраняем измененный баланс и историю в файл
 
   io.emit('client_balance_updated', { balance: clientBalance });
   res.json({ success: true, newBalance: clientBalance });
