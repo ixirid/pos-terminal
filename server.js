@@ -165,16 +165,16 @@ function sendTargetedEvent(eventName, payload, targetDisplayId) {
 function updateTelegramInvoiceStatus(txId, status, reason = null) {
   const inv = telegramInvoices.find(i => i.txId === txId || i.id === txId);
   if (inv) {
-    inv.status = status; // 'paid', 'failed_insufficient', 'cancelled'
+    inv.status = status; // 'success', 'failed_insufficient', 'cancelled', 'paid'
     saveDbData();
     io.emit('telegram_invoices_updated', { invoices: telegramInvoices });
 
     // Уведомление пользователю в Telegram
     const chatId = telegramUsers[inv.username.toLowerCase()];
     if (chatId) {
-      if (status === 'paid') {
+      if (status === 'success' || status === 'paid') {
         sendTelegramMessage(chatId, `✅ <b>Оплата прошла успешно!</b>\n\nСумма: <b>${inv.amount} ₽</b>\nЧек #${inv.id}`);
-      } else if (status === 'failed_insufficient') {
+      } else if (status === 'failed_insufficient' || status === 'failed') {
         sendTelegramMessage(chatId, `❌ <b>Ошибка оплаты!</b>\n\nНедостаточно средств на балансе для списания <b>${inv.amount} ₽</b>.`);
       }
     }
@@ -337,7 +337,7 @@ app.post('/api/bot/send-invoice', async (req, res) => {
     txId: txId,
     username: cleanUsername,
     amount: parsedAmount,
-    status: 'pending', // 'pending', 'paid', 'failed_insufficient'
+    status: 'pending',
     createdAt: Date.now()
   };
 
@@ -396,7 +396,7 @@ app.get('/api/shortcut/pay-active', (req, res) => {
   });
 
   saveDbData();
-  updateTelegramInvoiceStatus(tx.id, 'paid');
+  updateTelegramInvoiceStatus(tx.id, 'success');
 
   const successPayload = { transaction: tx, newBalance: clientBalance };
   sendTargetedEvent('payment_success', successPayload, tx.targetDisplayId);
@@ -449,7 +449,7 @@ app.post('/api/process-payment', (req, res) => {
   });
 
   saveDbData();
-  updateTelegramInvoiceStatus(tx.id, 'paid');
+  updateTelegramInvoiceStatus(tx.id, 'success');
 
   const successPayload = { transaction: tx, newBalance: clientBalance };
   sendTargetedEvent('payment_success', successPayload, tx.targetDisplayId);
