@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Портал Клиента — SberPay</title>
   <script src="/socket.io/socket.io.js"></script>
-  <!-- Подключаем библиотеку для сканирования QR-кодов через камеру -->
+  <!-- Библиотека для сканирования QR-кодов через камеру -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   
   <style>
@@ -123,21 +123,6 @@
       overflow: hidden;
       border: 2px solid var(--primary);
     }
-
-    .back-home-btn {
-      background: var(--surface-card);
-      border: 1px solid var(--border-color);
-      color: #fff;
-      padding: 14px;
-      font-size: 15px;
-      font-weight: 700;
-      border-radius: 14px;
-      cursor: pointer;
-      width: 100%;
-      text-align: center;
-      text-decoration: none;
-      display: block;
-    }
   </style>
 </head>
 <body>
@@ -174,41 +159,33 @@
     const socket = io();
     let html5QrCode = null;
 
-    // Функция для красивого отображения суммы в рублях
     function formatCurrency(num) {
-      return num.toLocaleString('ru-RU', {
+      return (num || 0).toLocaleString('ru-RU', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
       }) + ' ₽';
     }
 
-    // 1. Загрузка баланса при первом открытии страницы
-    fetch('/api/shortcut/test')
+    // 1. Первоначальная загрузка баланса через REST API
+    fetch('/api/info')
       .then(res => res.json())
       .then(data => {
-        if (data.currentBalance !== undefined) {
-          document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.currentBalance);
+        if (data && data.balance !== undefined) {
+          document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.balance);
         }
       })
       .catch(err => console.error('Ошибка загрузки баланса:', err));
 
-    // 2. Получение актуального состояния от сервера при подключении/обновлении
-    socket.on('init_state', (data) => {
-      if (data.balance !== undefined) {
+    // 2. Обновление баланса в реальном времени через WebSocket
+    socket.on('client_balance_updated', (data) => {
+      if (data && data.balance !== undefined) {
         document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.balance);
       }
     });
 
-    // 3. Обновление баланса в реальном времени при пополнении
-    socket.on('balance_updated', (data) => {
-      if (data.newBalance !== undefined) {
-        document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.newBalance);
-      }
-    });
-
-    // 4. Обновление баланса и закрытие камеры после успешной оплаты
+    // 3. Закрытие сканера и обновление баланса при успехе
     socket.on('payment_success', (data) => {
-      if (data.newBalance !== undefined) {
+      if (data && data.newBalance !== undefined) {
         document.getElementById('clientBalanceDisplay').textContent = formatCurrency(data.newBalance);
       }
       closeScanner();
@@ -221,15 +198,13 @@
       html5QrCode.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText, decodedResult) => {
-          if (decodedText.includes('/pay/')) {
+        (decodedText) => {
+          if (decodedText.includes('/pay')) {
             closeScanner();
             window.location.href = decodedText;
           }
         },
-        (errorMessage) => {
-          // Ошибки поиска QR в кадре можно игнорировать
-        }
+        () => {}
       ).catch(err => {
         alert("Не удалось запустить камеру. Проверьте разрешения браузера.");
         closeScanner();
@@ -240,7 +215,7 @@
       if (html5QrCode) {
         html5QrCode.stop().then(() => {
           html5QrCode.clear();
-        }).catch(err => {});
+        }).catch(() => {});
       }
       document.getElementById('scannerOverlay').classList.remove('active');
     }
