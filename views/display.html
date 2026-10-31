@@ -6,8 +6,8 @@
   <title>Дисплей покупателя</title>
   <!-- Подключаем Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Подключаем Socket.io клиент -->
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Подключаем Socket.io клиент через CDN для гарантированной работы на любом POS-терминале -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
     :root {
       --bg-dark: #000000;
@@ -33,14 +33,18 @@
       height: 100vh;
     }
 
-    /* Фоновый переливающийся амбиент */
+    /* Фоновый переливающийся градиент */
     .ambient-glow {
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at 50% 50%, rgba(0, 255, 102, 0.12) 0%, rgba(157, 0, 255, 0.06) 40%, transparent 80%);
+      background: radial-gradient(circle at 50% 50%, rgba(0, 255, 102, 0.14) 0%, rgba(157, 0, 255, 0.07) 45%, transparent 85%);
       animation: ambientPulse 8s ease-in-out infinite alternate;
       z-index: 0;
       pointer-events: none;
+    }
+
+    .ambient-glow.error-mode {
+      background: radial-gradient(circle at 50% 50%, rgba(255, 51, 102, 0.2) 0%, rgba(157, 0, 255, 0.08) 45%, transparent 85%);
     }
 
     @keyframes ambientPulse {
@@ -66,7 +70,7 @@
       opacity: 1;
     }
 
-    /* Верхняя панель */
+    /* Шапка дисплея */
     .display-header {
       position: absolute;
       top: 0;
@@ -83,17 +87,17 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       padding: 8px 18px;
       border-radius: 9999px;
       backdrop-filter: blur(12px);
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.25s ease;
     }
     .pay-secret-badge:active {
-      transform: scale(0.95);
-      background: rgba(0, 255, 102, 0.15);
+      transform: scale(0.94);
+      background: rgba(0, 255, 102, 0.2);
       border-color: var(--char-green);
     }
 
@@ -105,7 +109,7 @@
       box-shadow: 0 0 12px var(--char-green);
     }
 
-    /* Персонаж (Глазки-таблетки) */
+    /* Персонаж (Глазки) */
     .character-container {
       display: flex;
       flex-direction: column;
@@ -123,7 +127,7 @@
       align-items: center;
       justify-content: center;
       height: 120px;
-      filter: drop-shadow(0 0 24px rgba(0, 255, 102, 0.4));
+      filter: drop-shadow(0 0 24px rgba(0, 255, 102, 0.45));
     }
 
     .neon-eye {
@@ -136,7 +140,6 @@
       box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.4), 0 0 35px var(--char-green);
     }
 
-    /* Блик на глазках */
     .neon-eye::after {
       content: '';
       position: absolute;
@@ -144,15 +147,18 @@
       left: 18px;
       width: 24px;
       height: 12px;
-      background: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.55);
       border-radius: 6px;
     }
 
-    /* Вариации эмоций глазок */
     .neon-eye.wink {
       height: 14px;
       border-radius: 7px;
       box-shadow: 0 0 25px var(--char-green);
+    }
+
+    .neon-eye.wink::after {
+      display: none;
     }
 
     .neon-eye.heart {
@@ -160,6 +166,10 @@
       box-shadow: none !important;
       width: 130px;
       height: 120px;
+    }
+
+    .neon-eye.heart::after {
+      display: none;
     }
 
     .neon-eye.heart svg {
@@ -207,120 +217,98 @@
       text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
     }
 
-    /* Карточка счёта */
+    /* Карточка счёта (QR) */
     .invoice-card {
-      background: rgba(25, 25, 30, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(25, 25, 30, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 32px;
       padding: 40px;
       width: 90%;
       max-width: 480px;
       text-align: center;
       backdrop-filter: blur(20px);
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
     }
 
-    /* --- ЭКРАНЫ УСПЕХА И ОШИБКИ (ЧИСТЫЕ SVG АНИМАЦИИ БЕЗ БАГОВ) --- */
-    .success-stage {
+    /* --- ЭКРАНЫ СТАТУСА ОПЛАТЫ --- */
+    .status-stage {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 28px;
-      position: relative;
     }
 
-    .pay-anim-canvas {
-      width: 180px;
-      height: 180px;
+    .pay-anim-box {
+      width: 160px;
+      height: 160px;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .anim-svg-element {
+    .anim-svg {
       width: 100%;
       height: 100%;
-      position: absolute;
-      inset: 0;
       overflow: visible;
     }
 
-    /* Круг успеха */
-    .success-circle {
-      stroke: var(--char-green);
-      stroke-width: 8;
-      stroke-linecap: round;
+    .circle-path {
       fill: none;
+      stroke-width: 7;
+      stroke-linecap: round;
       stroke-dasharray: 340;
       stroke-dashoffset: 340;
+      transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Галочка */
-    .success-check {
+    .success-circle-path {
       stroke: var(--char-green);
-      stroke-width: 10;
+      filter: drop-shadow(0 0 16px rgba(0, 255, 102, 0.6));
+    }
+
+    .error-circle-path {
+      stroke: var(--char-pink);
+      filter: drop-shadow(0 0 16px rgba(255, 51, 102, 0.6));
+    }
+
+    .icon-path {
+      fill: none;
+      stroke-width: 9;
       stroke-linecap: round;
       stroke-linejoin: round;
-      fill: none;
       stroke-dasharray: 140;
       stroke-dashoffset: 140;
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.35s;
     }
 
-    .play-success .success-circle {
-      animation: drawCircle 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    .success-icon-path {
+      stroke: var(--char-green);
+      filter: drop-shadow(0 0 12px rgba(0, 255, 102, 0.8));
     }
 
-    .play-success .success-check {
-      animation: drawCheck 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
-    }
-
-    @keyframes drawCircle {
-      to { stroke-dashoffset: 0; }
-    }
-
-    @keyframes drawCheck {
-      to { stroke-dashoffset: 0; }
-    }
-
-    /* Круг ошибки */
-    .error-circle {
+    .error-icon-path {
       stroke: var(--char-pink);
-      stroke-width: 8;
-      stroke-linecap: round;
-      fill: none;
-      stroke-dasharray: 340;
-      stroke-dashoffset: 340;
+      filter: drop-shadow(0 0 12px rgba(255, 51, 102, 0.8));
     }
 
-    /* Крестик ошибки */
-    .error-cross {
-      stroke: var(--char-pink);
-      stroke-width: 10;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-      stroke-dasharray: 140;
-      stroke-dashoffset: 140;
+    .status-stage.active .circle-path {
+      stroke-dashoffset: 0;
     }
 
-    .play-error .error-circle {
-      animation: drawCircle 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    .status-stage.active .icon-path {
+      stroke-dashoffset: 0;
     }
 
-    .play-error .error-cross {
-      animation: drawCheck 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
-    }
-
-    .anim-text-box {
+    .status-text-box {
       text-align: center;
       opacity: 0;
-      transform: translateY(14px);
-      transition: opacity 0.4s ease, transform 0.4s ease;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease 0.4s, transform 0.5s ease 0.4s;
     }
 
-    .anim-text-box.show {
+    .status-stage.active .status-text-box {
       opacity: 1;
       transform: translateY(0);
     }
@@ -329,9 +317,9 @@
 <body onclick="handleUserTouch()" ontouchstart="handleUserTouch()">
 
   <!-- Фоновый амбиент -->
-  <div class="ambient-glow"></div>
+  <div class="ambient-glow" id="ambientGlow"></div>
 
-  <!-- Верхняя панель -->
+  <!-- Шапка -->
   <div class="display-header">
     <div class="pay-secret-badge" onclick="event.stopPropagation(); triggerCharacterMode();">
       <div class="pay-dot"></div>
@@ -344,17 +332,17 @@
   <div class="view-layer active" id="viewIdle">
     <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px;">
       <div style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: #ffffff;">Платите</div>
-      <div style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: #ffffff;">как вам</div>
-      <div style="display: flex; align-items: center; gap: 14px; margin-top: 4px;">
-        <span style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: var(--char-green); text-shadow: 0 0 30px rgba(0,255,102,0.4);">удобно</span>
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <span style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: #ffffff;">как вам</span>
         <div style="width: 48px; height: 48px; background: var(--char-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(0,255,102,0.6);">
           <svg style="width: 26px; height: 26px; stroke: #000; stroke-width: 3.5; fill: none;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </div>
       </div>
+      <div style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: var(--char-green); text-shadow: 0 0 30px rgba(0,255,102,0.4);">удобно</div>
     </div>
   </div>
 
-  <!-- 2. РЕЖИМ ПЕРСОНАЖА (ТЕМНЫЙ ФОН + НЕОНОВЫЕ ГЛАЗКИ) -->
+  <!-- 2. РЕЖИМ ПЕРСОНАЖА (ЧЕРЕЗ 15 СЕКУНД ИЛИ ПО КНОПКЕ) -->
   <div class="view-layer" id="viewCharacter">
     <div class="character-container">
       <div class="eyes-row" id="eyesRow">
@@ -373,7 +361,9 @@
       <div style="font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">Сумма к оплате</div>
       <div style="font-size: 52px; font-weight: 900; color: #fff; margin: 12px 0 24px 0; letter-spacing: -1px;" id="invoiceAmount">0 ₽</div>
       <div style="background: #ffffff; padding: 18px; border-radius: 20px; display: inline-block; margin-bottom: 20px;">
-        <div id="qrCodeContainer" style="width: 180px; height: 180px; background: #111; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 13px; font-weight: 500;">QR-код</div>
+        <div id="qrCodeContainer" style="width: 180px; height: 180px; background: #111; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 600;">
+          QR-код
+        </div>
       </div>
       <div style="font-size: 15px; color: rgba(255,255,255,0.7); font-weight: 500;">Наведите камеру телефона для оплаты</div>
     </div>
@@ -381,50 +371,32 @@
 
   <!-- 4. ЭКРАН УСПЕШНОЙ ОПЛАТЫ -->
   <div class="view-layer" id="viewSuccess">
-    <div class="success-stage" id="successStageContainer">
-      <div class="pay-anim-canvas">
-        <svg class="anim-svg-element" viewBox="0 0 120 120">
-          <defs>
-            <filter id="successGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <circle cx="60" cy="60" r="54" class="success-circle" filter="url(#successGlow)" />
-          <path d="M 36,62 L 52,78 L 84,44" class="success-check" filter="url(#successGlow)" />
+    <div class="status-stage" id="successStage">
+      <div class="pay-anim-box">
+        <svg class="anim-svg" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="54" class="circle-path success-circle-path" />
+          <path d="M 36,62 L 52,78 L 84,44" class="icon-path success-icon-path" />
         </svg>
       </div>
-      <div class="anim-text-box" id="successTextBox">
-        <div style="font-size: 44px; font-weight: 900; color: #fff; letter-spacing: -1px;" id="successAmountDisplay">0 ₽</div>
-        <div style="font-size: 20px; font-weight: 800; color: var(--char-green); margin-top: 6px; letter-spacing: 0.5px;">Успешно оплачено</div>
+      <div class="status-text-box">
+        <div style="font-size: 46px; font-weight: 900; color: #fff; letter-spacing: -1px;" id="successAmountDisplay">0 ₽</div>
+        <div style="font-size: 22px; font-weight: 800; color: var(--char-green); margin-top: 6px; letter-spacing: 0.5px;">Успешно оплачено</div>
       </div>
     </div>
   </div>
 
   <!-- 5. ЭКРАН ОШИБКИ / НЕХВАТКИ СРЕДСТВ -->
   <div class="view-layer" id="viewError">
-    <div class="success-stage" id="errorStageContainer">
-      <div class="pay-anim-canvas">
-        <svg class="anim-svg-element" viewBox="0 0 120 120">
-          <defs>
-            <filter id="errorGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <circle cx="60" cy="60" r="54" class="error-circle" filter="url(#errorGlow)" />
-          <path d="M 42,42 L 78,78 M 78,42 L 42,78" class="error-cross" filter="url(#errorGlow)" />
+    <div class="status-stage" id="errorStage">
+      <div class="pay-anim-box">
+        <svg class="anim-svg" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="54" class="circle-path error-circle-path" />
+          <path d="M 42,42 L 78,78 M 78,42 L 42,78" class="icon-path error-icon-path" />
         </svg>
       </div>
-      <div class="anim-text-box" id="errorTextBox">
-        <div style="font-size: 34px; font-weight: 900; color: #fff; letter-spacing: -0.5px;" id="errorTitleDisplay">Ошибка оплаты</div>
-        <div style="font-size: 19px; font-weight: 800; color: var(--char-pink); margin-top: 6px;" id="errorSubDisplay">Недостаточно средств</div>
+      <div class="status-text-box">
+        <div style="font-size: 32px; font-weight: 900; color: #fff; letter-spacing: -0.5px;" id="errorTitleDisplay">Ошибка оплаты</div>
+        <div style="font-size: 19px; font-weight: 700; color: var(--char-pink); margin-top: 8px;" id="errorSubDisplay">Недостаточно средств на карте</div>
       </div>
     </div>
   </div>
@@ -435,21 +407,27 @@
   </div>
 
   <script>
-    const socket = io();
+    // Безопасное подключение к Socket.io серверу POS-терминала
+    let socket;
+    try {
+      socket = (typeof io !== 'undefined') ? io() : null;
+    } catch (err) {
+      console.warn('Socket.io client connect error:', err);
+    }
 
-    // Полная база из 60 уникальных реплик
+    // База из 60 реплик
     const REPLICAS = [
-      { text: "Добро пожаловать! Выбирай любой удобный способ оплаты", emotion: "normal" },
+      { text: "Добро пожаловать! Выбирайте любой удобный способ оплаты", emotion: "normal" },
       { text: "QR-код на экране — это быстро и безопасно!", emotion: "smile" },
       { text: "Приложите телефон или карту к терминалу", emotion: "normal" },
       { text: "Быстрая оплата за пару секунд без лишних ожиданий", emotion: "wink" },
       { text: "Мы принимаем любые бесконтактные карты", emotion: "smile" },
-      { text: "Оплачивайте смартфоном через СБП или QR", emotion: "normal" },
+      { text: "Оплачивайте смартфоном через СберПэй или СБП", emotion: "normal" },
       { text: "Отличный выбор! Переходим к оплате заказа", emotion: "heart" },
       { text: "Спасибо, что вы с нами сегодня!", emotion: "smile" },
       { text: "Безопасность каждого платежа гарантирована банком", emotion: "normal" },
       { text: "Улыбнитесь! Ваш заказ уже почти готов", emotion: "wink" },
-      { text: "Нужен чек? Его можно получить на телефон", emotion: "normal" },
+      { text: "Нужен чек? Его можно получить на телефон или в бумажном виде", emotion: "normal" },
       { text: "Быстро, удобно и прямо здесь", emotion: "smile" },
       { text: "Прикладывайте карту или сканируйте код выше", emotion: "normal" },
       { text: "Мы ценим ваше время и комфорт", emotion: "heart" },
@@ -512,10 +490,18 @@
       document.querySelectorAll('.view-layer').forEach(el => el.classList.remove('active'));
       const target = document.getElementById(viewId);
       if (target) target.classList.add('active');
+
+      const glow = document.getElementById('ambientGlow');
+      if (viewId === 'viewError') {
+        glow.classList.add('error-mode');
+      } else {
+        glow.classList.remove('error-mode');
+      }
     }
 
     function resetIdleTimer() {
       if (hasActiveInvoice) return;
+
       clearTimeout(idleTimer);
       stopCharacterMode();
 
@@ -528,6 +514,7 @@
 
     function handleUserTouch() {
       if (hasActiveInvoice) return;
+
       if (isCharacterActive) {
         stopCharacterMode();
       }
@@ -579,6 +566,7 @@
 
       setTimeout(() => {
         applyEmotion(item.emotion, leftEye, rightEye);
+
         setTimeout(() => {
           speechText.textContent = item.text;
           speechBox.classList.add('show');
@@ -606,8 +594,8 @@
       }
     }
 
-    // --- СОБЫТИЯ ОПЛАТЫ SOCKET.IO ---
-    socket.on('new_invoice', (data) => {
+    // Обработка получения счетов от POS-терминала
+    function handleNewInvoice(data) {
       hasActiveInvoice = true;
       isCharacterActive = false;
       clearTimeout(idleTimer);
@@ -615,67 +603,66 @@
 
       const amount = data && data.amount ? data.amount : 0;
       document.getElementById('invoiceAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+      
       switchView('viewInvoice');
-    });
+    }
 
-    socket.on('payment_success', (data) => {
+    function handlePaymentSuccess(data) {
       hasActiveInvoice = false;
-      const amount = data && data.transaction && data.transaction.amount ? data.transaction.amount : 0;
+      const amount = data && data.transaction && data.transaction.amount ? data.transaction.amount : (data && data.amount ? data.amount : 0);
       document.getElementById('successAmountDisplay').textContent = amount.toLocaleString('ru-RU') + ' ₽';
 
-      const stageContainer = document.getElementById('successStageContainer');
-      const textBox = document.getElementById('successTextBox');
-      
-      stageContainer.classList.remove('play-success');
-      textBox.classList.remove('show');
+      const successStage = document.getElementById('successStage');
+      successStage.classList.remove('active');
       switchView('viewSuccess');
 
       setTimeout(() => {
-        stageContainer.classList.add('play-success');
-        textBox.classList.add('show');
-      }, 50);
+        successStage.classList.add('active');
+      }, 60);
 
       setTimeout(() => {
-        stageContainer.classList.remove('play-success');
-        textBox.classList.remove('show');
+        successStage.classList.remove('active');
         switchView('viewIdle');
         resetIdleTimer();
       }, 5500);
-    });
+    }
 
-    socket.on('payment_error', (data) => {
+    function handlePaymentError(data) {
       hasActiveInvoice = false;
       const errTitle = data && data.title ? data.title : 'Ошибка оплаты';
-      const errSub = data && data.message ? data.message : 'Недостаточно средств';
+      const errSub = data && data.message ? data.message : 'Недостаточно средств на карте';
 
       document.getElementById('errorTitleDisplay').textContent = errTitle;
       document.getElementById('errorSubDisplay').textContent = errSub;
 
-      const errorStage = document.getElementById('errorStageContainer');
-      const errorText = document.getElementById('errorTextBox');
-
-      errorStage.classList.remove('play-error');
-      errorText.classList.remove('show');
+      const errorStage = document.getElementById('errorStage');
+      errorStage.classList.remove('active');
       switchView('viewError');
 
       setTimeout(() => {
-        errorStage.classList.add('play-error');
-        errorText.classList.add('show');
-      }, 50);
+        errorStage.classList.add('active');
+      }, 60);
 
       setTimeout(() => {
-        errorStage.classList.remove('play-error');
-        errorText.classList.remove('show');
+        errorStage.classList.remove('active');
         switchView('viewIdle');
         resetIdleTimer();
       }, 5000);
-    });
+    }
 
-    socket.on('transaction_cancelled', () => {
+    function handleTransactionCancelled() {
       hasActiveInvoice = false;
       switchView('viewIdle');
       resetIdleTimer();
-    });
+    }
+
+    // Подписка на сокет-события
+    if (socket) {
+      socket.on('new_invoice', handleNewInvoice);
+      socket.on('payment_success', handlePaymentSuccess);
+      socket.on('payment_error', handlePaymentError);
+      socket.on('transaction_cancelled', handleTransactionCancelled);
+    }
 
     window.onload = function() {
       resetIdleTimer();
