@@ -182,7 +182,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 24px;
+      gap: 28px;
       height: 130px;
       position: relative;
     }
@@ -193,8 +193,9 @@
       background: var(--char-green);
       border-radius: 42px;
       box-shadow: 0 0 50px var(--char-green-glow);
-      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       position: relative;
+      overflow: hidden;
     }
 
     .eye-pill::after {
@@ -206,30 +207,55 @@
       height: 26%;
       background: rgba(255, 255, 255, 0.9);
       border-radius: 50%;
+      transition: opacity 0.3s ease;
     }
 
     /* Анимации и Эмоции */
     .eyes-box.blinking .eye-pill {
-      transform: scaleY(0.06);
+      height: 10px;
+      border-radius: 10px;
+      margin-top: 43px;
     }
 
     .eyes-box.happy .eye-pill {
-      height: 68px;
-      border-radius: 70px 70px 20px 20px;
-      transform: translateY(-8px);
+      height: 64px;
+      border-radius: 64px 64px 16px 16px;
+      transform: translateY(-6px);
     }
 
     .eyes-box.heart .eye-pill {
       background: var(--char-pink);
       box-shadow: 0 0 60px var(--char-pink-glow);
-      clip-path: path("M 12,35 C 12,17 28,5 45,5 C 60,5 70,16 75,25 C 80,16 90,5 105,5 C 122,5 138,17 138,35 C 138,62 90,92 75,108 C 60,92 12,62 12,35 Z");
-      width: 125px;
-      height: 115px;
-      border-radius: 0;
+      clip-path: none;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
+    .eyes-box.heart .eye-pill::after {
+      display: none;
+    }
+
+    .eyes-box.heart .eye-pill::before {
+      content: '♥';
+      font-size: 70px;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    /* Подмигивание: аккуратная горизонтальная полоска вместо сжатого глаза */
     .eyes-box.wink .eye-pill:last-child {
-      transform: scaleY(0.06);
+      height: 12px;
+      border-radius: 12px;
+      transform: translateY(20px);
+      box-shadow: 0 0 25px var(--char-green-glow);
+    }
+
+    .eyes-box.wink .eye-pill:last-child::after {
+      opacity: 0;
     }
 
     .eyes-box.blue .eye-pill {
@@ -506,12 +532,11 @@
       const REPLICAS = [
         { text: "— Привет! Я очень рад вас видеть!", emotion: "happy" },
         { text: "— Оплату по QR-коду можно провести с мобильного приложения!", emotion: "wink" },
-        { text: "— Вы можете оплатить любую покупку картой Сбербанка!", emotion: "happy" },
-        { text: "— Скидки, кешбэк и бонусы ждут вас с подпиской СберПрайм!", emotion: "heart" },
-        { text: "— Наведите камеру телефона на QR-код для оплаты!", emotion: "blue" },
-        { text: "— Хорошего дня и замечательного настроения!", emotion: "happy" },
-        { text: "— Платить смартфоном — это быстро и безопасно!", emotion: "purple" },
-        { text: "— Спасибо, что выбираете нас!", emotion: "heart" }
+        { text: "— Вы можете оплатить любую покупку быстро и без комиссии!", emotion: "happy" },
+        { text: "— Наведите камеру телефона на QR-код для моментальной оплаты!", emotion: "blue" },
+        { text: "— Хорошего дня и замечательных покупок!", emotion: "happy" },
+        { text: "— Платить по QR — это удобно, технологично и безопасно!", emotion: "purple" },
+        { text: "— Спасибо, что вы с нами!", emotion: "heart" }
       ];
 
       let currentView = 'viewIdle';
