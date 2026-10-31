@@ -1,588 +1,699 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Дисплей Клиента — POS</title>
-<script src="/socket.io/socket.io.js"></script>
-<style>
-:root {
---primary: #10b981;
---primary-bright: #38ef7d;
---bg-base: #000000;
---text-muted: #9ca3af;
---char-green: #38ef7d;
---char-green-glow: rgba(56, 239, 125, 0.9);
---char-pink: #ff2a85;
---char-pink-glow: rgba(255, 42, 133, 0.9);
---char-blue: #00d2ff;
---char-blue-glow: rgba(0, 210, 255, 0.9);
---char-purple: #b5179e;
---char-purple-glow: rgba(181, 23, 158, 0.9);
-}
-* {
-box-sizing: border-box;
-margin: 0;
-padding: 0;
-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-user-select: none;
--webkit-tap-highlight-color: transparent;
-}
-body {
-background-color: var(--bg-base);
-color: #ffffff;
-height: 100vh;
-height: 100dvh;
-width: 100vw;
-overflow: hidden;
-position: relative;
-}
-/* АМБИЕНТНОЕ СВЕЧЕНИЕ НА ФОНЕ */
-.ambient-glow {
-position: absolute;
-width: 700px;
-height: 700px;
-top: 50%;
-left: 50%;
-transform: translate(-50%, -50%);
-background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(56, 239, 125, 0.12) 40%, transparent 70%);
-filter: blur(90px);
-border-radius: 50%;
-pointer-events: none;
-z-index: 1;
-transition: all 0.8s ease;
-}
-/* ВЕРХНЯЯ ШАПКА */
-.top-header {
-position: absolute;
-top: 24px;
-left: 20px;
-right: 20px;
-display: flex;
-justify-content: space-between;
-align-items: center;
-z-index: 100;
-}
-.secret-pay-btn {
-display: inline-flex;
-align-items: center;
-gap: 8px;
-background: rgba(255, 255, 255, 0.08);
-backdrop-filter: blur(16px);
-padding: 8px 18px;
-border-radius: 30px;
-border: 1px solid rgba(255, 255, 255, 0.18);
-font-size: 15px;
-font-weight: 800;
-color: #ffffff;
-cursor: pointer;
-box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-transition: transform 0.15s ease, background-color 0.2s ease;
-}
-.secret-pay-btn:active {
-transform: scale(0.92);
-background: rgba(56, 239, 125, 0.25);
-border-color: rgba(56, 239, 125, 0.5);
-}
-.green-dot {
-width: 8px;
-height: 8px;
-background: var(--char-green);
-border-radius: 50%;
-box-shadow: 0 0 10px var(--char-green);
-}
-/* ОСНОВНЫЕ СЛОИ ЭКРАНОВ */
-.view-layer {
-position: absolute;
-inset: 0;
-width: 100%;
-height: 100%;
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-padding: 24px 16px;
-z-index: 10;
-opacity: 0;
-visibility: hidden;
-transform: scale(0.96);
-transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s;
-pointer-events: none;
-}
-.view-layer.active {
-opacity: 1;
-visibility: visible;
-transform: scale(1);
-pointer-events: auto;
-}
-/* --- 1. ЭКРАН ОЖИДАНИЯ --- */
-.idle-title {
-font-size: 50px;
-font-weight: 900;
-line-height: 1.25;
-text-align: center;
-color: #ffffff;
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-}
-.idle-title .white-text {
-color: #ffffff;
-}
-.idle-title .green-text {
-color: var(--char-green);
-display: inline-flex;
-align-items: center;
-gap: 12px;
-text-shadow: 0 0 25px rgba(56, 239, 125, 0.5);
-margin: 4px 0;
-}
-.green-check-icon {
-width: 42px;
-height: 42px;
-background: var(--char-green);
-border-radius: 50%;
-display: inline-flex;
-align-items: center;
-justify-content: center;
-color: #000000;
-font-weight: 900;
-font-size: 24px;
-box-shadow: 0 0 20px rgba(56, 239, 125, 0.8);
-flex-shrink: 0;
-}
-/* --- 2. ЭКРАН ПЕРСОНАЖА --- */
-.character-stage {
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-gap: 36px;
-width: 100%;
-cursor: pointer;
-}
-.eyes-box {
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 24px;
-height: 130px;
-position: relative;
-}
-.eye-pill {
-width: 125px;
-height: 96px;
-background: var(--char-green);
-border-radius: 42px;
-box-shadow: 0 0 50px var(--char-green-glow);
-transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-position: relative;
-}
-.eye-pill::after {
-content: '';
-position: absolute;
-top: 15%;
-left: 18%;
-width: 26%;
-height: 26%;
-background: rgba(255, 255, 255, 0.9);
-border-radius: 50%;
-}
-/* Анимации и Эмоции */
-.eyes-box.blinking .eye-pill {
-transform: scaleY(0.06);
-}
-.eyes-box.happy .eye-pill {
-height: 68px;
-border-radius: 70px 70px 20px 20px;
-transform: translateY(-8px);
-clip-path: ellipse(100% 75% at 50% 0%);
-}
-.eyes-box.heart .eye-pill {
-background: var(--char-pink);
-box-shadow: 0 0 60px var(--char-pink-glow);
-clip-path: path("M 12,35 C 12,17 28,5 45,5 C 60,5 70,16 75,25 C 80,16 90,5 105,5 C 122,5 138,17 138,35 C 138,62 90,92 75,108 C 60,92 12,62 12,35 Z");
-width: 125px;
-height: 115px;
-border-radius: 0;
-}
-.eyes-box.wink .eye-pill:last-child {
-transform: scaleY(0.06);
-}
-.eyes-box.blue .eye-pill {
-background: var(--char-blue);
-box-shadow: 0 0 55px var(--char-blue-glow);
-}
-.eyes-box.purple .eye-pill {
-background: var(--char-purple);
-box-shadow: 0 0 55px var(--char-purple-glow);
-}
-.speech-text {
-font-size: 24px;
-font-weight: 800;
-text-align: center;
-color: #ffffff;
-line-height: 1.4;
-max-width: 440px;
-min-height: 80px;
-display: flex;
-align-items: center;
-justify-content: center;
-opacity: 0;
-transform: translateY(12px);
-transition: opacity 0.5s ease, transform 0.5s ease;
-text-shadow: 0 4px 20px rgba(0,0,0,0.9);
-}
-.speech-text.visible {
-opacity: 1;
-transform: translateY(0);
-}
-/* --- 3. ЭКРАН ОПЛАТЫ ПО QR --- */
-.pay-card-container {
-width: 100%;
-max-width: 400px;
-display: flex;
-flex-direction: column;
-align-items: center;
-gap: 20px;
-}
-.pay-amount-num {
-font-size: 48px;
-font-weight: 900;
-color: #ffffff;
-text-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
-}
-.qr-card-glass {
-background: rgba(17, 24, 39, 0.85);
-backdrop-filter: blur(24px);
-border: 1px solid rgba(255, 255, 255, 0.12);
-border-radius: 28px;
-padding: 24px;
-display: flex;
-flex-direction: column;
-align-items: center;
-gap: 16px;
-box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
-width: 100%;
-}
-.qr-white-bg {
-background: #ffffff;
-padding: 16px;
-border-radius: 20px;
-}
-.qr-white-bg img {
-width: 190px;
-height: 190px;
-display: block;
-}
-/* --- 4. СВЯЗЬ С СЕРВЕРОМ --- */
-.spinner-circle {
-width: 64px;
-height: 64px;
-border: 5px solid rgba(255, 255, 255, 0.1);
-border-top-color: var(--char-green);
-border-radius: 50%;
-animation: spin 0.8s linear infinite;
-margin-bottom: 16px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-/* --- 5. ЭКРАН УСПЕХА --- */
-.success-icon-box {
-width: 130px;
-height: 130px;
-position: relative;
-margin-bottom: 20px;
-display: flex;
-align-items: center;
-justify-content: center;
-}
-.success-circle-svg {
-position: absolute;
-width: 100%;
-height: 100%;
-transform: rotate(-90deg);
-}
-.success-circle-svg circle {
-fill: none;
-stroke-width: 6;
-stroke-linecap: round;
-}
-.success-circle-svg .circle-bg { stroke: rgba(56, 239, 125, 0.15); }
-.success-circle-svg .circle-main {
-stroke: var(--char-green);
-stroke-dasharray: 440;
-stroke-dashoffset: 440;
-filter: drop-shadow(0 0 12px var(--char-green));
-}
-.check-mark-svg {
-width: 48px;
-height: 48px;
-stroke: #ffffff;
-stroke-width: 5;
-stroke-linecap: round;
-stroke-linejoin: round;
-fill: none;
-stroke-dasharray: 100;
-stroke-dashoffset: 100;
-z-index: 2;
-}
-.animate-circle { animation: drawCircle 0.8s forwards; }
-.animate-check { animation: drawCheck 0.5s 0.5s forwards; }
-@keyframes drawCircle { to { stroke-dashoffset: 0; } }
-@keyframes drawCheck { to { stroke-dashoffset: 0; } }
-/* НИЖНИЙ ПОДВАЛ */
-.bottom-footer {
-position: absolute;
-bottom: 24px;
-left: 0;
-right: 0;
-text-align: center;
-z-index: 100;
-font-size: 13px;
-font-weight: 700;
-color: var(--text-muted);
-}
-/* БЛОКИРОВКА */
-.block-modal {
-position: fixed;
-inset: 0;
-background: rgba(0, 0, 0, 0.95);
-backdrop-filter: blur(20px);
-z-index: 999;
-display: none;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-gap: 12px;
-}
-.block-modal.active { display: flex !important; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Дисплей Клиента — POS</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-bright: #38ef7d;
+      --bg-base: #000000;
+      --text-muted: #9ca3af;
+      
+      --char-green: #38ef7d;
+      --char-green-glow: rgba(56, 239, 125, 0.9);
+      --char-pink: #ff2a85;
+      --char-pink-glow: rgba(255, 42, 133, 0.9);
+      --char-blue: #00d2ff;
+      --char-blue-glow: rgba(0, 210, 255, 0.9);
+      --char-purple: #b5179e;
+      --char-purple-glow: rgba(181, 23, 158, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: #ffffff;
+      height: 100vh;
+      height: 100dvh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* АМБИЕНТНОЕ СВЕЧЕНИЕ НА ФОНЕ */
+    .ambient-glow {
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(56, 239, 125, 0.12) 40%, transparent 70%);
+      filter: blur(90px);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1;
+      transition: background 0.8s ease;
+    }
+
+    /* ВЕРХНЯЯ ШАПКА */
+    .top-header {
+      position: absolute;
+      top: 24px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .secret-pay-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+      padding: 8px 18px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 15px;
+      font-weight: 800;
+      color: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      transition: transform 0.15s ease, background-color 0.2s ease;
+    }
+
+    .secret-pay-btn:active {
+      transform: scale(0.92);
+      background: rgba(56, 239, 125, 0.25);
+      border-color: rgba(56, 239, 125, 0.5);
+    }
+
+    .green-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--char-green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--char-green);
+    }
+
+    /* ОСНОВНЫЕ СЛОИ ЭКРАНОВ */
+    .view-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      z-index: 10;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.96);
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s;
+      pointer-events: none;
+    }
+
+    .view-layer.active {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+    /* --- 1. ЭКРАН ОЖИДАНИЯ --- */
+    .idle-title {
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 1.25;
+      text-align: center;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .idle-title .white-text {
+      color: #ffffff;
+    }
+
+    .idle-title .green-text {
+      color: var(--char-green);
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      text-shadow: 0 0 25px rgba(56, 239, 125, 0.5);
+    }
+
+    .green-check-icon {
+      width: 42px;
+      height: 42px;
+      background: var(--char-green);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #000000;
+      font-weight: 900;
+      font-size: 24px;
+      box-shadow: 0 0 20px rgba(56, 239, 125, 0.8);
+      flex-shrink: 0;
+    }
+
+    /* --- 2. ЭКРАН ПЕРСОНАЖА --- */
+    .character-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 36px;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .eyes-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      height: 130px;
+      position: relative;
+    }
+
+    .eye-pill {
+      width: 125px;
+      height: 96px;
+      background: var(--char-green);
+      border-radius: 42px;
+      box-shadow: 0 0 50px var(--char-green-glow);
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .eye-pill::after {
+      content: '';
+      position: absolute;
+      top: 15%;
+      left: 18%;
+      width: 26%;
+      height: 26%;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+    }
+
+    /* Анимации и Эмоции */
+    .eyes-box.blinking .eye-pill {
+      transform: scaleY(0.06);
+    }
+
+    .eyes-box.happy .eye-pill {
+      height: 68px;
+      border-radius: 70px 70px 20px 20px;
+      transform: translateY(-8px);
+    }
+
+    .eyes-box.heart .eye-pill {
+      background: var(--char-pink);
+      box-shadow: 0 0 60px var(--char-pink-glow);
+      clip-path: path("M 12,35 C 12,17 28,5 45,5 C 60,5 70,16 75,25 C 80,16 90,5 105,5 C 122,5 138,17 138,35 C 138,62 90,92 75,108 C 60,92 12,62 12,35 Z");
+      width: 125px;
+      height: 115px;
+      border-radius: 0;
+    }
+
+    .eyes-box.wink .eye-pill:last-child {
+      transform: scaleY(0.06);
+    }
+
+    .eyes-box.blue .eye-pill {
+      background: var(--char-blue);
+      box-shadow: 0 0 55px var(--char-blue-glow);
+    }
+
+    .eyes-box.purple .eye-pill {
+      background: var(--char-purple);
+      box-shadow: 0 0 55px var(--char-purple-glow);
+    }
+
+    .speech-text {
+      font-size: 24px;
+      font-weight: 800;
+      text-align: center;
+      color: #ffffff;
+      line-height: 1.4;
+      max-width: 440px;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.9);
+    }
+
+    .speech-text.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* --- 3. ЭКРАН ОПЛАТЫ ПО QR --- */
+    .pay-card-container {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .pay-amount-num {
+      font-size: 48px;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
+    }
+
+    .qr-card-glass {
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 28px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
+      width: 100%;
+    }
+
+    .qr-white-bg {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 20px;
+    }
+
+    .qr-white-bg img {
+      width: 190px;
+      height: 190px;
+      display: block;
+    }
+
+    /* --- 4. СВЯЗЬ С СЕРВЕРОМ --- */
+    .spinner-circle {
+      width: 64px;
+      height: 64px;
+      border: 5px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--char-green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- 5. ЭКРАН УСПЕХА --- */
+    .success-icon-box {
+      width: 130px;
+      height: 130px;
+      position: relative;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .success-circle-svg {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .success-circle-svg circle {
+      fill: none;
+      stroke-width: 6;
+      stroke-linecap: round;
+    }
+
+    .success-circle-svg .circle-bg { stroke: rgba(56, 239, 125, 0.15); }
+    .success-circle-svg .circle-main {
+      stroke: var(--char-green);
+      stroke-dasharray: 440;
+      stroke-dashoffset: 440;
+      filter: drop-shadow(0 0 12px var(--char-green));
+    }
+
+    .check-mark-svg {
+      width: 48px;
+      height: 48px;
+      stroke: #ffffff;
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      z-index: 2;
+    }
+
+    .animate-circle { animation: drawCircle 0.8s forwards; }
+    .animate-check { animation: drawCheck 0.5s 0.5s forwards; }
+
+    @keyframes drawCircle { to { stroke-dashoffset: 0; } }
+    @keyframes drawCheck { to { stroke-dashoffset: 0; } }
+
+    /* НИЖНИЙ ПОДВАЛ */
+    .bottom-footer {
+      position: absolute;
+      bottom: 24px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 100;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    /* БЛОКИРОВКА */
+    .block-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(20px);
+      z-index: 999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .block-modal.active { display: flex !important; }
+  </style>
 </head>
 <body>
-<!-- ФОНОВОЕ СВЕЧЕНИЕ -->
-<div class="ambient-glow" id="ambientGlow"></div>
-<!-- ВЕРХНЯЯ ПАНЕЛЬ -->
-<header class="top-header">
-<button class="secret-pay-btn" id="paySecretBtn">
-<span class="green-dot"></span>
-<span>Pay</span>
-</button>
-<div style="font-size: 12px; font-weight: 700; color: var(--text-muted);">POS System</div>
-</header>
-<!-- 1. ГЛАВНЫЙ ЭКРАН ОЖИДАНИЯ -->
-<div class="view-layer active" id="viewIdle">
-<h1 class="idle-title">
-<span class="white-text">Платите</span>
-<span class="green-text">как вам <span class="green-check-icon">✓</span></span>
-<span class="white-text">удобно</span>
-</h1>
-</div>
-<!-- 2. ЭКРАН ПЕРСОНАЖА -->
-<div class="view-layer" id="viewCharacter">
-<div class="character-stage" id="characterStage">
-<div class="eyes-box" id="eyesBox">
-<div class="eye-pill"></div>
-<div class="eye-pill"></div>
-</div>
-<div class="speech-text" id="speechText">
-— Привет! Я очень рад вас видеть!
-</div>
-</div>
-</div>
-<!-- 3. ЭКРАН ОПЛАТЫ ПО QR -->
-<div class="view-layer" id="viewPay">
-<div class="pay-card-container">
-<div style="text-align: center;">
-<div style="font-size: 14px; color: var(--text-muted); font-weight: 700;">Сумма к оплате</div>
-<div class="pay-amount-num" id="payAmountDisplay">0 ₽</div>
-</div>
-<div class="qr-card-glass">
-<div style="font-size: 16px; font-weight: 800; color: #fff;">Оплатить по QR-коду</div>
-<div class="qr-white-bg">
-<img id="qrImage" src="" alt="QR-код">
-</div>
-<div style="font-size: 12px; color: var(--char-green); font-weight: 700;">
-● Отсканируйте приложением банка
-</div>
-</div>
-</div>
-</div>
-<!-- 4. СВЯЗЬ С СЕРВЕРОМ -->
-<div class="view-layer" id="viewProcessing">
-<div class="spinner-circle"></div>
-<div style="font-size: 20px; font-weight: 800; color: #fff;">Связь с сервером...</div>
-</div>
-<!-- 5. ОПЛАЧЕНО -->
-<div class="view-layer" id="viewSuccess">
-<div class="success-icon-box">
-<svg class="success-circle-svg" viewBox="0 0 150 150">
-<circle class="circle-bg" cx="75" cy="75" r="66"></circle>
-<circle class="circle-main" id="successCircle" cx="75" cy="75" r="66"></circle>
-</svg>
-<svg class="check-mark-svg" id="successCheck" viewBox="0 0 24 24">
-<polyline points="20 6 9 17 4 12"></polyline>
-</svg>
-</div>
-<div style="font-size: 44px; font-weight: 900; color: #fff;" id="successAmountDisplay">0 ₽</div>
-<div style="font-size: 22px; font-weight: 800; color: var(--char-green); margin-top: 4px;">Оплачено</div>
-</div>
-<!-- НИЖНИЙ ПОДВАЛ -->
-<footer class="bottom-footer">
-<span id="terminalNumberLabel">Терминал №3815</span>
-</footer>
-<!-- БЛОКИРОВКА -->
-<div class="block-modal" id="blockedOverlay">
-<div style="font-size: 40px;">🔒</div>
-<h2 style="font-size: 20px; font-weight: 800; color: #fff;">Дисплей заблокирован</h2>
-</div>
-<script>
-const socket = io();
-let displayId = localStorage.getItem('pos_display_id');
-if (!displayId) {
-displayId = 'disp_' + Math.random().toString(36).substring(2, 7);
-localStorage.setItem('pos_display_id', displayId);
-}
-const terminalNum = displayId.replace(/\D/g, '').substring(0, 4) || '3815';
-document.getElementById('terminalNumberLabel').textContent = ⁠Терминал №${terminalNum}⁠;
-const REPLICAS = [
-{ text: "— Привет! Я очень рад вас видеть!", emotion: "happy" },
-{ text: "— Оплату по QR-коду можно провести с мобильного приложения!", emotion: "wink" },
-{ text: "— Вы можете оплатить любую покупку картой Сбербанка!", emotion: "happy" },
-{ text: "— Скидки, кешбэк и бонусы ждут вас с подпиской СберПрайм!", emotion: "heart" },
-{ text: "— Наведите камеру телефона на QR-код для оплаты!", emotion: "blue" },
-{ text: "— Хорошего дня и замечательного настроения!", emotion: "happy" },
-{ text: "— Платить смартфоном — это быстро и безопасно!", emotion: "purple" },
-{ text: "— Спасибо, что выбираете нас!", emotion: "heart" }
-];
-let currentView = 'viewIdle';
-let idleTimer = null;
-let characterLoopTimeout = null;
-let hasActiveInvoice = false;
-let replicaIndex = 0;
-function switchView(targetViewId) {
-currentView = targetViewId;
-document.querySelectorAll('.view-layer').forEach(layer => {
-layer.classList.remove('active');
-});
-const activeLayer = document.getElementById(targetViewId);
-if (activeLayer) {
-activeLayer.classList.add('active');
-}
-const glow = document.getElementById('ambientGlow');
-if (targetViewId === 'viewCharacter') {
-glow.style.background = 'radial-gradient(circle, rgba(56, 239, 125, 0.5) 0%, rgba(181, 23, 158, 0.3) 60%, transparent 100%)';
-} else {
-glow.style.background = 'radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(56, 239, 125, 0.12) 40%, transparent 70%)';
-}
-}
-function resetIdleTimer() {
-clearTimeout(idleTimer);
-if (hasActiveInvoice) return;
-idleTimer = setTimeout(() => {
-startCharacterMode();
-}, 15000);
-}
-function startCharacterMode() {
-clearTimeout(idleTimer);
-switchView('viewCharacter');
-runCharacterCycle();
-}
-function stopCharacterMode() {
-clearTimeout(characterLoopTimeout);
-const textEl = document.getElementById('speechText');
-if (textEl) textEl.classList.remove('visible');
-}
-function exitCharacterMode() {
-if (currentView === 'viewCharacter') {
-stopCharacterMode();
-switchView('viewIdle');
-resetIdleTimer();
-}
-}
-function runCharacterCycle() {
-if (currentView !== 'viewCharacter') return;
-const currentReplica = REPLICAS[replicaIndex];
-replicaIndex = (replicaIndex + 1) % REPLICAS.length;
-const eyesBox = document.getElementById('eyesBox');
-const speechText = document.getElementById('speechText');
-speechText.classList.remove('visible');
-setTimeout(() => {
-eyesBox.className = 'eyes-box ' + currentReplica.emotion;
-setTimeout(() => {
-eyesBox.classList.add('blinking');
-setTimeout(() => eyesBox.classList.remove('blinking'), 160);
-}, 150);
-setTimeout(() => {
-speechText.textContent = currentReplica.text;
-speechText.classList.add('visible');
-}, 350);
-}, 250);
-characterLoopTimeout = setTimeout(() => {
-runCharacterCycle();
-}, 4500);
-}
-// СЕКРЕТНАЯ КНОПКА "Pay"
-document.getElementById('paySecretBtn').addEventListener('click', (e) => {
-e.stopPropagation();
-if (hasActiveInvoice) return;
-if (currentView === 'viewCharacter') {
-exitCharacterMode();
-} else {
-startCharacterMode();
-}
-});
-// КЛИК ПО ЭКРАНУ ПЕРСОНАЖА ДЛЯ ВЫХОДА
-document.getElementById('viewCharacter').addEventListener('click', () => {
-exitCharacterMode();
-});
-// SOCKET.IO СОБЫТИЯ
-socket.on('connect', () => {
-socket.emit('register_display', { id: displayId, name: ⁠Дисплей №${terminalNum}⁠ });
-});
-socket.on('show_qr', (data) => {
-hasActiveInvoice = true;
-stopCharacterMode();
-clearTimeout(idleTimer);
-document.getElementById('payAmountDisplay').textContent = data.amount.toLocaleString('ru-RU') + ' ₽';
-document.getElementById('qrImage').src = data.qrCode;
-switchView('viewPay');
-});
-socket.on('processing_payment', () => {
-switchView('viewProcessing');
-});
-socket.on('payment_success', (data) => {
-hasActiveInvoice = false;
-const amount = data.transaction ? data.transaction.amount : 0;
-document.getElementById('successAmountDisplay').textContent = amount.toLocaleString('ru-RU') + ' ₽';
-switchView('viewSuccess');
-const circle = document.getElementById('successCircle');
-const check = document.getElementById('successCheck');
-circle.classList.remove('animate-circle');
-check.classList.remove('animate-check');
-void circle.offsetWidth;
-circle.classList.add('animate-circle');
-check.classList.add('animate-check');
-setTimeout(() => {
-switchView('viewIdle');
-resetIdleTimer();
-}, 4500);
-});
-socket.on('transaction_cancelled', () => {
-hasActiveInvoice = false;
-switchView('viewIdle');
-resetIdleTimer();
-});
-socket.on('display_block_status', (data) => {
-const modal = document.getElementById('blockedOverlay');
-if (data.isBlocked) {
-modal.classList.add('active');
-} else {
-modal.classList.remove('active');
-}
-});
-// ИНИЦИАЛИЗАЦИЯ
-resetIdleTimer();
-</script>
+
+  <!-- ФОНОВОЕ СВЕЧЕНИЕ -->
+  <div class="ambient-glow" id="ambientGlow"></div>
+
+  <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+  <header class="top-header">
+    <button class="secret-pay-btn" id="paySecretBtn" type="button">
+      <span class="green-dot"></span>
+      <span>Pay</span>
+    </button>
+    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted);">POS System</div>
+  </header>
+
+  <!-- 1. ГЛАВНЫЙ ЭКРАН ОЖИДАНИЯ -->
+  <div class="view-layer active" id="viewIdle">
+    <h1 class="idle-title">
+      <span class="white-text">Платите</span>
+      <span class="white-text">как вам</span>
+      <span class="green-text">удобно <span class="green-check-icon">✓</span></span>
+    </h1>
+  </div>
+
+  <!-- 2. ЭКРАН ПЕРСОНАЖА -->
+  <div class="view-layer" id="viewCharacter">
+    <div class="character-stage" id="characterStage">
+      <div class="eyes-box" id="eyesBox">
+        <div class="eye-pill"></div>
+        <div class="eye-pill"></div>
+      </div>
+      <div class="speech-text" id="speechText">
+        — Привет! Я очень рад вас видеть!
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ЭКРАН ОПЛАТЫ ПО QR -->
+  <div class="view-layer" id="viewPay">
+    <div class="pay-card-container">
+      <div style="text-align: center;">
+        <div style="font-size: 14px; color: var(--text-muted); font-weight: 700;">Сумма к оплате</div>
+        <div class="pay-amount-num" id="payAmountDisplay">0 ₽</div>
+      </div>
+
+      <div class="qr-card-glass">
+        <div style="font-size: 16px; font-weight: 800; color: #fff;">Оплатить по QR-коду</div>
+        <div class="qr-white-bg">
+          <img id="qrImage" src="" alt="QR-код">
+        </div>
+        <div style="font-size: 12px; color: var(--char-green); font-weight: 700;">
+          ● Отсканируйте приложением банка
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. СВЯЗЬ С СЕРВЕРОМ -->
+  <div class="view-layer" id="viewProcessing">
+    <div class="spinner-circle"></div>
+    <div style="font-size: 20px; font-weight: 800; color: #fff;">Связь с сервером...</div>
+  </div>
+
+  <!-- 5. ОПЛАЧЕНО -->
+  <div class="view-layer" id="viewSuccess">
+    <div class="success-icon-box">
+      <svg class="success-circle-svg" viewBox="0 0 150 150">
+        <circle class="circle-bg" cx="75" cy="75" r="66"></circle>
+        <circle class="circle-main" id="successCircle" cx="75" cy="75" r="66"></circle>
+      </svg>
+      <svg class="check-mark-svg" id="successCheck" viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div style="font-size: 44px; font-weight: 900; color: #fff;" id="successAmountDisplay">0 ₽</div>
+    <div style="font-size: 22px; font-weight: 800; color: var(--char-green); margin-top: 4px;">Оплачено</div>
+  </div>
+
+  <!-- НИЖНИЙ ПОДВАЛ -->
+  <footer class="bottom-footer">
+    <span id="terminalNumberLabel">Терминал №3815</span>
+  </footer>
+
+  <!-- БЛОКИРОВКА -->
+  <div class="block-modal" id="blockedOverlay">
+    <div style="font-size: 40px;">🔒</div>
+    <h2 style="font-size: 20px; font-weight: 800; color: #fff;">Дисплей заблокирован</h2>
+  </div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const socket = io();
+      
+      let displayId = localStorage.getItem('pos_display_id');
+      if (!displayId) {
+        displayId = 'disp_' + Math.random().toString(36).substring(2, 7);
+        localStorage.setItem('pos_display_id', displayId);
+      }
+      
+      const terminalNum = displayId.replace(/\D/g, '').substring(0, 4) || '3815';
+      const termLabel = document.getElementById('terminalNumberLabel');
+      if (termLabel) termLabel.textContent = `Терминал №${terminalNum}`;
+
+      const REPLICAS = [
+        { text: "— Привет! Я очень рад вас видеть!", emotion: "happy" },
+        { text: "— Оплату по QR-коду можно провести с мобильного приложения!", emotion: "wink" },
+        { text: "— Вы можете оплатить любую покупку картой Сбербанка!", emotion: "happy" },
+        { text: "— Скидки, кешбэк и бонусы ждут вас с подпиской СберПрайм!", emotion: "heart" },
+        { text: "— Наведите камеру телефона на QR-код для оплаты!", emotion: "blue" },
+        { text: "— Хорошего дня и замечательного настроения!", emotion: "happy" },
+        { text: "— Платить смартфоном — это быстро и безопасно!", emotion: "purple" },
+        { text: "— Спасибо, что выбираете нас!", emotion: "heart" }
+      ];
+
+      let currentView = 'viewIdle';
+      let idleTimer = null;
+      let characterLoopTimeout = null;
+      let hasActiveInvoice = false;
+      let replicaIndex = 0;
+
+      function switchView(targetViewId) {
+        currentView = targetViewId;
+        document.querySelectorAll('.view-layer').forEach(layer => {
+          layer.classList.remove('active');
+        });
+
+        const activeLayer = document.getElementById(targetViewId);
+        if (activeLayer) {
+          activeLayer.classList.add('active');
+        }
+
+        const glow = document.getElementById('ambientGlow');
+        if (targetViewId === 'viewCharacter') {
+          glow.style.background = 'radial-gradient(circle, rgba(56, 239, 125, 0.5) 0%, rgba(181, 23, 158, 0.3) 60%, transparent 100%)';
+        } else {
+          glow.style.background = 'radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(56, 239, 125, 0.12) 40%, transparent 70%)';
+        }
+      }
+
+      function resetIdleTimer() {
+        clearTimeout(idleTimer);
+        if (hasActiveInvoice) return;
+
+        idleTimer = setTimeout(() => {
+          startCharacterMode();
+        }, 15000);
+      }
+
+      function startCharacterMode() {
+        clearTimeout(idleTimer);
+        switchView('viewCharacter');
+        runCharacterCycle();
+      }
+
+      function stopCharacterMode() {
+        clearTimeout(characterLoopTimeout);
+        const textEl = document.getElementById('speechText');
+        if (textEl) textEl.classList.remove('visible');
+      }
+
+      function exitCharacterMode() {
+        if (currentView === 'viewCharacter') {
+          stopCharacterMode();
+          switchView('viewIdle');
+          resetIdleTimer();
+        }
+      }
+
+      function runCharacterCycle() {
+        if (currentView !== 'viewCharacter') return;
+
+        const currentReplica = REPLICAS[replicaIndex];
+        replicaIndex = (replicaIndex + 1) % REPLICAS.length;
+
+        const eyesBox = document.getElementById('eyesBox');
+        const speechText = document.getElementById('speechText');
+
+        speechText.classList.remove('visible');
+
+        setTimeout(() => {
+          eyesBox.className = 'eyes-box ' + currentReplica.emotion;
+
+          setTimeout(() => {
+            eyesBox.classList.add('blinking');
+            setTimeout(() => eyesBox.classList.remove('blinking'), 160);
+          }, 150);
+
+          setTimeout(() => {
+            speechText.textContent = currentReplica.text;
+            speechText.classList.add('visible');
+          }, 350);
+
+        }, 250);
+
+        characterLoopTimeout = setTimeout(() => {
+          runCharacterCycle();
+        }, 4500);
+      }
+
+      // СЕКРЕТНАЯ КНОПКА "Pay"
+      const secretBtn = document.getElementById('paySecretBtn');
+      if (secretBtn) {
+        secretBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (hasActiveInvoice) return;
+
+          if (currentView === 'viewCharacter') {
+            exitCharacterMode();
+          } else {
+            startCharacterMode();
+          }
+        });
+      }
+
+      // КЛИК ПО ЭКРАНУ ПЕРСОНАЖА ДЛЯ ВЫХОДА
+      const charLayer = document.getElementById('viewCharacter');
+      if (charLayer) {
+        charLayer.addEventListener('click', () => {
+          exitCharacterMode();
+        });
+      }
+
+      // ОТСЛЕЖИВАНИЕ ДЕЙСТВИЙ ДЛЯ СБРОСА ТАЙМЕРА 15 СЕК
+      ['click', 'touchstart', 'mousemove'].forEach(evt => {
+        window.addEventListener(evt, () => {
+          if (currentView === 'viewIdle') {
+            resetIdleTimer();
+          }
+        }, { passive: true });
+      });
+
+      // SOCKET.IO СОБЫТИЯ
+      socket.on('connect', () => {
+        socket.emit('register_display', { id: displayId, name: `Дисплей №${terminalNum}` });
+      });
+
+      socket.on('show_qr', (data) => {
+        hasActiveInvoice = true;
+        stopCharacterMode();
+        clearTimeout(idleTimer);
+
+        document.getElementById('payAmountDisplay').textContent = data.amount.toLocaleString('ru-RU') + ' ₽';
+        document.getElementById('qrImage').src = data.qrCode;
+        switchView('viewPay');
+      });
+
+      socket.on('processing_payment', () => {
+        switchView('viewProcessing');
+      });
+
+      socket.on('payment_success', (data) => {
+        hasActiveInvoice = false;
+        const amount = data.transaction ? data.transaction.amount : 0;
+        document.getElementById('successAmountDisplay').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+
+        switchView('viewSuccess');
+
+        const circle = document.getElementById('successCircle');
+        const check = document.getElementById('successCheck');
+        
+        if (circle && check) {
+          circle.classList.remove('animate-circle');
+          check.classList.remove('animate-check');
+          void circle.offsetWidth;
+          circle.classList.add('animate-circle');
+          check.classList.add('animate-check');
+        }
+
+        setTimeout(() => {
+          switchView('viewIdle');
+          resetIdleTimer();
+        }, 4500);
+      });
+
+      socket.on('transaction_cancelled', () => {
+        hasActiveInvoice = false;
+        switchView('viewIdle');
+        resetIdleTimer();
+      });
+
+      socket.on('display_block_status', (data) => {
+        const modal = document.getElementById('blockedOverlay');
+        if (modal) {
+          if (data.isBlocked) {
+            modal.classList.add('active');
+          } else {
+            modal.classList.remove('active');
+          }
+        }
+      });
+
+      // ИНИЦИАЛИЗАЦИЯ
+      resetIdleTimer();
+    });
+  </script>
 </body>
 </html>
