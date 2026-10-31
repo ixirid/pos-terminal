@@ -2,364 +2,237 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Дисплей Клиента — POS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Дисплей покупателя</title>
+  <!-- Подключаем Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Подключаем Socket.io клиент -->
   <script src="/socket.io/socket.io.js"></script>
   <style>
     :root {
-      --primary: #10b981;
-      --primary-bright: #38ef7d;
-      --bg-base: #000000;
-      --text-muted: #9ca3af;
-      
-      --char-green: #38ef7d;
-      --char-green-glow: rgba(56, 239, 125, 0.9);
-      --char-pink: #ff2a85;
-      --char-pink-glow: rgba(255, 42, 133, 0.9);
-      --char-blue: #00d2ff;
-      --char-blue-glow: rgba(0, 210, 255, 0.9);
-      --char-purple: #b5179e;
-      --char-purple-glow: rgba(181, 23, 158, 0.9);
+      --bg-dark: #000000;
+      --char-green: #00FF66;
+      --char-pink: #FF3366;
+      --char-purple: #9D00FF;
     }
 
     * {
       box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       user-select: none;
-      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
     }
 
     body {
-      background-color: var(--bg-base);
+      background-color: var(--bg-dark);
       color: #ffffff;
-      height: 100vh;
-      height: 100dvh;
-      width: 100vw;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
-      position: relative;
+      width: 100vw;
+      height: 100vh;
     }
 
-    /* АМБИЕНТНОЕ СВЕЧЕНИЕ НА ФОНЕ */
+    /* Фоновый переливающийся амбиент */
     .ambient-glow {
       position: absolute;
-      width: 700px;
-      height: 700px;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(56, 239, 125, 0.12) 40%, transparent 70%);
-      filter: blur(90px);
-      border-radius: 50%;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(0, 255, 102, 0.12) 0%, rgba(157, 0, 255, 0.06) 40%, transparent 80%);
+      animation: ambientPulse 8s ease-in-out infinite alternate;
+      z-index: 0;
       pointer-events: none;
-      z-index: 1;
-      transition: background 0.8s ease;
     }
 
-    /* ВЕРХНЯЯ ШАПКА */
-    .top-header {
-      position: absolute;
-      top: 24px;
-      left: 20px;
-      right: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 100;
+    @keyframes ambientPulse {
+      0% { transform: scale(0.95); opacity: 0.7; }
+      100% { transform: scale(1.08); opacity: 1; }
     }
 
-    .secret-pay-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(16px);
-      padding: 8px 18px;
-      border-radius: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      font-size: 15px;
-      font-weight: 800;
-      color: #ffffff;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-      transition: transform 0.15s ease, background-color 0.2s ease;
-    }
-
-    .secret-pay-btn:active {
-      transform: scale(0.92);
-      background: rgba(56, 239, 125, 0.25);
-      border-color: rgba(56, 239, 125, 0.5);
-    }
-
-    .green-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--char-green);
-      border-radius: 50%;
-      box-shadow: 0 0 10px var(--char-green);
-    }
-
-    /* ОСНОВНЫЕ СЛОИ ЭКРАНОВ */
+    /* Слои отображения (Экраны) */
     .view-layer {
       position: absolute;
       inset: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
+      display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px 16px;
       z-index: 10;
       opacity: 0;
-      visibility: hidden;
-      transform: scale(0.96);
-      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s;
-      pointer-events: none;
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .view-layer.active {
+      display: flex;
       opacity: 1;
-      visibility: visible;
-      transform: scale(1);
-      pointer-events: auto;
     }
 
-    /* --- 1. ЭКРАН ОЖИДАНИЯ --- */
-    .idle-title {
-      font-size: 48px;
-      font-weight: 900;
-      line-height: 1.25;
-      text-align: center;
-      color: #ffffff;
+    /* Верхняя панель */
+    .display-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      gap: 4px;
+      padding: 24px 28px;
+      z-index: 50;
     }
 
-    .idle-title .white-text {
-      color: #ffffff;
-    }
-
-    .idle-title .green-text {
-      color: var(--char-green);
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      text-shadow: 0 0 25px rgba(56, 239, 125, 0.5);
-    }
-
-    .green-check-icon {
-      width: 42px;
-      height: 42px;
-      background: var(--char-green);
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: #000000;
-      font-weight: 900;
-      font-size: 24px;
-      box-shadow: 0 0 20px rgba(56, 239, 125, 0.8);
-      flex-shrink: 0;
-    }
-
-    /* --- 2. ЭКРАН ПЕРСОНАЖА --- */
-    .character-stage {
+    .pay-secret-badge {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 36px;
-      width: 100%;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 8px 18px;
+      border-radius: 9999px;
+      backdrop-filter: blur(12px);
       cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .pay-secret-badge:active {
+      transform: scale(0.95);
+      background: rgba(0, 255, 102, 0.15);
+      border-color: var(--char-green);
     }
 
-    .eyes-box {
+    .pay-dot {
+      width: 10px;
+      height: 10px;
+      background-color: var(--char-green);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--char-green);
+    }
+
+    /* Персонаж (Глазки-таблетки) */
+    .character-container {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 28px;
-      height: 130px;
-      position: relative;
+      gap: 48px;
+      width: 100%;
+      max-width: 600px;
+      padding: 0 20px;
     }
 
-    .eye-pill {
+    .eyes-row {
+      display: flex;
+      gap: 36px;
+      align-items: center;
+      justify-content: center;
+      height: 120px;
+      filter: drop-shadow(0 0 24px rgba(0, 255, 102, 0.4));
+    }
+
+    .neon-eye {
       width: 125px;
       height: 96px;
-      background: var(--char-green);
+      background-color: var(--char-green);
       border-radius: 42px;
-      box-shadow: 0 0 50px var(--char-green-glow);
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       position: relative;
-      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.4), 0 0 35px var(--char-green);
     }
 
-    .eye-pill::after {
+    /* Блик на глазках */
+    .neon-eye::after {
       content: '';
       position: absolute;
-      top: 15%;
-      left: 18%;
-      width: 26%;
-      height: 26%;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 50%;
-      transition: opacity 0.3s ease;
-    }
-
-    /* Анимации и Эмоции */
-    .eyes-box.blinking .eye-pill {
-      height: 10px;
-      border-radius: 10px;
-      margin-top: 43px;
-    }
-
-    .eyes-box.happy .eye-pill {
-      height: 64px;
-      border-radius: 64px 64px 16px 16px;
-      transform: translateY(-6px);
-    }
-
-    .eyes-box.heart .eye-pill {
-      background: var(--char-pink);
-      box-shadow: 0 0 60px var(--char-pink-glow);
-      clip-path: none;
-      width: 110px;
-      height: 110px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .eyes-box.heart .eye-pill::after {
-      display: none;
-    }
-
-    .eyes-box.heart .eye-pill::before {
-      content: '♥';
-      font-size: 70px;
-      color: #ffffff;
-      line-height: 1;
-    }
-
-    /* Подмигивание */
-    .eyes-box.wink .eye-pill:last-child {
+      top: 14px;
+      left: 18px;
+      width: 24px;
       height: 12px;
-      border-radius: 12px;
-      transform: translateY(20px);
-      box-shadow: 0 0 25px var(--char-green-glow);
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 6px;
     }
 
-    .eyes-box.wink .eye-pill:last-child::after {
-      opacity: 0;
+    /* Вариации эмоций глазок */
+    .neon-eye.wink {
+      height: 14px;
+      border-radius: 7px;
+      box-shadow: 0 0 25px var(--char-green);
     }
 
-    .eyes-box.blue .eye-pill {
-      background: var(--char-blue);
-      box-shadow: 0 0 55px var(--char-blue-glow);
+    .neon-eye.heart {
+      background-color: transparent !important;
+      box-shadow: none !important;
+      width: 130px;
+      height: 120px;
     }
 
-    .eyes-box.purple .eye-pill {
-      background: var(--char-purple);
-      box-shadow: 0 0 55px var(--char-purple-glow);
+    .neon-eye.heart svg {
+      width: 100%;
+      height: 100%;
+      fill: var(--char-pink);
+      filter: drop-shadow(0 0 20px var(--char-pink));
+      animation: heartBeat 1.2s ease-in-out infinite;
     }
 
-    .speech-text {
-      font-size: 24px;
-      font-weight: 800;
-      text-align: center;
-      color: #ffffff;
-      line-height: 1.4;
-      max-width: 440px;
-      min-height: 80px;
+    @keyframes heartBeat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.12); }
+    }
+
+    .neon-eye.pink-glow {
+      background-color: var(--char-pink);
+      box-shadow: inset 0 0 16px rgba(255, 255, 255, 0.4), 0 0 35px var(--char-pink);
+    }
+
+    /* Контейнер реплик */
+    .speech-box {
+      min-height: 90px;
       display: flex;
       align-items: center;
       justify-content: center;
+      text-align: center;
+      padding: 0 20px;
       opacity: 0;
       transform: translateY(12px);
-      transition: opacity 0.5s ease, transform 0.5s ease;
-      text-shadow: 0 4px 20px rgba(0,0,0,0.9);
+      transition: opacity 0.6s ease, transform 0.6s ease;
     }
 
-    .speech-text.visible {
+    .speech-box.show {
       opacity: 1;
       transform: translateY(0);
     }
 
-    /* --- 3. ЭКРАН ОПЛАТЫ ПО QR --- */
-    .pay-card-container {
-      width: 100%;
-      max-width: 400px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .pay-amount-num {
-      font-size: 48px;
-      font-weight: 900;
+    .speech-text {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
       color: #ffffff;
-      text-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
+      line-height: 1.35;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
     }
 
-    .qr-card-glass {
-      background: rgba(17, 24, 39, 0.85);
-      backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 28px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
-      width: 100%;
+    /* Карточка счёта */
+    .invoice-card {
+      background: rgba(25, 25, 30, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 32px;
+      padding: 40px;
+      width: 90%;
+      max-width: 480px;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
     }
 
-    .qr-white-bg {
-      background: #ffffff;
-      padding: 16px;
-      border-radius: 20px;
-    }
-
-    .qr-white-bg img {
-      width: 190px;
-      height: 190px;
-      display: block;
-    }
-
-    /* --- 4. СВЯЗЬ С СЕРВЕРОМ --- */
-    .spinner-circle {
-      width: 64px;
-      height: 64px;
-      border: 5px solid rgba(255, 255, 255, 0.1);
-      border-top-color: var(--char-green);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 16px;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* --- 5. ЭКРАН УСПЕХА С ИЗОБРАЖЕНИЕМ ИЗ ВИДЕО --- */
+    /* --- ЭКРАНЫ УСПЕХА И ОШИБКИ (ЧИСТЫЕ SVG АНИМАЦИИ БЕЗ БАГОВ) --- */
     .success-stage {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 24px;
+      gap: 28px;
       position: relative;
     }
 
-    /* ВЖУХ ТРАЕКТОРИЯ И ДУГА ОПЛАТЫ */
     .pay-anim-canvas {
-      width: 220px;
-      height: 220px;
+      width: 180px;
+      height: 180px;
       position: relative;
       display: flex;
       align-items: center;
@@ -371,429 +244,442 @@
       height: 100%;
       position: absolute;
       inset: 0;
+      overflow: visible;
     }
 
-    .spiral-swirl {
+    /* Круг успеха */
+    .success-circle {
       stroke: var(--char-green);
-      stroke-width: 12;
+      stroke-width: 8;
       stroke-linecap: round;
       fill: none;
-      stroke-dasharray: 600;
-      stroke-dashoffset: 600;
-      filter: drop-shadow(0 0 16px var(--char-green-glow));
+      stroke-dasharray: 340;
+      stroke-dashoffset: 340;
     }
 
-    .smile-arc {
+    /* Галочка */
+    .success-check {
       stroke: var(--char-green);
-      stroke-width: 18;
-      stroke-linecap: round;
-      fill: none;
-      stroke-dasharray: 200;
-      stroke-dashoffset: 200;
-      filter: drop-shadow(0 0 20px var(--char-green-glow));
-      opacity: 0;
-    }
-
-    .checkmark-path {
-      stroke: var(--char-green);
-      stroke-width: 16;
+      stroke-width: 10;
       stroke-linecap: round;
       stroke-linejoin: round;
       fill: none;
-      stroke-dasharray: 180;
-      stroke-dashoffset: 180;
-      filter: drop-shadow(0 0 24px var(--char-green-glow));
-      opacity: 0;
+      stroke-dasharray: 140;
+      stroke-dashoffset: 140;
     }
 
-    /* Классы управления кадр за кадром (секунда в секунду по видео) */
-    .stage-swirl .spiral-swirl {
-      animation: swirlRun 0.75s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    .play-success .success-circle {
+      animation: drawCircle 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    .stage-smile .spiral-swirl { opacity: 0; }
-    .stage-smile .smile-arc {
-      opacity: 1;
-      animation: smileAppear 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.28) forwards;
+    .play-success .success-check {
+      animation: drawCheck 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
     }
 
-    .stage-check .smile-arc { opacity: 0; }
-    .stage-check .checkmark-path {
-      opacity: 1;
-      animation: checkmarkDraw 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    @keyframes drawCircle {
+      to { stroke-dashoffset: 0; }
     }
 
-    @keyframes swirlRun {
-      0% { stroke-dashoffset: 600; transform: rotate(0deg) scale(0.6); opacity: 0.2; }
-      50% { opacity: 1; }
-      100% { stroke-dashoffset: 0; transform: rotate(360deg) scale(1); opacity: 1; }
+    @keyframes drawCheck {
+      to { stroke-dashoffset: 0; }
     }
 
-    @keyframes smileAppear {
-      0% { stroke-dashoffset: 200; transform: translateY(10px) scale(0.8); }
-      100% { stroke-dashoffset: 0; transform: translateY(0) scale(1); }
+    /* Круг ошибки */
+    .error-circle {
+      stroke: var(--char-pink);
+      stroke-width: 8;
+      stroke-linecap: round;
+      fill: none;
+      stroke-dasharray: 340;
+      stroke-dashoffset: 340;
     }
 
-    @keyframes checkmarkDraw {
-      0% { stroke-dashoffset: 180; transform: scale(0.7) rotate(-10deg); }
-      60% { transform: scale(1.15) rotate(4deg); }
-      100% { stroke-dashoffset: 0; transform: scale(1) rotate(0deg); }
+    /* Крестик ошибки */
+    .error-cross {
+      stroke: var(--char-pink);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      stroke-dasharray: 140;
+      stroke-dashoffset: 140;
     }
 
-    .success-text-box {
+    .play-error .error-circle {
+      animation: drawCircle 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .play-error .error-cross {
+      animation: drawCheck 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
+    }
+
+    .anim-text-box {
       text-align: center;
       opacity: 0;
-      transform: translateY(20px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
+      transform: translateY(14px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
     }
 
-    .success-text-box.show {
+    .anim-text-box.show {
       opacity: 1;
       transform: translateY(0);
     }
-
-    /* НИЖНИЙ ПОДВАЛ */
-    .bottom-footer {
-      position: absolute;
-      bottom: 24px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      z-index: 100;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text-muted);
-    }
-
-    /* БЛОКИРОВКА */
-    .block-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.95);
-      backdrop-filter: blur(20px);
-      z-index: 999;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-    }
-
-    .block-modal.active { display: flex !important; }
   </style>
 </head>
-<body>
+<body onclick="handleUserTouch()" ontouchstart="handleUserTouch()">
 
-  <!-- ФОНОВОЕ СВЕЧЕНИЕ -->
-  <div class="ambient-glow" id="ambientGlow"></div>
+  <!-- Фоновый амбиент -->
+  <div class="ambient-glow"></div>
 
-  <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
-  <header class="top-header">
-    <button class="secret-pay-btn" id="paySecretBtn" type="button">
-      <span class="green-dot"></span>
-      <span>Pay</span>
-    </button>
-    <div style="font-size: 12px; font-weight: 700; color: var(--text-muted);">POS System</div>
-  </header>
+  <!-- Верхняя панель -->
+  <div class="display-header">
+    <div class="pay-secret-badge" onclick="event.stopPropagation(); triggerCharacterMode();">
+      <div class="pay-dot"></div>
+      <span style="font-weight: 700; font-size: 15px; letter-spacing: -0.2px;">Pay</span>
+    </div>
+    <div style="font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.4); letter-spacing: 0.5px;">POS System</div>
+  </div>
 
   <!-- 1. ГЛАВНЫЙ ЭКРАН ОЖИДАНИЯ -->
   <div class="view-layer active" id="viewIdle">
-    <h1 class="idle-title">
-      <span class="white-text">Платите</span>
-      <span class="white-text">как вам</span>
-      <span class="green-text">удобно <span class="green-check-icon">✓</span></span>
-    </h1>
+    <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <div style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: #ffffff;">Платите</div>
+      <div style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: #ffffff;">как вам</div>
+      <div style="display: flex; align-items: center; gap: 14px; margin-top: 4px;">
+        <span style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: var(--char-green); text-shadow: 0 0 30px rgba(0,255,102,0.4);">удобно</span>
+        <div style="width: 48px; height: 48px; background: var(--char-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(0,255,102,0.6);">
+          <svg style="width: 26px; height: 26px; stroke: #000; stroke-width: 3.5; fill: none;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- 2. ЭКРАН ПЕРСОНАЖА -->
+  <!-- 2. РЕЖИМ ПЕРСОНАЖА (ТЕМНЫЙ ФОН + НЕОНОВЫЕ ГЛАЗКИ) -->
   <div class="view-layer" id="viewCharacter">
-    <div class="character-stage" id="characterStage">
-      <div class="eyes-box" id="eyesBox">
-        <div class="eye-pill"></div>
-        <div class="eye-pill"></div>
+    <div class="character-container">
+      <div class="eyes-row" id="eyesRow">
+        <div class="neon-eye" id="leftEye"></div>
+        <div class="neon-eye" id="rightEye"></div>
       </div>
-      <div class="speech-text" id="speechText">
-        — Привет! Я очень рад вас видеть!
-      </div>
-    </div>
-  </div>
-
-  <!-- 3. ЭКРАН ОПЛАТЫ ПО QR -->
-  <div class="view-layer" id="viewPay">
-    <div class="pay-card-container">
-      <div style="text-align: center;">
-        <div style="font-size: 14px; color: var(--text-muted); font-weight: 700;">Сумма к оплате</div>
-        <div class="pay-amount-num" id="payAmountDisplay">0 ₽</div>
-      </div>
-
-      <div class="qr-card-glass">
-        <div style="font-size: 16px; font-weight: 800; color: #fff;">Оплатить по QR-коду</div>
-        <div class="qr-white-bg">
-          <img id="qrImage" src="" alt="QR-код">
-        </div>
-        <div style="font-size: 12px; color: var(--char-green); font-weight: 700;">
-          ● Отсканируйте приложением банка
-        </div>
+      <div class="speech-box" id="speechBox">
+        <div class="speech-text" id="speechText">Привет! Выбирай любой удобный способ оплаты</div>
       </div>
     </div>
   </div>
 
-  <!-- 4. СВЯЗЬ С СЕРВЕРОМ -->
-  <div class="view-layer" id="viewProcessing">
-    <div class="spinner-circle"></div>
-    <div style="font-size: 20px; font-weight: 800; color: #fff;">Связь с сервером...</div>
+  <!-- 3. ЭКРАН СЧЕТА (ОПЛАТА) -->
+  <div class="view-layer" id="viewInvoice">
+    <div class="invoice-card">
+      <div style="font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">Сумма к оплате</div>
+      <div style="font-size: 52px; font-weight: 900; color: #fff; margin: 12px 0 24px 0; letter-spacing: -1px;" id="invoiceAmount">0 ₽</div>
+      <div style="background: #ffffff; padding: 18px; border-radius: 20px; display: inline-block; margin-bottom: 20px;">
+        <div id="qrCodeContainer" style="width: 180px; height: 180px; background: #111; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #666; font-size: 13px; font-weight: 500;">QR-код</div>
+      </div>
+      <div style="font-size: 15px; color: rgba(255,255,255,0.7); font-weight: 500;">Наведите камеру телефона для оплаты</div>
+    </div>
   </div>
 
-  <!-- 5. ОПЛАЧЕНО (АНИМАЦИЯ ИЗ ВИДЕО) -->
+  <!-- 4. ЭКРАН УСПЕШНОЙ ОПЛАТЫ -->
   <div class="view-layer" id="viewSuccess">
-    <div class="success-stage">
-      <div class="pay-anim-canvas" id="animCanvas">
-        <svg class="anim-svg-element" viewBox="0 0 200 200">
-          <!-- 1. Спиральный вжух след -->
-          <path class="spiral-swirl" d="M 100,100 m -60,0 a 60,60 0 1,0 120,0 a 60,60 0 1,0 -120,0 A 45,45 0 1,0 145,100" />
-          <!-- 2. Зеленая дуга-улыбка -->
-          <path class="smile-arc" d="M 35,95 Q 100,165 165,95" />
-          <!-- 3. Зеленая галочка успеха -->
-          <path class="checkmark-path" d="M 42,102 L 84,144 L 162,62" />
+    <div class="success-stage" id="successStageContainer">
+      <div class="pay-anim-canvas">
+        <svg class="anim-svg-element" viewBox="0 0 120 120">
+          <defs>
+            <filter id="successGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <circle cx="60" cy="60" r="54" class="success-circle" filter="url(#successGlow)" />
+          <path d="M 36,62 L 52,78 L 84,44" class="success-check" filter="url(#successGlow)" />
         </svg>
       </div>
-      <div class="success-text-box" id="successTextBox">
-        <div style="font-size: 44px; font-weight: 900; color: #fff;" id="successAmountDisplay">0 ₽</div>
-        <div style="font-size: 22px; font-weight: 800; color: var(--char-green); margin-top: 4px;">Оплачено</div>
+      <div class="anim-text-box" id="successTextBox">
+        <div style="font-size: 44px; font-weight: 900; color: #fff; letter-spacing: -1px;" id="successAmountDisplay">0 ₽</div>
+        <div style="font-size: 20px; font-weight: 800; color: var(--char-green); margin-top: 6px; letter-spacing: 0.5px;">Успешно оплачено</div>
       </div>
     </div>
   </div>
 
-  <!-- НИЖНИЙ ПОДВАЛ -->
-  <footer class="bottom-footer">
-    <span id="terminalNumberLabel">Терминал №3815</span>
-  </footer>
+  <!-- 5. ЭКРАН ОШИБКИ / НЕХВАТКИ СРЕДСТВ -->
+  <div class="view-layer" id="viewError">
+    <div class="success-stage" id="errorStageContainer">
+      <div class="pay-anim-canvas">
+        <svg class="anim-svg-element" viewBox="0 0 120 120">
+          <defs>
+            <filter id="errorGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <circle cx="60" cy="60" r="54" class="error-circle" filter="url(#errorGlow)" />
+          <path d="M 42,42 L 78,78 M 78,42 L 42,78" class="error-cross" filter="url(#errorGlow)" />
+        </svg>
+      </div>
+      <div class="anim-text-box" id="errorTextBox">
+        <div style="font-size: 34px; font-weight: 900; color: #fff; letter-spacing: -0.5px;" id="errorTitleDisplay">Ошибка оплаты</div>
+        <div style="font-size: 19px; font-weight: 800; color: var(--char-pink); margin-top: 6px;" id="errorSubDisplay">Недостаточно средств</div>
+      </div>
+    </div>
+  </div>
 
-  <!-- БЛОКИРОВКА -->
-  <div class="block-modal" id="blockedOverlay">
-    <div style="font-size: 40px;">🔒</div>
-    <h2 style="font-size: 20px; font-weight: 800; color: #fff;">Дисплей заблокирован</h2>
+  <!-- Подвал -->
+  <div style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 13px; color: rgba(255,255,255,0.25); font-weight: 600; z-index: 5;">
+    Терминал №3815
   </div>
 
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const socket = io();
-      
-      let displayId = localStorage.getItem('pos_display_id');
-      if (!displayId) {
-        displayId = 'disp_' + Math.random().toString(36).substring(2, 7);
-        localStorage.setItem('pos_display_id', displayId);
-      }
-      
-      const terminalNum = displayId.replace(/\D/g, '').substring(0, 4) || '3815';
-      const termLabel = document.getElementById('terminalNumberLabel');
-      if (termLabel) termLabel.textContent = `Терминал №${terminalNum}`;
+    const socket = io();
 
-      const REPLICAS = [
-        { text: "— Привет! Я очень рад вас видеть!", emotion: "happy" },
-        { text: "— Оплату по QR-коду можно провести с мобильного приложения!", emotion: "wink" },
-        { text: "— Вы можете оплатить любую покупку быстро и без комиссии!", emotion: "happy" },
-        { text: "— Наведите камеру телефона на QR-код для моментальной оплаты!", emotion: "blue" },
-        { text: "— Хорошего дня и замечательных покупок!", emotion: "happy" },
-        { text: "— Платить по QR — это удобно, технологично и безопасно!", emotion: "purple" },
-        { text: "— Спасибо, что вы с нами!", emotion: "heart" }
-      ];
+    // Полная база из 60 уникальных реплик
+    const REPLICAS = [
+      { text: "Добро пожаловать! Выбирай любой удобный способ оплаты", emotion: "normal" },
+      { text: "QR-код на экране — это быстро и безопасно!", emotion: "smile" },
+      { text: "Приложите телефон или карту к терминалу", emotion: "normal" },
+      { text: "Быстрая оплата за пару секунд без лишних ожиданий", emotion: "wink" },
+      { text: "Мы принимаем любые бесконтактные карты", emotion: "smile" },
+      { text: "Оплачивайте смартфоном через СБП или QR", emotion: "normal" },
+      { text: "Отличный выбор! Переходим к оплате заказа", emotion: "heart" },
+      { text: "Спасибо, что вы с нами сегодня!", emotion: "smile" },
+      { text: "Безопасность каждого платежа гарантирована банком", emotion: "normal" },
+      { text: "Улыбнитесь! Ваш заказ уже почти готов", emotion: "wink" },
+      { text: "Нужен чек? Его можно получить на телефон", emotion: "normal" },
+      { text: "Быстро, удобно и прямо здесь", emotion: "smile" },
+      { text: "Прикладывайте карту или сканируйте код выше", emotion: "normal" },
+      { text: "Мы ценим ваше время и комфорт", emotion: "heart" },
+      { text: "Секунда — и оплата прошла успешно!", emotion: "wink" },
+      { text: "Пользуйтесь оплатой по QR-коду со скидками", emotion: "smile" },
+      { text: "Если возникнут вопросы, наш кассир всегда поможет", emotion: "normal" },
+      { text: "Желаем вам прекрасного и продуктивного дня!", emotion: "heart" },
+      { text: "Все платежи защищены современными протоколами", emotion: "normal" },
+      { text: "Готовы принять ваш платеж в любое время", emotion: "wink" },
+      { text: "Просто наведите камеру вашего смартфона на экран", emotion: "smile" },
+      { text: "Надежная и мгновенная кассовая система", emotion: "normal" },
+      { text: "Рады обслуживать вас на высшем уровне", emotion: "heart" },
+      { text: "Оплата прошла — можно забирать заказ!", emotion: "wink" },
+      { text: "Электронные чеки экономят бумагу и заботятся о природе", emotion: "normal" },
+      { text: "Комфортная покупка начинается здесь", emotion: "smile" },
+      { text: "Быстрое сканирование и моментальное зачисление", emotion: "normal" },
+      { text: "Спасибо за доверие к нашему сервису!", emotion: "heart" },
+      { text: "Ваш любимый способ оплаты всегда под рукой", emotion: "wink" },
+      { text: "Приятного аппетита и отличного настроения!", emotion: "smile" },
+      { text: "Современные технологии для вашего удобства", emotion: "normal" },
+      { text: "Бесконтактно, безопасно и очень быстро", emotion: "wink" },
+      { text: "Каждый платеж обрабатывается за доли секунды", emotion: "normal" },
+      { text: "Мы работаем для того, чтобы вам было удобно", emotion: "heart" },
+      { text: "Выбирайте привычный банк для перевода", emotion: "smile" },
+      { text: "Надежная защита ваших финансовых данных", emotion: "normal" },
+      { text: "Мгновенное подтверждение от кассы", emotion: "wink" },
+      { text: "Прекрасный выбор товаров сегодня!", emotion: "heart" },
+      { text: "Всегда рады видеть вас снова", emotion: "smile" },
+      { text: "Оплачивайте в одно касание", emotion: "normal" },
+      { text: "Удобный расчет без очередей и задержек", emotion: "wink" },
+      { text: "Простота и скорость в каждом заказе", emotion: "normal" },
+      { text: "Благодарим за покупку!", emotion: "heart" },
+      { text: "Технологии будущего на нашем терминале", emotion: "smile" },
+      { text: "Быстрые переводы через систему быстрых платежей", emotion: "normal" },
+      { text: "Комфорт превыше всего", emotion: "wink" },
+      { text: "Ваш платеж в надежных руках", emotion: "normal" },
+      { text: "Отличного дня и удачных покупок!", emotion: "heart" },
+      { text: "Мы делаем сервис лучше для вас каждый день", emotion: "smile" },
+      { text: "Простая оплата в один клик", emotion: "normal" },
+      { text: "Безупречная скорость работы терминала", emotion: "wink" },
+      { text: "Спасибо за отличное настроение", emotion: "heart" },
+      { text: "Безопасный расчет за заказы", emotion: "normal" },
+      { text: "Удобно и понятно с первого взгляда", emotion: "smile" },
+      { text: "Молниеносный отклик кассы", emotion: "wink" },
+      { text: "Рады стараться для каждого клиента", emotion: "heart" },
+      { text: "Проведите оплату любым привычным способом", emotion: "normal" },
+      { text: "Быстрый расчет без лишних хлопот", emotion: "smile" },
+      { text: "Спасибо, что выбрали именно нас!", emotion: "heart" }
+    ];
 
-      let currentView = 'viewIdle';
-      let idleTimer = null;
-      let characterLoopTimeout = null;
-      let hasActiveInvoice = false;
-      let replicaIndex = 0;
+    let idleTimer = null;
+    let replicaInterval = null;
+    let hasActiveInvoice = false;
+    let isCharacterActive = false;
+    let lastReplicaIndex = -1;
 
-      function switchView(targetViewId) {
-        currentView = targetViewId;
-        document.querySelectorAll('.view-layer').forEach(layer => {
-          layer.classList.remove('active');
-        });
+    const IDLE_TIMEOUT = 15000; // 15 секунд
 
-        const activeLayer = document.getElementById(targetViewId);
-        if (activeLayer) {
-          activeLayer.classList.add('active');
-        }
+    function switchView(viewId) {
+      document.querySelectorAll('.view-layer').forEach(el => el.classList.remove('active'));
+      const target = document.getElementById(viewId);
+      if (target) target.classList.add('active');
+    }
 
-        const glow = document.getElementById('ambientGlow');
-        if (targetViewId === 'viewCharacter' || targetViewId === 'viewSuccess') {
-          glow.style.background = 'radial-gradient(circle, rgba(56, 239, 125, 0.5) 0%, rgba(16, 185, 129, 0.2) 60%, transparent 100%)';
-        } else {
-          glow.style.background = 'radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(56, 239, 125, 0.12) 40%, transparent 70%)';
-        }
-      }
+    function resetIdleTimer() {
+      if (hasActiveInvoice) return;
+      clearTimeout(idleTimer);
+      stopCharacterMode();
 
-      function resetIdleTimer() {
-        clearTimeout(idleTimer);
-        if (hasActiveInvoice) return;
-
-        idleTimer = setTimeout(() => {
+      idleTimer = setTimeout(() => {
+        if (!hasActiveInvoice) {
           startCharacterMode();
-        }, 15000);
-      }
-
-      function startCharacterMode() {
-        clearTimeout(idleTimer);
-        switchView('viewCharacter');
-        runCharacterCycle();
-      }
-
-      function stopCharacterMode() {
-        clearTimeout(characterLoopTimeout);
-        const textEl = document.getElementById('speechText');
-        if (textEl) textEl.classList.remove('visible');
-      }
-
-      function exitCharacterMode() {
-        if (currentView === 'viewCharacter') {
-          stopCharacterMode();
-          switchView('viewIdle');
-          resetIdleTimer();
         }
-      }
+      }, IDLE_TIMEOUT);
+    }
 
-      function runCharacterCycle() {
-        if (currentView !== 'viewCharacter') return;
-
-        const currentReplica = REPLICAS[replicaIndex];
-        replicaIndex = (replicaIndex + 1) % REPLICAS.length;
-
-        const eyesBox = document.getElementById('eyesBox');
-        const speechText = document.getElementById('speechText');
-
-        speechText.classList.remove('visible');
-
-        setTimeout(() => {
-          eyesBox.className = 'eyes-box ' + currentReplica.emotion;
-
-          setTimeout(() => {
-            eyesBox.classList.add('blinking');
-            setTimeout(() => eyesBox.classList.remove('blinking'), 160);
-          }, 150);
-
-          setTimeout(() => {
-            speechText.textContent = currentReplica.text;
-            speechText.classList.add('visible');
-          }, 350);
-
-        }, 250);
-
-        characterLoopTimeout = setTimeout(() => {
-          runCharacterCycle();
-        }, 4500);
-      }
-
-      // ТАКТОВАЯ СЕКУНДНАЯ АНИМАЦИЯ УСПЕХА
-      function playExactVideoSuccessAnimation() {
-        const animCanvas = document.getElementById('animCanvas');
-        const textBox = document.getElementById('successTextBox');
-
-        animCanvas.className = 'pay-anim-canvas';
-        textBox.classList.remove('show');
-
-        // 1. Кадр: Вжух-спираль (0.0s - 0.75s)
-        setTimeout(() => {
-          animCanvas.className = 'pay-anim-canvas stage-swirl';
-        }, 50);
-
-        // 2. Кадр: Трансформация в дугу-улыбку (0.75s - 1.25s)
-        setTimeout(() => {
-          animCanvas.className = 'pay-anim-canvas stage-smile';
-        }, 800);
-
-        // 3. Кадр: Галочка и появление суммы (1.3s+)
-        setTimeout(() => {
-          animCanvas.className = 'pay-anim-canvas stage-check';
-          textBox.classList.add('show');
-        }, 1350);
-      }
-
-      // СЕКРЕТНАЯ КНОПКА "Pay"
-      const secretBtn = document.getElementById('paySecretBtn');
-      if (secretBtn) {
-        secretBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (hasActiveInvoice) return;
-
-          if (currentView === 'viewCharacter') {
-            exitCharacterMode();
-          } else {
-            startCharacterMode();
-          }
-        });
-      }
-
-      // КЛИК ПО ЭКРАНУ ПЕРСОНАЖА ДЛЯ ВЫХОДА
-      const charLayer = document.getElementById('viewCharacter');
-      if (charLayer) {
-        charLayer.addEventListener('click', () => {
-          exitCharacterMode();
-        });
-      }
-
-      // ОТСЛЕЖИВАНИЕ ДЕЙСТВИЙ ДЛЯ СБРОСА ТАЙМЕРА 15 СЕК
-      ['click', 'touchstart', 'mousemove'].forEach(evt => {
-        window.addEventListener(evt, () => {
-          if (currentView === 'viewIdle') {
-            resetIdleTimer();
-          }
-        }, { passive: true });
-      });
-
-      // SOCKET.IO СОБЫТИЯ
-      socket.on('connect', () => {
-        socket.emit('register_display', { id: displayId, name: `Дисплей №${terminalNum}` });
-      });
-
-      socket.on('show_qr', (data) => {
-        hasActiveInvoice = true;
+    function handleUserTouch() {
+      if (hasActiveInvoice) return;
+      if (isCharacterActive) {
         stopCharacterMode();
-        clearTimeout(idleTimer);
+      }
+      resetIdleTimer();
+    }
 
-        document.getElementById('payAmountDisplay').textContent = data.amount.toLocaleString('ru-RU') + ' ₽';
-        document.getElementById('qrImage').src = data.qrCode;
-        switchView('viewPay');
-      });
+    function triggerCharacterMode() {
+      if (hasActiveInvoice) return;
+      clearTimeout(idleTimer);
+      startCharacterMode();
+    }
 
-      socket.on('processing_payment', () => {
-        switchView('viewProcessing');
-      });
+    function startCharacterMode() {
+      isCharacterActive = true;
+      switchView('viewCharacter');
+      showNextRandomReplica();
 
-      socket.on('payment_success', (data) => {
-        hasActiveInvoice = false;
-        const amount = data.transaction ? data.transaction.amount : 0;
-        document.getElementById('successAmountDisplay').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+      clearInterval(replicaInterval);
+      replicaInterval = setInterval(() => {
+        if (isCharacterActive && !hasActiveInvoice) {
+          showNextRandomReplica();
+        }
+      }, 6000);
+    }
 
-        switchView('viewSuccess');
-        playExactVideoSuccessAnimation();
+    function stopCharacterMode() {
+      isCharacterActive = false;
+      clearInterval(replicaInterval);
+      document.getElementById('speechBox').classList.remove('show');
+      if (!hasActiveInvoice) {
+        switchView('viewIdle');
+      }
+    }
 
+    function showNextRandomReplica() {
+      let randomIndex;
+      do {
+        randomIndex = Math.floor(Math.random() * REPLICAS.length);
+      } while (randomIndex === lastReplicaIndex && REPLICAS.length > 1);
+      lastReplicaIndex = randomIndex;
+
+      const item = REPLICAS[randomIndex];
+      const speechBox = document.getElementById('speechBox');
+      const speechText = document.getElementById('speechText');
+      const leftEye = document.getElementById('leftEye');
+      const rightEye = document.getElementById('rightEye');
+
+      speechBox.classList.remove('show');
+
+      setTimeout(() => {
+        applyEmotion(item.emotion, leftEye, rightEye);
         setTimeout(() => {
-          switchView('viewIdle');
-          resetIdleTimer();
-        }, 5500);
-      });
+          speechText.textContent = item.text;
+          speechBox.classList.add('show');
+        }, 400);
+      }, 300);
+    }
 
-      socket.on('transaction_cancelled', () => {
-        hasActiveInvoice = false;
+    function applyEmotion(emotion, leftEye, rightEye) {
+      leftEye.className = 'neon-eye';
+      rightEye.className = 'neon-eye';
+      leftEye.innerHTML = '';
+      rightEye.innerHTML = '';
+
+      if (emotion === 'smile') {
+        leftEye.classList.add('pink-glow');
+        rightEye.classList.add('pink-glow');
+      } else if (emotion === 'wink') {
+        rightEye.classList.add('wink');
+      } else if (emotion === 'heart') {
+        leftEye.classList.add('heart');
+        rightEye.classList.add('heart');
+        const heartSvg = '<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+        leftEye.innerHTML = heartSvg;
+        rightEye.innerHTML = heartSvg;
+      }
+    }
+
+    // --- СОБЫТИЯ ОПЛАТЫ SOCKET.IO ---
+    socket.on('new_invoice', (data) => {
+      hasActiveInvoice = true;
+      isCharacterActive = false;
+      clearTimeout(idleTimer);
+      clearInterval(replicaInterval);
+
+      const amount = data && data.amount ? data.amount : 0;
+      document.getElementById('invoiceAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+      switchView('viewInvoice');
+    });
+
+    socket.on('payment_success', (data) => {
+      hasActiveInvoice = false;
+      const amount = data && data.transaction && data.transaction.amount ? data.transaction.amount : 0;
+      document.getElementById('successAmountDisplay').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+
+      const stageContainer = document.getElementById('successStageContainer');
+      const textBox = document.getElementById('successTextBox');
+      
+      stageContainer.classList.remove('play-success');
+      textBox.classList.remove('show');
+      switchView('viewSuccess');
+
+      setTimeout(() => {
+        stageContainer.classList.add('play-success');
+        textBox.classList.add('show');
+      }, 50);
+
+      setTimeout(() => {
+        stageContainer.classList.remove('play-success');
+        textBox.classList.remove('show');
         switchView('viewIdle');
         resetIdleTimer();
-      });
+      }, 5500);
+    });
 
-      socket.on('display_block_status', (data) => {
-        const modal = document.getElementById('blockedOverlay');
-        if (modal) {
-          if (data.isBlocked) {
-            modal.classList.add('active');
-          } else {
-            modal.classList.remove('active');
-          }
-        }
-      });
+    socket.on('payment_error', (data) => {
+      hasActiveInvoice = false;
+      const errTitle = data && data.title ? data.title : 'Ошибка оплаты';
+      const errSub = data && data.message ? data.message : 'Недостаточно средств';
 
-      // ИНИЦИАЛИЗАЦИЯ
+      document.getElementById('errorTitleDisplay').textContent = errTitle;
+      document.getElementById('errorSubDisplay').textContent = errSub;
+
+      const errorStage = document.getElementById('errorStageContainer');
+      const errorText = document.getElementById('errorTextBox');
+
+      errorStage.classList.remove('play-error');
+      errorText.classList.remove('show');
+      switchView('viewError');
+
+      setTimeout(() => {
+        errorStage.classList.add('play-error');
+        errorText.classList.add('show');
+      }, 50);
+
+      setTimeout(() => {
+        errorStage.classList.remove('play-error');
+        errorText.classList.remove('show');
+        switchView('viewIdle');
+        resetIdleTimer();
+      }, 5000);
+    });
+
+    socket.on('transaction_cancelled', () => {
+      hasActiveInvoice = false;
+      switchView('viewIdle');
       resetIdleTimer();
     });
+
+    window.onload = function() {
+      resetIdleTimer();
+    };
   </script>
 </body>
 </html>
