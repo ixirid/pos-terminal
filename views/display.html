@@ -246,7 +246,7 @@
       line-height: 1;
     }
 
-    /* Подмигивание: аккуратная горизонтальная полоска вместо сжатого глаза */
+    /* Подмигивание */
     .eyes-box.wink .eye-pill:last-child {
       height: 12px;
       border-radius: 12px;
@@ -346,56 +346,111 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* --- 5. ЭКРАН УСПЕХА --- */
-    .success-icon-box {
-      width: 130px;
-      height: 130px;
+    /* --- 5. ЭКРАН УСПЕХА С ИЗОБРАЖЕНИЕМ ИЗ ВИДЕО --- */
+    .success-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
       position: relative;
-      margin-bottom: 20px;
+    }
+
+    /* ВЖУХ ТРАЕКТОРИЯ И ДУГА ОПЛАТЫ */
+    .pay-anim-canvas {
+      width: 220px;
+      height: 220px;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .success-circle-svg {
-      position: absolute;
+    .anim-svg-element {
       width: 100%;
       height: 100%;
-      transform: rotate(-90deg);
+      position: absolute;
+      inset: 0;
     }
 
-    .success-circle-svg circle {
-      fill: none;
-      stroke-width: 6;
-      stroke-linecap: round;
-    }
-
-    .success-circle-svg .circle-bg { stroke: rgba(56, 239, 125, 0.15); }
-    .success-circle-svg .circle-main {
+    .spiral-swirl {
       stroke: var(--char-green);
-      stroke-dasharray: 440;
-      stroke-dashoffset: 440;
-      filter: drop-shadow(0 0 12px var(--char-green));
+      stroke-width: 12;
+      stroke-linecap: round;
+      fill: none;
+      stroke-dasharray: 600;
+      stroke-dashoffset: 600;
+      filter: drop-shadow(0 0 16px var(--char-green-glow));
     }
 
-    .check-mark-svg {
-      width: 48px;
-      height: 48px;
-      stroke: #ffffff;
-      stroke-width: 5;
+    .smile-arc {
+      stroke: var(--char-green);
+      stroke-width: 18;
+      stroke-linecap: round;
+      fill: none;
+      stroke-dasharray: 200;
+      stroke-dashoffset: 200;
+      filter: drop-shadow(0 0 20px var(--char-green-glow));
+      opacity: 0;
+    }
+
+    .checkmark-path {
+      stroke: var(--char-green);
+      stroke-width: 16;
       stroke-linecap: round;
       stroke-linejoin: round;
       fill: none;
-      stroke-dasharray: 100;
-      stroke-dashoffset: 100;
-      z-index: 2;
+      stroke-dasharray: 180;
+      stroke-dashoffset: 180;
+      filter: drop-shadow(0 0 24px var(--char-green-glow));
+      opacity: 0;
     }
 
-    .animate-circle { animation: drawCircle 0.8s forwards; }
-    .animate-check { animation: drawCheck 0.5s 0.5s forwards; }
+    /* Классы управления кадр за кадром (секунда в секунду по видео) */
+    .stage-swirl .spiral-swirl {
+      animation: swirlRun 0.75s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
 
-    @keyframes drawCircle { to { stroke-dashoffset: 0; } }
-    @keyframes drawCheck { to { stroke-dashoffset: 0; } }
+    .stage-smile .spiral-swirl { opacity: 0; }
+    .stage-smile .smile-arc {
+      opacity: 1;
+      animation: smileAppear 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.28) forwards;
+    }
+
+    .stage-check .smile-arc { opacity: 0; }
+    .stage-check .checkmark-path {
+      opacity: 1;
+      animation: checkmarkDraw 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes swirlRun {
+      0% { stroke-dashoffset: 600; transform: rotate(0deg) scale(0.6); opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { stroke-dashoffset: 0; transform: rotate(360deg) scale(1); opacity: 1; }
+    }
+
+    @keyframes smileAppear {
+      0% { stroke-dashoffset: 200; transform: translateY(10px) scale(0.8); }
+      100% { stroke-dashoffset: 0; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes checkmarkDraw {
+      0% { stroke-dashoffset: 180; transform: scale(0.7) rotate(-10deg); }
+      60% { transform: scale(1.15) rotate(4deg); }
+      100% { stroke-dashoffset: 0; transform: scale(1) rotate(0deg); }
+    }
+
+    .success-text-box {
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .success-text-box.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
     /* НИЖНИЙ ПОДВАЛ */
     .bottom-footer {
@@ -489,19 +544,24 @@
     <div style="font-size: 20px; font-weight: 800; color: #fff;">Связь с сервером...</div>
   </div>
 
-  <!-- 5. ОПЛАЧЕНО -->
+  <!-- 5. ОПЛАЧЕНО (АНИМАЦИЯ ИЗ ВИДЕО) -->
   <div class="view-layer" id="viewSuccess">
-    <div class="success-icon-box">
-      <svg class="success-circle-svg" viewBox="0 0 150 150">
-        <circle class="circle-bg" cx="75" cy="75" r="66"></circle>
-        <circle class="circle-main" id="successCircle" cx="75" cy="75" r="66"></circle>
-      </svg>
-      <svg class="check-mark-svg" id="successCheck" viewBox="0 0 24 24">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
+    <div class="success-stage">
+      <div class="pay-anim-canvas" id="animCanvas">
+        <svg class="anim-svg-element" viewBox="0 0 200 200">
+          <!-- 1. Спиральный вжух след -->
+          <path class="spiral-swirl" d="M 100,100 m -60,0 a 60,60 0 1,0 120,0 a 60,60 0 1,0 -120,0 A 45,45 0 1,0 145,100" />
+          <!-- 2. Зеленая дуга-улыбка -->
+          <path class="smile-arc" d="M 35,95 Q 100,165 165,95" />
+          <!-- 3. Зеленая галочка успеха -->
+          <path class="checkmark-path" d="M 42,102 L 84,144 L 162,62" />
+        </svg>
+      </div>
+      <div class="success-text-box" id="successTextBox">
+        <div style="font-size: 44px; font-weight: 900; color: #fff;" id="successAmountDisplay">0 ₽</div>
+        <div style="font-size: 22px; font-weight: 800; color: var(--char-green); margin-top: 4px;">Оплачено</div>
+      </div>
     </div>
-    <div style="font-size: 44px; font-weight: 900; color: #fff;" id="successAmountDisplay">0 ₽</div>
-    <div style="font-size: 22px; font-weight: 800; color: var(--char-green); margin-top: 4px;">Оплачено</div>
   </div>
 
   <!-- НИЖНИЙ ПОДВАЛ -->
@@ -557,8 +617,8 @@
         }
 
         const glow = document.getElementById('ambientGlow');
-        if (targetViewId === 'viewCharacter') {
-          glow.style.background = 'radial-gradient(circle, rgba(56, 239, 125, 0.5) 0%, rgba(181, 23, 158, 0.3) 60%, transparent 100%)';
+        if (targetViewId === 'viewCharacter' || targetViewId === 'viewSuccess') {
+          glow.style.background = 'radial-gradient(circle, rgba(56, 239, 125, 0.5) 0%, rgba(16, 185, 129, 0.2) 60%, transparent 100%)';
         } else {
           glow.style.background = 'radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(56, 239, 125, 0.12) 40%, transparent 70%)';
         }
@@ -624,6 +684,31 @@
         }, 4500);
       }
 
+      // ТАКТОВАЯ СЕКУНДНАЯ АНИМАЦИЯ УСПЕХА
+      function playExactVideoSuccessAnimation() {
+        const animCanvas = document.getElementById('animCanvas');
+        const textBox = document.getElementById('successTextBox');
+
+        animCanvas.className = 'pay-anim-canvas';
+        textBox.classList.remove('show');
+
+        // 1. Кадр: Вжух-спираль (0.0s - 0.75s)
+        setTimeout(() => {
+          animCanvas.className = 'pay-anim-canvas stage-swirl';
+        }, 50);
+
+        // 2. Кадр: Трансформация в дугу-улыбку (0.75s - 1.25s)
+        setTimeout(() => {
+          animCanvas.className = 'pay-anim-canvas stage-smile';
+        }, 800);
+
+        // 3. Кадр: Галочка и появление суммы (1.3s+)
+        setTimeout(() => {
+          animCanvas.className = 'pay-anim-canvas stage-check';
+          textBox.classList.add('show');
+        }, 1350);
+      }
+
       // СЕКРЕТНАЯ КНОПКА "Pay"
       const secretBtn = document.getElementById('paySecretBtn');
       if (secretBtn) {
@@ -681,22 +766,12 @@
         document.getElementById('successAmountDisplay').textContent = amount.toLocaleString('ru-RU') + ' ₽';
 
         switchView('viewSuccess');
-
-        const circle = document.getElementById('successCircle');
-        const check = document.getElementById('successCheck');
-        
-        if (circle && check) {
-          circle.classList.remove('animate-circle');
-          check.classList.remove('animate-check');
-          void circle.offsetWidth;
-          circle.classList.add('animate-circle');
-          check.classList.add('animate-check');
-        }
+        playExactVideoSuccessAnimation();
 
         setTimeout(() => {
           switchView('viewIdle');
           resetIdleTimer();
-        }, 4500);
+        }, 5500);
       });
 
       socket.on('transaction_cancelled', () => {
