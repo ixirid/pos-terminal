@@ -10,12 +10,10 @@
 --primary: #10b981;
 --primary-glow: rgba(16, 185, 129, 0.55);
 --bg-base: #05080e;
---surface-glass: rgba(255, 255, 255, 0.05);
---surface-card: rgba(15, 23, 42, 0.78);
 --border-glass: rgba(255, 255, 255, 0.14);
 --text-main: #ffffff;
 --text-muted: #9ca3af;
-/* Сочные, яркие неновые цвета глазок */
+/* Сочные неоновые цвета */
 --character-color: #38ef7d;
 --character-glow: rgba(56, 239, 125, 0.95);
 --character-heart-color: #ff2a85;
@@ -35,9 +33,6 @@ user-select: none;
 }
 body {
 background-color: var(--bg-base);
-background-image:
-radial-gradient(circle at 50% 15%, rgba(16, 185, 129, 0.22) 0%, transparent 65%),
-radial-gradient(circle at 50% 85%, rgba(15, 23, 42, 0.8) 0%, var(--bg-base) 80%);
 color: var(--text-main);
 height: 100vh;
 height: 100dvh;
@@ -51,51 +46,68 @@ position: relative;
 cursor: pointer;
 transition: background-color 1.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-/* Фоновый динамический неоновый блеск */
+/* ФОНОВЫЙ ПЕРЕЛИВАЮЩИЙСЯ НЕОНОВЫЙ ГРАДИЕНТ */
 .bg-glow {
 position: absolute;
-width: 550px;
-height: 550px;
-background: var(--primary-glow);
-filter: blur(140px);
+width: 650px;
+height: 650px;
+background: radial-gradient(circle, rgba(16, 185, 129, 0.45) 0%, rgba(56, 239, 125, 0.2) 45%, transparent 70%);
+filter: blur(120px);
 border-radius: 50%;
 pointer-events: none;
-top: 45%;
+top: 50%;
 left: 50%;
 transform: translate(-50%, -50%);
-opacity: 0.35;
+opacity: 0.8;
+animation: ambientGlow 8s ease-in-out infinite alternate;
 transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-/* Шапка с интерактивным Pay значком */
+@keyframes ambientGlow {
+0% {
+transform: translate(-50%, -50%) scale(0.9) rotate(0deg);
+filter: blur(110px);
+}
+50% {
+transform: translate(-48%, -52%) scale(1.1) rotate(180deg);
+filter: blur(140px);
+}
+100% {
+transform: translate(-52%, -48%) scale(1.0) rotate(360deg);
+filter: blur(120px);
+}
+}
+/* ШАПКА */
 .header {
 width: 100%;
 max-width: 460px;
 display: flex;
 justify-content: space-between;
 align-items: center;
-z-index: 50;
+z-index: 100;
 }
+/* КНОПКА PAY ПРЯМОЙ ИНТЕРАКТИВ */
 .pay-badge {
 display: inline-flex;
 align-items: center;
 gap: 8px;
-background: rgba(255, 255, 255, 0.08);
-backdrop-filter: blur(16px);
--webkit-backdrop-filter: blur(16px);
-padding: 8px 18px;
-border-radius: 24px;
-border: 1px solid var(--border-glass);
-font-size: 14px;
+background: rgba(255, 255, 255, 0.12);
+backdrop-filter: blur(20px);
+-webkit-backdrop-filter: blur(20px);
+padding: 10px 22px;
+border-radius: 30px;
+border: 1px solid rgba(255, 255, 255, 0.25);
+font-size: 15px;
 font-weight: 800;
 letter-spacing: -0.2px;
 cursor: pointer;
-box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+transition: all 0.2s ease;
+z-index: 200;
 }
 .pay-badge:active {
 transform: scale(0.92);
-background: rgba(16, 185, 129, 0.25);
-border-color: rgba(16, 185, 129, 0.5);
+background: rgba(56, 239, 125, 0.3);
+border-color: rgba(56, 239, 125, 0.6);
 }
 .pulse-dot {
 width: 9px;
@@ -122,7 +134,7 @@ justify-content: center;
 z-index: 10;
 position: relative;
 }
-/* ПЛАВНЫЕ ПЕРЕХОДЫ МЕЖДУ ЭКРАНАМИ (1.2s cubic-bezier) */
+/* ПЛАВНЫЕ ПЕРЕХОДЫ МЕЖДУ ЭКРАНАМИ */
 .view-layer {
 position: absolute;
 inset: 0;
@@ -132,7 +144,7 @@ align-items: center;
 justify-content: center;
 opacity: 0;
 pointer-events: none;
-transform: scale(0.92) translateY(12px);
+transform: scale(0.94) translateY(12px);
 transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .view-layer.active {
@@ -140,88 +152,41 @@ opacity: 1;
 pointer-events: auto;
 transform: scale(1) translateY(0);
 }
-/* 1. ОБНОВЛЕННЫЙ ЭКРАН ОЖИДАНИЯ (ИЗЫСКАННЫЙ ДИЗАЙН) */
+/* 1. ЛАКОНИЧНЫЙ ЭКРАН ОЖИДАНИЯ (ТОЛЬКО НАДПИСЬ) */
 .view-idle {
 text-align: center;
-gap: 28px;
 width: 100%;
-}
-.idle-hero-card {
-background: linear-gradient(145deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
-border: 1px solid var(--border-glass);
-backdrop-filter: blur(24px);
--webkit-backdrop-filter: blur(24px);
-border-radius: 36px;
-padding: 40px 24px;
 display: flex;
-flex-direction: column;
 align-items: center;
-gap: 20px;
-box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-width: 100%;
-position: relative;
-overflow: hidden;
-}
-.idle-hero-card::before {
-content: '';
-position: absolute;
-top: -50%;
-left: -50%;
-width: 200%;
-height: 200%;
-background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 60%);
-animation: rotateBg 15s linear infinite;
-}
-@keyframes rotateBg {
-0% { transform: rotate(0deg); }
-100% { transform: rotate(360deg); }
+justify-content: center;
 }
 .idle-title {
-font-size: 42px;
+font-size: 48px;
 font-weight: 900;
-line-height: 1.12;
-letter-spacing: -1.2px;
+line-height: 1.15;
+letter-spacing: -1.5px;
 color: #ffffff;
-z-index: 2;
+text-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
 }
 .idle-title .highlight-green {
 color: #38ef7d;
-text-shadow: 0 0 20px rgba(56, 239, 125, 0.6);
+text-shadow: 0 0 25px rgba(56, 239, 125, 0.7);
 display: inline-flex;
 align-items: center;
-gap: 8px;
+gap: 10px;
 }
 .idle-icon-check {
-width: 38px;
-height: 38px;
+width: 42px;
+height: 42px;
 background: linear-gradient(135deg, #38ef7d 0%, #10b981 100%);
 border-radius: 50%;
 display: inline-flex;
 align-items: center;
 justify-content: center;
-box-shadow: 0 0 18px rgba(56, 239, 125, 0.8);
+box-shadow: 0 0 20px rgba(56, 239, 125, 0.8);
 color: #000;
 font-weight: 900;
-font-size: 22px;
-}
-.idle-features {
-display: flex;
-gap: 10px;
-z-index: 2;
-flex-wrap: wrap;
-justify-content: center;
-}
-.idle-chip {
-background: rgba(255, 255, 255, 0.08);
-border: 1px solid rgba(255, 255, 255, 0.15);
-padding: 8px 14px;
-border-radius: 20px;
-font-size: 13px;
-font-weight: 700;
-color: var(--text-muted);
-display: flex;
-align-items: center;
-gap: 6px;
+font-size: 24px;
 }
 /* 2. СОСТОЯНИЕ: ПЕРСОНАЖ */
 .view-character {
@@ -232,7 +197,6 @@ justify-content: center;
 gap: 44px;
 width: 100%;
 }
-/* УВЕЛИЧЕННЫЕ И ЯРКИЕ ГЛАЗА ПЕРСОНАЖА */
 .eyes-container {
 display: flex;
 align-items: center;
@@ -261,7 +225,7 @@ background: rgba(255, 255, 255, 0.85);
 border-radius: 50%;
 filter: blur(0.5px);
 }
-/* Анимационные мимики (Крупные сердечки, ушки, улыбочки) */
+/* Эмоции */
 .eyes-container.blinking .eye-pill {
 transform: scaleY(0.05);
 }
@@ -271,7 +235,6 @@ border-radius: 70px 70px 20px 20px;
 transform: translateY(-8px) scaleY(0.88);
 clip-path: ellipse(100% 75% at 50% 0%);
 }
-/* БОЛЬШИЕ СЕРДЕЧКИ */
 .eyes-container.heart .eye-pill {
 background: var(--character-heart-color);
 box-shadow: 0 0 65px var(--character-heart-glow);
@@ -296,7 +259,6 @@ width: 100px;
 height: 120px;
 border-radius: 50px;
 }
-/* ПОБЛЕСКИВАЮЩИЕ ЗВЕЗДОЧКИ (КАК НА ВИДЕО) */
 .sparkles-layer {
 position: absolute;
 inset: -40px;
@@ -321,9 +283,9 @@ animation: floatSparkle 2s ease-in-out infinite alternate;
 0% { transform: scale(0.6) rotate(0deg); opacity: 0.4; }
 100% { transform: scale(1.2) rotate(45deg); opacity: 1; }
 }
-/* ТЕКСТОВАЯ РЕПЛИКА (СНАЧАЛА ЭМОЦИЯ, ПОТОМ МЯГКО ТЕКСТ) */
+/* РЕПЛИКА ПЕРСОНАЖА */
 .speech-bubble {
-font-size: 23px;
+font-size: 24px;
 font-weight: 800;
 text-align: center;
 color: #ffffff;
@@ -366,7 +328,7 @@ color: #fff;
 text-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
 }
 .qr-card {
-background: var(--surface-card);
+background: rgba(15, 23, 42, 0.78);
 backdrop-filter: blur(24px);
 -webkit-backdrop-filter: blur(24px);
 border: 1px solid var(--border-glass);
@@ -535,10 +497,9 @@ display: flex !important;
 </head>
 <body onclick="handleUserInteraction()" ontouchstart="handleUserInteraction()">
 <div class="bg-glow" id="bgGlow"></div>
-<!-- ШАПКА -->
+<!-- ШАПКА С КНОПКОЙ PAY -->
 <header class="header">
-<!-- СЕКРЕТНАЯ КНОПКА: При клике на Pay мгновенно открывает персонажа -->
-<div class="pay-badge" onclick="triggerSecretCharacter(event)">
+<div class="pay-badge" id="payBtn" onclick="triggerSecretCharacter(event)">
 <span class="pulse-dot"></span>
 <span>Pay</span>
 </div>
@@ -546,9 +507,8 @@ display: flex !important;
 </header>
 <!-- ОСНОВНОЙ ЭКРАН СМЕНЫ СОСТОЯНИЙ -->
 <main class="display-screen">
-<!-- 1. ОБНОВЛЕННЫЙ ИЗЫСКАННЫЙ ЭКРАН ОЖИДАНИЯ -->
+<!-- 1. ЧИСТЫЙ И ЛАКОНИЧНЫЙ ЭКРАН ОЖИДАНИЯ -->
 <div class="view-layer view-idle active" id="viewIdle">
-<div class="idle-hero-card">
 <h1 class="idle-title">
 Платите
 
@@ -556,12 +516,6 @@ display: flex !important;
 
 удобно
 </h1>
-<div class="idle-features">
-<div class="idle-chip">📱 QR-код</div>
-<div class="idle-chip">💳 СберПэй</div>
-<div class="idle-chip">⚡ Мгновенно</div>
-</div>
-</div>
 </div>
 <!-- 2. СОСТОЯНИЕ: ПЕРСОНАЖ -->
 <div class="view-layer view-character" id="viewCharacter">
@@ -635,7 +589,7 @@ localStorage.setItem('pos_display_id', displayId);
 }
 const terminalNum = displayId.replace(/\D/g, '').substring(0, 4) || '3815';
 document.getElementById('terminalNumberLabel').textContent = ⁠Терминал №${terminalNum}⁠;
-// === БАЗА ИЗ 60 МЯГКИХ И ИНТЕРЕСНЫХ РЕПЛИК С ЭМОЦИЯМИ ===
+// === БАЗА РЕПЛИК ПЕРСОНАЖА ===
 const REPLICAS_DATABASE = [
 { text: "— Привет! Я очень рад вас видеть!", emotion: "happy" },
 { text: "— Оплату по QR-коду можно провести с мобильного приложения!", emotion: "wink" },
@@ -702,7 +656,6 @@ let idleTimer = null;
 let currentView = 'viewIdle';
 let hasActiveInvoice = false;
 let usedIndices = [];
-// Функция рандомайзера без повторов
 function getRandomReplica() {
 if (usedIndices.length >= REPLICAS_DATABASE.length) {
 usedIndices = [];
@@ -714,7 +667,6 @@ randIndex = Math.floor(Math.random() * REPLICAS_DATABASE.length);
 usedIndices.push(randIndex);
 return REPLICAS_DATABASE[randIndex];
 }
-// Переключение слоев с МАКСИМАЛЬНО МЯГКИМ ПЕРЕХОДОМ
 function showLayer(layerId) {
 currentView = layerId;
 document.querySelectorAll('.view-layer').forEach(layer => {
@@ -727,23 +679,22 @@ target.classList.add('active');
 const bgGlow = document.getElementById('bgGlow');
 if (layerId === 'viewSuccess') {
 document.body.style.backgroundColor = '#05080e';
-bgGlow.style.opacity = '0.85';
-bgGlow.style.background = 'rgba(56, 239, 125, 0.65)';
+bgGlow.style.opacity = '0.95';
+bgGlow.style.background = 'radial-gradient(circle, rgba(56, 239, 125, 0.7) 0%, transparent 70%)';
 } else if (layerId === 'viewPay') {
 document.body.style.backgroundColor = '#05080e';
 bgGlow.style.opacity = '0.5';
 bgGlow.style.background = 'var(--primary-glow)';
 } else if (layerId === 'viewCharacter') {
 document.body.style.backgroundColor = '#000000';
-bgGlow.style.opacity = '0.75';
-bgGlow.style.background = 'radial-gradient(circle, rgba(56, 239, 125, 0.5) 0%, rgba(181, 23, 158, 0.3) 60%, transparent 100%)';
+bgGlow.style.opacity = '0.85';
+bgGlow.style.background = 'radial-gradient(circle, rgba(56, 239, 125, 0.55) 0%, rgba(181, 23, 158, 0.35) 60%, transparent 100%)';
 } else {
 document.body.style.backgroundColor = '#05080e';
-bgGlow.style.opacity = '0.35';
-bgGlow.style.background = 'var(--primary-glow)';
+bgGlow.style.opacity = '0.8';
+bgGlow.style.background = 'radial-gradient(circle, rgba(16, 185, 129, 0.45) 0%, rgba(56, 239, 125, 0.2) 45%, transparent 70%)';
 }
 }
-// Таймер ожидания (15 секунд)
 function resetIdleTimer() {
 clearTimeout(idleTimer);
 if (hasActiveInvoice) return;
@@ -759,14 +710,14 @@ showLayer('viewIdle');
 }
 resetIdleTimer();
 }
-// СЕКРЕТНАЯ КНОПКА НА PAY ЗНАЧОК
+// НАЖАТИЕ НА КНОПКУ PAY
 function triggerSecretCharacter(event) {
-event.stopPropagation();
+if (event) event.stopPropagation();
 if (hasActiveInvoice) return;
 startCharacterMode();
 }
-// ЗАПУСК И УПРАВЛЕНИЕ ПЕРСОНАЖЕМ
 function startCharacterMode() {
+clearTimeout(idleTimer);
 showLayer('viewCharacter');
 cycleCharacterState();
 }
@@ -775,34 +726,28 @@ clearTimeout(characterLoopTimeout);
 const bubble = document.getElementById('speechBubble');
 bubble.classList.remove('text-visible');
 }
-// МЯГКАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ: СНАЧАЛА ЭМОЦИЯ ГЛАЗ -> ЗАТЕМ МЯГКО ТЕКСТ
 function cycleCharacterState() {
 if (currentView !== 'viewCharacter') return;
 const replica = getRandomReplica();
 const bubble = document.getElementById('speechBubble');
 const eyes = document.getElementById('eyesContainer');
-// 1. Скрываем прошлый текст
 bubble.classList.remove('text-visible');
 setTimeout(() => {
-// 2. Сначала плавно включаем эмоцию на глазках
 eyes.className = 'eyes-container ' + replica.emotion;
-// Моргание глаз для живости
 setTimeout(() => {
 eyes.classList.add('blinking');
 setTimeout(() => eyes.classList.remove('blinking'), 180);
 }, 300);
-// 3. Спустя 700ms плавно проявляем текст
 setTimeout(() => {
 bubble.textContent = replica.text;
 bubble.classList.add('text-visible');
 }, 700);
 }, 500);
-// Задержка между репликами (5.5 секунд для комфортного чтения)
 characterLoopTimeout = setTimeout(() => {
 cycleCharacterState();
 }, 5800);
 }
-// WebSocket связи
+// Socket.io
 socket.on('connect', () => {
 socket.emit('register_display', { id: displayId, name: ⁠Дисплей №${terminalNum}⁠ });
 });
@@ -847,7 +792,6 @@ overlay.classList.add('active');
 overlay.classList.remove('active');
 }
 });
-// Инициализация
 resetIdleTimer();
 </script>
 </body>
