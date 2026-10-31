@@ -1,741 +1,854 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Дисплей Клиента — Оплата</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    :root {
-      --primary: #10b981;
-      --primary-glow: rgba(16, 185, 129, 0.45);
-      --bg-base: #070a10;
-      --surface-glass: rgba(255, 255, 255, 0.05);
-      --surface-card: rgba(17, 24, 39, 0.75);
-      --border-glass: rgba(255, 255, 255, 0.12);
-      --text-main: #ffffff;
-      --text-muted: #9ca3af;
-      --character-color: #bbf7d0;
-      --character-glow: rgba(16, 185, 129, 0.85);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      background-color: var(--bg-base);
-      background-image: 
-        radial-gradient(circle at 50% 10%, rgba(16, 185, 129, 0.15) 0%, transparent 60%),
-        radial-gradient(circle at 50% 90%, rgba(17, 30, 56, 0.5) 0%, var(--bg-base) 80%);
-      color: var(--text-main);
-      height: 100vh;
-      height: 100dvh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      padding: 24px 16px;
-      position: relative;
-      cursor: pointer;
-      transition: background-color 0.8s ease;
-    }
-
-    /* Фоновый динамический блеск */
-    .bg-glow {
-      position: absolute;
-      width: 450px;
-      height: 450px;
-      background: var(--primary-glow);
-      filter: blur(120px);
-      border-radius: 50%;
-      pointer-events: none;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      opacity: 0.3;
-      transition: all 0.8s ease;
-    }
-
-    /* Шапка с индикатором сокета */
-    .header {
-      width: 100%;
-      max-width: 440px;
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      z-index: 10;
-    }
-
-    .pay-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(12px);
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1px solid var(--border-glass);
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: -0.2px;
-    }
-
-    .pulse-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--primary);
-      border-radius: 50%;
-      box-shadow: 0 0 10px var(--primary);
-      animation: pulse 1.8s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(0.9); opacity: 0.7; }
-      50% { transform: scale(1.4); opacity: 1; }
-      100% { transform: scale(0.9); opacity: 0.7; }
-    }
-
-    /* ОСНОВНОЙ КОНТЕЙНЕР СОСТОЯНИЙ */
-    .display-screen {
-      width: 100%;
-      max-width: 440px;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      position: relative;
-    }
-
-    /* ОБЩИЕ СТИЛИ ДЛЯ ПЛАВНОГО ПЕРЕКЛЮЧЕНИЯ СЛОЕВ */
-    .view-layer {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transform: scale(0.95);
-      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .view-layer.active {
-      opacity: 1;
-      pointer-events: auto;
-      transform: scale(1);
-    }
-
-    /* 1. СОСТОЯНИЕ: ОЖИДАНИЕ (IDLE) */
-    .view-idle {
-      text-align: center;
-      gap: 16px;
-    }
-
-    .idle-title {
-      font-size: 38px;
-      font-weight: 900;
-      line-height: 1.1;
-      letter-spacing: -1px;
-      color: #ffffff;
-    }
-
-    .idle-title span {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .idle-title .icon-check {
-      display: inline-block;
-      width: 32px;
-      height: 32px;
-      background: var(--primary);
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center / contain;
-      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center / contain;
-    }
-
-    /* 2. СОСТОЯНИЕ: ПЕРСОНАЖ С РЕПЛИКАМИ */
-    .view-character {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 40px;
-      width: 100%;
-    }
-
-    .speech-bubble {
-      font-size: 22px;
-      font-weight: 800;
-      text-align: center;
-      color: #ffffff;
-      line-height: 1.35;
-      padding: 0 16px;
-      max-width: 380px;
-      min-height: 70px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: opacity 0.4s ease, transform 0.4s ease;
-      filter: drop-shadow(0 4px 16px rgba(0,0,0,0.8));
-    }
-
-    .speech-bubble.text-switching {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-
-    /* УВЕЛИЧЕННЫЕ ГЛАЗА ПЕРСОНАЖА КАК НА ВИДЕО */
-    .eyes-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 22px;
-      height: 120px;
-    }
-
-    .eye-pill {
-      width: 110px;
-      height: 85px;
-      background: var(--character-color);
-      border-radius: 38px;
-      box-shadow: 0 0 35px var(--character-glow), inset 0 -4px 10px rgba(0,0,0,0.15);
-      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      position: relative;
-    }
-
-    .eye-pill::after {
-      content: '';
-      position: absolute;
-      top: 15%;
-      left: 20%;
-      width: 25%;
-      height: 25%;
-      background: rgba(255, 255, 255, 0.6);
-      border-radius: 50%;
-      filter: blur(1px);
-    }
-
-    /* Анимации мимики глаз */
-    .eyes-container.blinking .eye-pill {
-      transform: scaleY(0.06);
-    }
-
-    .eyes-container.happy .eye-pill {
-      height: 60px;
-      border-radius: 60px 60px 15px 15px;
-      transform: translateY(-6px) scaleY(0.85);
-      clip-path: ellipse(100% 75% at 50% 0%);
-    }
-
-    .eyes-container.heart .eye-pill {
-      background: #f472b6;
-      box-shadow: 0 0 45px rgba(244, 114, 182, 0.9);
-      clip-path: path("M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z");
-      width: 85px;
-      height: 85px;
-      border-radius: 0;
-    }
-
-    .eyes-container.wink .eye-pill:last-child {
-      transform: scaleY(0.06);
-    }
-
-    /* 3. СОСТОЯНИЕ: ВЫБОР И ОПЛАТА ПО QR */
-    .view-pay {
-      width: 100%;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .amount-header {
-      text-align: center;
-      margin-bottom: 8px;
-    }
-
-    .amount-label {
-      font-size: 14px;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
-    .amount-value {
-      font-size: 44px;
-      font-weight: 900;
-      letter-spacing: -1px;
-      color: #fff;
-    }
-
-    .qr-card {
-      background: var(--surface-card);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--border-glass);
-      border-radius: 28px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-      width: 100%;
-    }
-
-    .qr-card-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      justify-content: flex-start;
-    }
-
-    .qr-frame {
-      background: #ffffff;
-      padding: 16px;
-      border-radius: 20px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .qr-frame img {
-      width: 190px;
-      height: 190px;
-      display: block;
-      border-radius: 4px;
-    }
-
-    .qr-footer-hint {
-      font-size: 12px;
-      color: var(--primary);
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* 4. СОСТОЯНИЕ: СВЯЗЬ С СЕРВЕРОМ */
-    .view-processing {
-      gap: 20px;
-    }
-
-    .spinner-ring {
-      width: 70px;
-      height: 70px;
-      border: 4px solid rgba(255, 255, 255, 0.1);
-      border-top-color: #ffffff;
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .processing-text {
-      font-size: 18px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    /* 5. СОСТОЯНИЕ: УСПЕХ */
-    .view-success {
-      text-align: center;
-      width: 100%;
-    }
-
-    .success-anim-container {
-      position: relative;
-      width: 140px;
-      height: 140px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 24px;
-    }
-
-    .success-svg-ring {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      transform: rotate(-90deg);
-    }
-
-    .success-svg-ring circle {
-      fill: none;
-      stroke-width: 6;
-      stroke-linecap: round;
-    }
-
-    .success-svg-ring .bg-circle {
-      stroke: rgba(16, 185, 129, 0.15);
-    }
-
-    .success-svg-ring .animated-circle {
-      stroke: var(--primary);
-      stroke-dasharray: 400;
-      stroke-dashoffset: 400;
-      filter: drop-shadow(0 0 8px var(--primary));
-    }
-
-    .success-check-mark {
-      width: 50px;
-      height: 50px;
-      stroke: #ffffff;
-      stroke-width: 5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-      stroke-dasharray: 100;
-      stroke-dashoffset: 100;
-      z-index: 2;
-    }
-
-    .run-circle-anim {
-      animation: drawCircle 0.8s cubic-bezier(0.65, 0, 0.45, 1) forwards;
-    }
-
-    .run-check-anim {
-      animation: drawCheck 0.4s 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
-    }
-
-    @keyframes drawCircle {
-      to { stroke-dashoffset: 0; }
-    }
-
-    @keyframes drawCheck {
-      to { stroke-dashoffset: 0; }
-    }
-
-    .success-amount {
-      font-size: 40px;
-      font-weight: 900;
-      color: #fff;
-      margin-bottom: 4px;
-    }
-
-    .success-status-text {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--primary);
-      letter-spacing: -0.3px;
-    }
-
-    /* ПОДВАЛ */
-    .footer {
-      width: 100%;
-      text-align: center;
-      z-index: 10;
-    }
-
-    .terminal-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      letter-spacing: 0.3px;
-    }
-
-    .blocked-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(7, 10, 16, 0.95);
-      backdrop-filter: blur(20px);
-      z-index: 999;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-    }
-
-    .blocked-overlay.active {
-      display: flex !important;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Дисплей Клиента — Оплата</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+:root {
+--primary: #10b981;
+--primary-glow: rgba(16, 185, 129, 0.55);
+--bg-base: #05080e;
+--surface-glass: rgba(255, 255, 255, 0.05);
+--surface-card: rgba(15, 23, 42, 0.78);
+--border-glass: rgba(255, 255, 255, 0.14);
+--text-main: #ffffff;
+--text-muted: #9ca3af;
+/* Сочные, яркие неновые цвета глазок */
+--character-color: #38ef7d;
+--character-glow: rgba(56, 239, 125, 0.95);
+--character-heart-color: #ff2a85;
+--character-heart-glow: rgba(255, 42, 133, 0.95);
+--character-blue-color: #00d2ff;
+--character-blue-glow: rgba(0, 210, 255, 0.95);
+--character-purple-color: #b5179e;
+--character-purple-glow: rgba(181, 23, 158, 0.95);
+}
+* {
+box-sizing: border-box;
+margin: 0;
+padding: 0;
+font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+user-select: none;
+-webkit-tap-highlight-color: transparent;
+}
+body {
+background-color: var(--bg-base);
+background-image:
+radial-gradient(circle at 50% 15%, rgba(16, 185, 129, 0.22) 0%, transparent 65%),
+radial-gradient(circle at 50% 85%, rgba(15, 23, 42, 0.8) 0%, var(--bg-base) 80%);
+color: var(--text-main);
+height: 100vh;
+height: 100dvh;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: space-between;
+padding: 24px 16px;
+position: relative;
+cursor: pointer;
+transition: background-color 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Фоновый динамический неоновый блеск */
+.bg-glow {
+position: absolute;
+width: 550px;
+height: 550px;
+background: var(--primary-glow);
+filter: blur(140px);
+border-radius: 50%;
+pointer-events: none;
+top: 45%;
+left: 50%;
+transform: translate(-50%, -50%);
+opacity: 0.35;
+transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Шапка с интерактивным Pay значком */
+.header {
+width: 100%;
+max-width: 460px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+z-index: 50;
+}
+.pay-badge {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+background: rgba(255, 255, 255, 0.08);
+backdrop-filter: blur(16px);
+-webkit-backdrop-filter: blur(16px);
+padding: 8px 18px;
+border-radius: 24px;
+border: 1px solid var(--border-glass);
+font-size: 14px;
+font-weight: 800;
+letter-spacing: -0.2px;
+cursor: pointer;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.pay-badge:active {
+transform: scale(0.92);
+background: rgba(16, 185, 129, 0.25);
+border-color: rgba(16, 185, 129, 0.5);
+}
+.pulse-dot {
+width: 9px;
+height: 9px;
+background: var(--primary);
+border-radius: 50%;
+box-shadow: 0 0 12px var(--primary);
+animation: pulse 1.8s infinite ease-in-out;
+}
+@keyframes pulse {
+0% { transform: scale(0.9); opacity: 0.7; }
+50% { transform: scale(1.45); opacity: 1; filter: drop-shadow(0 0 8px var(--primary)); }
+100% { transform: scale(0.9); opacity: 0.7; }
+}
+/* ОСНОВНОЙ КОНТЕЙНЕР СОСТОЯНИЙ */
+.display-screen {
+width: 100%;
+max-width: 460px;
+flex: 1;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+z-index: 10;
+position: relative;
+}
+/* ПЛАВНЫЕ ПЕРЕХОДЫ МЕЖДУ ЭКРАНАМИ (1.2s cubic-bezier) */
+.view-layer {
+position: absolute;
+inset: 0;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+opacity: 0;
+pointer-events: none;
+transform: scale(0.92) translateY(12px);
+transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.view-layer.active {
+opacity: 1;
+pointer-events: auto;
+transform: scale(1) translateY(0);
+}
+/* 1. ОБНОВЛЕННЫЙ ЭКРАН ОЖИДАНИЯ (ИЗЫСКАННЫЙ ДИЗАЙН) */
+.view-idle {
+text-align: center;
+gap: 28px;
+width: 100%;
+}
+.idle-hero-card {
+background: linear-gradient(145deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+border: 1px solid var(--border-glass);
+backdrop-filter: blur(24px);
+-webkit-backdrop-filter: blur(24px);
+border-radius: 36px;
+padding: 40px 24px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 20px;
+box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+width: 100%;
+position: relative;
+overflow: hidden;
+}
+.idle-hero-card::before {
+content: '';
+position: absolute;
+top: -50%;
+left: -50%;
+width: 200%;
+height: 200%;
+background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 60%);
+animation: rotateBg 15s linear infinite;
+}
+@keyframes rotateBg {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+.idle-title {
+font-size: 42px;
+font-weight: 900;
+line-height: 1.12;
+letter-spacing: -1.2px;
+color: #ffffff;
+z-index: 2;
+}
+.idle-title .highlight-green {
+color: #38ef7d;
+text-shadow: 0 0 20px rgba(56, 239, 125, 0.6);
+display: inline-flex;
+align-items: center;
+gap: 8px;
+}
+.idle-icon-check {
+width: 38px;
+height: 38px;
+background: linear-gradient(135deg, #38ef7d 0%, #10b981 100%);
+border-radius: 50%;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+box-shadow: 0 0 18px rgba(56, 239, 125, 0.8);
+color: #000;
+font-weight: 900;
+font-size: 22px;
+}
+.idle-features {
+display: flex;
+gap: 10px;
+z-index: 2;
+flex-wrap: wrap;
+justify-content: center;
+}
+.idle-chip {
+background: rgba(255, 255, 255, 0.08);
+border: 1px solid rgba(255, 255, 255, 0.15);
+padding: 8px 14px;
+border-radius: 20px;
+font-size: 13px;
+font-weight: 700;
+color: var(--text-muted);
+display: flex;
+align-items: center;
+gap: 6px;
+}
+/* 2. СОСТОЯНИЕ: ПЕРСОНАЖ */
+.view-character {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 44px;
+width: 100%;
+}
+/* УВЕЛИЧЕННЫЕ И ЯРКИЕ ГЛАЗА ПЕРСОНАЖА */
+.eyes-container {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 24px;
+height: 140px;
+position: relative;
+}
+.eye-pill {
+width: 125px;
+height: 96px;
+background: var(--character-color);
+border-radius: 42px;
+box-shadow: 0 0 50px var(--character-glow), inset 0 -6px 12px rgba(0,0,0,0.2);
+transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+position: relative;
+}
+.eye-pill::after {
+content: '';
+position: absolute;
+top: 14%;
+left: 18%;
+width: 28%;
+height: 28%;
+background: rgba(255, 255, 255, 0.85);
+border-radius: 50%;
+filter: blur(0.5px);
+}
+/* Анимационные мимики (Крупные сердечки, ушки, улыбочки) */
+.eyes-container.blinking .eye-pill {
+transform: scaleY(0.05);
+}
+.eyes-container.happy .eye-pill {
+height: 68px;
+border-radius: 70px 70px 20px 20px;
+transform: translateY(-8px) scaleY(0.88);
+clip-path: ellipse(100% 75% at 50% 0%);
+}
+/* БОЛЬШИЕ СЕРДЕЧКИ */
+.eyes-container.heart .eye-pill {
+background: var(--character-heart-color);
+box-shadow: 0 0 65px var(--character-heart-glow);
+clip-path: path("M 12,35 C 12,17 28,5 45,5 C 60,5 70,16 75,25 C 80,16 90,5 105,5 C 122,5 138,17 138,35 C 138,62 90,92 75,108 C 60,92 12,62 12,35 Z");
+width: 125px;
+height: 115px;
+border-radius: 0;
+}
+.eyes-container.wink .eye-pill:last-child {
+transform: scaleY(0.06);
+}
+.eyes-container.blue .eye-pill {
+background: var(--character-blue-color);
+box-shadow: 0 0 55px var(--character-blue-glow);
+}
+.eyes-container.purple .eye-pill {
+background: var(--character-purple-color);
+box-shadow: 0 0 55px var(--character-purple-glow);
+}
+.eyes-container.surprised .eye-pill {
+width: 100px;
+height: 120px;
+border-radius: 50px;
+}
+/* ПОБЛЕСКИВАЮЩИЕ ЗВЕЗДОЧКИ (КАК НА ВИДЕО) */
+.sparkles-layer {
+position: absolute;
+inset: -40px;
+pointer-events: none;
+opacity: 0;
+transition: opacity 0.8s ease;
+}
+.eyes-container.happy .sparkles-layer,
+.eyes-container.heart .sparkles-layer {
+opacity: 1;
+}
+.sparkle {
+position: absolute;
+background: #fff;
+clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
+animation: floatSparkle 2s ease-in-out infinite alternate;
+}
+.sparkle-1 { width: 20px; height: 20px; top: -10px; left: 10px; animation-delay: 0s; }
+.sparkle-2 { width: 16px; height: 16px; top: 10px; right: 10px; animation-delay: 0.5s; }
+.sparkle-3 { width: 18px; height: 18px; bottom: -15px; left: 30px; animation-delay: 1s; }
+@keyframes floatSparkle {
+0% { transform: scale(0.6) rotate(0deg); opacity: 0.4; }
+100% { transform: scale(1.2) rotate(45deg); opacity: 1; }
+}
+/* ТЕКСТОВАЯ РЕПЛИКА (СНАЧАЛА ЭМОЦИЯ, ПОТОМ МЯГКО ТЕКСТ) */
+.speech-bubble {
+font-size: 23px;
+font-weight: 800;
+text-align: center;
+color: #ffffff;
+line-height: 1.4;
+padding: 0 20px;
+max-width: 420px;
+min-height: 85px;
+display: flex;
+align-items: center;
+justify-content: center;
+opacity: 0;
+transform: translateY(14px);
+transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+filter: drop-shadow(0 6px 20px rgba(0,0,0,0.9));
+}
+.speech-bubble.text-visible {
+opacity: 1;
+transform: translateY(0);
+}
+/* 3. СОСТОЯНИЕ: ОПЛАТА ПО QR */
+.view-pay {
+width: 100%;
+flex-direction: column;
+gap: 20px;
+}
+.amount-header {
+text-align: center;
+margin-bottom: 4px;
+}
+.amount-label {
+font-size: 15px;
+color: var(--text-muted);
+font-weight: 700;
+}
+.amount-value {
+font-size: 48px;
+font-weight: 900;
+letter-spacing: -1.5px;
+color: #fff;
+text-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
+}
+.qr-card {
+background: var(--surface-card);
+backdrop-filter: blur(24px);
+-webkit-backdrop-filter: blur(24px);
+border: 1px solid var(--border-glass);
+border-radius: 32px;
+padding: 28px 24px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 20px;
+box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+width: 100%;
+}
+.qr-card-title {
+font-size: 17px;
+font-weight: 800;
+color: #fff;
+display: flex;
+align-items: center;
+gap: 8px;
+width: 100%;
+justify-content: center;
+}
+.qr-frame {
+background: #ffffff;
+padding: 18px;
+border-radius: 24px;
+box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.qr-frame img {
+width: 200px;
+height: 200px;
+display: block;
+border-radius: 6px;
+}
+.qr-footer-hint {
+font-size: 13px;
+color: #38ef7d;
+font-weight: 700;
+display: flex;
+align-items: center;
+gap: 8px;
+}
+/* 4. СОСТОЯНИЕ: СВЯЗЬ С СЕРВЕРОМ */
+.view-processing {
+gap: 24px;
+}
+.spinner-ring {
+width: 76px;
+height: 76px;
+border: 5px solid rgba(255, 255, 255, 0.1);
+border-top-color: #38ef7d;
+border-radius: 50%;
+animation: spin 0.9s linear infinite;
+box-shadow: 0 0 20px rgba(56, 239, 125, 0.3);
+}
+@keyframes spin {
+to { transform: rotate(360deg); }
+}
+.processing-text {
+font-size: 20px;
+font-weight: 800;
+color: #fff;
+}
+/* 5. СОСТОЯНИЕ: УСПЕХ */
+.view-success {
+text-align: center;
+width: 100%;
+}
+.success-anim-container {
+position: relative;
+width: 150px;
+height: 150px;
+display: flex;
+align-items: center;
+justify-content: center;
+margin-bottom: 28px;
+}
+.success-svg-ring {
+position: absolute;
+width: 100%;
+height: 100%;
+transform: rotate(-90deg);
+}
+.success-svg-ring circle {
+fill: none;
+stroke-width: 7;
+stroke-linecap: round;
+}
+.success-svg-ring .bg-circle {
+stroke: rgba(56, 239, 125, 0.15);
+}
+.success-svg-ring .animated-circle {
+stroke: #38ef7d;
+stroke-dasharray: 440;
+stroke-dashoffset: 440;
+filter: drop-shadow(0 0 12px #38ef7d);
+}
+.success-check-mark {
+width: 56px;
+height: 56px;
+stroke: #ffffff;
+stroke-width: 5;
+stroke-linecap: round;
+stroke-linejoin: round;
+fill: none;
+stroke-dasharray: 100;
+stroke-dashoffset: 100;
+z-index: 2;
+}
+.run-circle-anim {
+animation: drawCircle 0.9s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+.run-check-anim {
+animation: drawCheck 0.5s 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+@keyframes drawCircle {
+to { stroke-dashoffset: 0; }
+}
+@keyframes drawCheck {
+to { stroke-dashoffset: 0; }
+}
+.success-amount {
+font-size: 46px;
+font-weight: 900;
+color: #fff;
+margin-bottom: 6px;
+}
+.success-status-text {
+font-size: 22px;
+font-weight: 800;
+color: #38ef7d;
+letter-spacing: -0.3px;
+text-shadow: 0 0 15px rgba(56, 239, 125, 0.5);
+}
+/* ПОДВАЛ */
+.footer {
+width: 100%;
+text-align: center;
+z-index: 10;
+}
+.terminal-label {
+font-size: 13px;
+font-weight: 700;
+color: var(--text-muted);
+letter-spacing: 0.4px;
+}
+.blocked-overlay {
+position: fixed;
+inset: 0;
+background: rgba(5, 8, 14, 0.96);
+backdrop-filter: blur(24px);
+z-index: 999;
+display: none;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 14px;
+}
+.blocked-overlay.active {
+display: flex !important;
+}
+</style>
 </head>
 <body onclick="handleUserInteraction()" ontouchstart="handleUserInteraction()">
+<div class="bg-glow" id="bgGlow"></div>
+<!-- ШАПКА -->
+<header class="header">
+<!-- СЕКРЕТНАЯ КНОПКА: При клике на Pay мгновенно открывает персонажа -->
+<div class="pay-badge" onclick="triggerSecretCharacter(event)">
+<span class="pulse-dot"></span>
+<span>Pay</span>
+</div>
+<div style="font-size: 12px; font-weight: 700; color: var(--text-muted);">POS System</div>
+</header>
+<!-- ОСНОВНОЙ ЭКРАН СМЕНЫ СОСТОЯНИЙ -->
+<main class="display-screen">
+<!-- 1. ОБНОВЛЕННЫЙ ИЗЫСКАННЫЙ ЭКРАН ОЖИДАНИЯ -->
+<div class="view-layer view-idle active" id="viewIdle">
+<div class="idle-hero-card">
+<h1 class="idle-title">
+Платите
 
-  <div class="bg-glow" id="bgGlow"></div>
+<span class="highlight-green">как вам <span class="idle-icon-check">✓</span></span>
 
-  <!-- ШАПКА -->
-  <header class="header">
-    <div class="pay-badge">
-      <span class="pulse-dot"></span>
-      <span>Pay</span>
-    </div>
-  </header>
-
-  <!-- ОСНОВНОЙ ЭКРАН СМЕНЫ СОСТОЯНИЙ -->
-  <main class="display-screen">
-
-    <!-- 1. СОСТОЯНИЕ: ОЖИДАНИЕ (ПЕРВОНАЧАЛЬНЫЙ ЭКРАН) -->
-    <div class="view-layer view-idle active" id="viewIdle">
-      <h1 class="idle-title">
-        платите<br>
-        <span>как вам <span class="icon-check"></span></span><br>
-        удобно
-      </h1>
-    </div>
-
-    <!-- 2. СОСТОЯНИЕ: ПЕРСОНАЖ С РЕПЛИКАМИ -->
-    <div class="view-layer view-character" id="viewCharacter">
-      <div class="speech-bubble" id="speechBubble">
-        — Привет! Я очень рад вас видеть!
-      </div>
-      <div class="eyes-container" id="eyesContainer">
-        <div class="eye-pill"></div>
-        <div class="eye-pill"></div>
-      </div>
-    </div>
-
-    <!-- 3. СОСТОЯНИЕ: ВЫСТАВЛЕН СЧЕТ С QR -->
-    <div class="view-layer view-pay" id="viewPay">
-      <div class="amount-header">
-        <div class="amount-label">К оплате</div>
-        <div class="amount-value" id="payAmountDisplay">0 ₽</div>
-      </div>
-
-      <div class="qr-card">
-        <div class="qr-card-title">
-          <span>оплатить по QR</span>
-        </div>
-        <div class="qr-frame">
-          <img id="qrImage" src="" alt="QR-код оплаты">
-        </div>
-        <div class="qr-footer-hint">
-          <span class="pulse-dot"></span> Отсканируйте камерой смартфона
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. СОСТОЯНИЕ: СВЯЗЬ С СЕРВЕРОМ -->
-    <div class="view-layer view-processing" id="viewProcessing">
-      <div class="spinner-ring"></div>
-      <div class="processing-text">Связь с сервером...</div>
-    </div>
-
-    <!-- 5. СОСТОЯНИЕ: ОПЛАЧЕНО (УСПЕХ) -->
-    <div class="view-layer view-success" id="viewSuccess">
-      <div class="success-anim-container">
-        <svg class="success-svg-ring" viewBox="0 0 140 140">
-          <circle class="bg-circle" cx="70" cy="70" r="62"></circle>
-          <circle class="animated-circle" id="successCircle" cx="70" cy="70" r="62"></circle>
-        </svg>
-        <svg class="success-check-mark" id="successCheck" viewBox="0 0 24 24">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-      </div>
-
-      <div class="success-amount" id="successAmountDisplay">0 ₽</div>
-      <div class="success-status-text">Оплачено</div>
-    </div>
-
-  </main>
-
-  <!-- ПОДВАЛ -->
-  <footer class="footer">
-    <div class="terminal-label" id="terminalNumberLabel">Терминал №3815</div>
-  </footer>
-
-  <!-- ЭКРАН БЛОКИРОВКИ -->
-  <div class="blocked-overlay" id="blockedOverlay">
-    <div style="font-size: 40px;">🔒</div>
-    <h2 style="font-size: 20px; font-weight: 800; color: #fff;">Дисплей заблокирован</h2>
-    <p style="color: var(--text-muted); font-size: 13px;">Обратитесь к кассиру</p>
-  </div>
-
-  <script>
-    const socket = io();
-    
-    // Идентификация дисплея
-    let displayId = localStorage.getItem('pos_display_id');
-    if (!displayId) {
-      displayId = 'disp_' + Math.random().toString(36).substring(2, 7);
-      localStorage.setItem('pos_display_id', displayId);
-    }
-    
-    const terminalNum = displayId.replace(/\D/g, '').substring(0, 4) || '3815';
-    document.getElementById('terminalNumberLabel').textContent = `Терминал №${terminalNum}`;
-
-    // Перечень реплик и настроек эмоций персонажа
-    const REPLICAS = [
-      { text: "— Привет! Я очень рад вас видеть!", emotion: "happy" },
-      { text: "— Оплату по QR-коду можно провести с мобильного приложения!", emotion: "wink" },
-      { text: "— Вы можете оплатить любую покупку картой Сбербанка!", emotion: "happy" },
-      { text: "— Скидки, кешбэк и бонусы ждут вас при каждой оплате!", emotion: "heart" },
-      { text: "— Желаем вам отличного дня и замечательных покупок!", emotion: "happy" }
-    ];
-
-    let currentReplicaIndex = 0;
-    let characterLoopInterval = null;
-    let idleTimer = null;
-    let currentView = 'viewIdle';
-    let hasActiveInvoice = false;
-
-    // Переключение слоев с плавной анимацией
-    function showLayer(layerId) {
-      currentView = layerId;
-      document.querySelectorAll('.view-layer').forEach(layer => {
-        layer.classList.remove('active');
-      });
-
-      const target = document.getElementById(layerId);
-      if (target) {
-        target.classList.add('active');
-      }
-
-      const bgGlow = document.getElementById('bgGlow');
-      if (layerId === 'viewSuccess') {
-        document.body.style.backgroundColor = '#070a10';
-        bgGlow.style.opacity = '0.8';
-        bgGlow.style.background = 'rgba(16, 185, 129, 0.6)';
-      } else if (layerId === 'viewPay') {
-        document.body.style.backgroundColor = '#070a10';
-        bgGlow.style.opacity = '0.45';
-        bgGlow.style.background = 'var(--primary-glow)';
-      } else if (layerId === 'viewCharacter') {
-        document.body.style.backgroundColor = '#000000';
-        bgGlow.style.opacity = '0.65';
-        bgGlow.style.background = 'radial-gradient(circle, rgba(16, 185, 129, 0.45) 0%, rgba(139, 92, 246, 0.25) 60%, transparent 100%)';
-      } else {
-        document.body.style.backgroundColor = '#070a10';
-        bgGlow.style.opacity = '0.25';
-        bgGlow.style.background = 'var(--primary-glow)';
-      }
-    }
-
-    // Логика таймера бездействия (15 секунд)
-    function resetIdleTimer() {
-      clearTimeout(idleTimer);
-
-      if (hasActiveInvoice) return;
-
-      idleTimer = setTimeout(() => {
-        startCharacterMode();
-      }, 15000);
-    }
-
-    function handleUserInteraction() {
-      if (hasActiveInvoice) return;
-
-      if (currentView === 'viewCharacter') {
-        stopCharacterMode();
-        showLayer('viewIdle');
-      }
-      resetIdleTimer();
-    }
-
-    // Запуск персонажа
-    function startCharacterMode() {
-      showLayer('viewCharacter');
-      currentReplicaIndex = 0;
-      updateCharacterSpeech();
-
-      clearInterval(characterLoopInterval);
-      characterLoopInterval = setInterval(() => {
-        currentReplicaIndex = (currentReplicaIndex + 1) % REPLICAS.length;
-        updateCharacterSpeech();
-      }, 4500);
-    }
-
-    function stopCharacterMode() {
-      clearInterval(characterLoopInterval);
-    }
-
-    function updateCharacterSpeech() {
-      const bubble = document.getElementById('speechBubble');
-      const eyes = document.getElementById('eyesContainer');
-      const current = REPLICAS[currentReplicaIndex];
-
-      bubble.classList.add('text-switching');
-
-      setTimeout(() => {
-        bubble.textContent = current.text;
-        bubble.classList.remove('text-switching');
-
-        eyes.className = 'eyes-container ' + current.emotion;
-
-        // Эффект моргания
-        setTimeout(() => {
-          eyes.classList.add('blinking');
-          setTimeout(() => eyes.classList.remove('blinking'), 150);
-        }, 1200);
-
-      }, 350);
-    }
-
-    // Socket.io интеграция
-    socket.on('connect', () => {
-      socket.emit('register_display', { id: displayId, name: `Дисплей №${terminalNum}` });
-    });
-
-    socket.on('show_qr', (data) => {
-      hasActiveInvoice = true;
-      stopCharacterMode();
-      clearTimeout(idleTimer);
-
-      document.getElementById('payAmountDisplay').textContent = data.amount.toLocaleString('ru-RU') + ' ₽';
-      document.getElementById('qrImage').src = data.qrCode;
-      showLayer('viewPay');
-    });
-
-    socket.on('processing_payment', () => {
-      showLayer('viewProcessing');
-    });
-
-    socket.on('payment_success', (data) => {
-      hasActiveInvoice = false;
-      const amount = data.transaction ? data.transaction.amount : 0;
-      document.getElementById('successAmountDisplay').textContent = amount.toLocaleString('ru-RU') + ' ₽';
-      
-      showLayer('viewSuccess');
-
-      const circle = document.getElementById('successCircle');
-      const check = document.getElementById('successCheck');
-      
-      circle.classList.remove('run-circle-anim');
-      check.classList.remove('run-check-anim');
-      void circle.offsetWidth;
-      circle.classList.add('run-circle-anim');
-      check.classList.add('run-check-anim');
-
-      setTimeout(() => {
-        showLayer('viewIdle');
-        resetIdleTimer();
-      }, 4500);
-    });
-
-    socket.on('transaction_cancelled', () => {
-      hasActiveInvoice = false;
-      showLayer('viewIdle');
-      resetIdleTimer();
-    });
-
-    socket.on('display_block_status', (data) => {
-      const overlay = document.getElementById('blockedOverlay');
-      if (data.isBlocked) {
-        overlay.classList.add('active');
-      } else {
-        overlay.classList.remove('active');
-      }
-    });
-
-    // Инициализация при старте
-    resetIdleTimer();
-  </script>
+удобно
+</h1>
+<div class="idle-features">
+<div class="idle-chip">📱 QR-код</div>
+<div class="idle-chip">💳 СберПэй</div>
+<div class="idle-chip">⚡ Мгновенно</div>
+</div>
+</div>
+</div>
+<!-- 2. СОСТОЯНИЕ: ПЕРСОНАЖ -->
+<div class="view-layer view-character" id="viewCharacter">
+<div class="eyes-container" id="eyesContainer">
+<div class="sparkles-layer">
+<div class="sparkle sparkle-1"></div>
+<div class="sparkle sparkle-2"></div>
+<div class="sparkle sparkle-3"></div>
+</div>
+<div class="eye-pill"></div>
+<div class="eye-pill"></div>
+</div>
+<div class="speech-bubble" id="speechBubble">
+— Привет! Я очень рад вас видеть!
+</div>
+</div>
+<!-- 3. СОСТОЯНИЕ: ОПЛАТА ПО QR -->
+<div class="view-layer view-pay" id="viewPay">
+<div class="amount-header">
+<div class="amount-label">Сумма к оплате</div>
+<div class="amount-value" id="payAmountDisplay">0 ₽</div>
+</div>
+<div class="qr-card">
+<div class="qr-card-title">
+<span>Оплатить по QR-коду</span>
+</div>
+<div class="qr-frame">
+<img id="qrImage" src="" alt="QR-код оплаты">
+</div>
+<div class="qr-footer-hint">
+<span class="pulse-dot"></span> Отсканируйте приложением банка
+</div>
+</div>
+</div>
+<!-- 4. СОСТОЯНИЕ: СВЯЗЬ С СЕРВЕРОМ -->
+<div class="view-layer view-processing" id="viewProcessing">
+<div class="spinner-ring"></div>
+<div class="processing-text">Связь с сервером...</div>
+</div>
+<!-- 5. СОСТОЯНИЕ: ОПЛАЧЕНО -->
+<div class="view-layer view-success" id="viewSuccess">
+<div class="success-anim-container">
+<svg class="success-svg-ring" viewBox="0 0 150 150">
+<circle class="bg-circle" cx="75" cy="75" r="66"></circle>
+<circle class="animated-circle" id="successCircle" cx="75" cy="75" r="66"></circle>
+</svg>
+<svg class="success-check-mark" id="successCheck" viewBox="0 0 24 24">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+</div>
+<div class="success-amount" id="successAmountDisplay">0 ₽</div>
+<div class="success-status-text">Оплачено</div>
+</div>
+</main>
+<!-- ПОДВАЛ -->
+<footer class="footer">
+<div class="terminal-label" id="terminalNumberLabel">Терминал №3815</div>
+</footer>
+<!-- БЛОКИРОВКА -->
+<div class="blocked-overlay" id="blockedOverlay">
+<div style="font-size: 44px;">🔒</div>
+<h2 style="font-size: 22px; font-weight: 800; color: #fff;">Дисплей заблокирован</h2>
+<p style="color: var(--text-muted); font-size: 14px;">Обратитесь к кассиру</p>
+</div>
+<script>
+const socket = io();
+let displayId = localStorage.getItem('pos_display_id');
+if (!displayId) {
+displayId = 'disp_' + Math.random().toString(36).substring(2, 7);
+localStorage.setItem('pos_display_id', displayId);
+}
+const terminalNum = displayId.replace(/\D/g, '').substring(0, 4) || '3815';
+document.getElementById('terminalNumberLabel').textContent = ⁠Терминал №${terminalNum}⁠;
+// === БАЗА ИЗ 60 МЯГКИХ И ИНТЕРЕСНЫХ РЕПЛИК С ЭМОЦИЯМИ ===
+const REPLICAS_DATABASE = [
+{ text: "— Привет! Я очень рад вас видеть!", emotion: "happy" },
+{ text: "— Оплату по QR-коду можно провести с мобильного приложения!", emotion: "wink" },
+{ text: "— Вы можете оплатить любую покупку картой Сбербанка!", emotion: "happy" },
+{ text: "— Скидки, кешбэк и бонусы ждут вас с подпиской СберПрайм!", emotion: "heart" },
+{ text: "— Наведите камеру телефона на QR-код для моментальной оплаты!", emotion: "blue" },
+{ text: "— Хорошего дня и замечательного настроения!", emotion: "happy" },
+{ text: "— Платить смартфоном — это быстро, удобно и безопасно!", emotion: "purple" },
+{ text: "— Спасибо, что выбираете нас! Нам очень приятно!", emotion: "heart" },
+{ text: "— Улыбнитесь! Сегодня отличный день для приятных покупок!", emotion: "happy" },
+{ text: "— Все ваши транзакции надежно защищены шифрованием!", emotion: "blue" },
+{ text: "— Оплата прошла за доли секунды. Магия технологий!", emotion: "surprised" },
+{ text: "— Нужен чек? Он автоматически сохранится в вашем приложении!", emotion: "wink" },
+{ text: "— Выглядите просто потрясающе сегодня!", emotion: "heart" },
+{ text: "— Копите бонусы и оплачивайте ими до 99% покупки!", emotion: "purple" },
+{ text: "— Бесконтактная оплата — самый удобный способ расчёта!", emotion: "happy" },
+{ text: "— Оплата по СБП проходит без комиссий!", emotion: "blue" },
+{ text: "— Всегда к вашим услугам! Готов к приёму оплаты!", emotion: "happy" },
+{ text: "— Быстро, как вжух! И покупка уже ваша!", emotion: "wink" },
+{ text: "— Рады видеть вашу улыбку!", emotion: "heart" },
+{ text: "— Мгновенное подтверждение платежа на экране!", emotion: "blue" },
+{ text: "— Платите так, как вам удобно!", emotion: "happy" },
+{ text: "— Отсканируйте QR и подтвердите платеж в один клик!", emotion: "wink" },
+{ text: "— Покупки приносят радость, особенно выгодные!", emotion: "purple" },
+{ text: "— Каждый день становимся лучше для вас!", emotion: "happy" },
+{ text: "— Надежное соединение с банковским сервером!", emotion: "blue" },
+{ text: "— Ваша карта или телефон — всё сработает идеально!", emotion: "happy" },
+{ text: "— Приятно иметь дело с вежливыми покупателями!", emotion: "heart" },
+{ text: "— Современные технологии на службе вашего комфорта!", emotion: "purple" },
+{ text: "— Копить бонусы Спасибо так легко и приятно!", emotion: "happy" },
+{ text: "— Проверка безопасности завершена успешно!", emotion: "blue" },
+{ text: "— Ваше доверие — наша главная ценность!", emotion: "heart" },
+{ text: "— Всего секунда — и покупка оплачена!", emotion: "wink" },
+{ text: "— Мечты должны сбываться, а покупки — радовать!", emotion: "happy" },
+{ text: "— Удобная оплата без лишних пластиковых карт!", emotion: "blue" },
+{ text: "— Приходите к нам чаще, мы всегда вам рады!", emotion: "heart" },
+{ text: "— Автоматическая проверка баланса и данных!", emotion: "purple" },
+{ text: "— Легко, как взмах волшебной палочки!", emotion: "wink" },
+{ text: "— Желаем продуктивного и удачного дня!", emotion: "happy" },
+{ text: "— Безопасность каждого платежа гарантирована!", emotion: "blue" },
+{ text: "— Скорость и комфорт — наш главный приоритет!", emotion: "happy" },
+{ text: "— Нажмите на Pay вверху, чтобы поздороваться со мной!", emotion: "wink" },
+{ text: "— Платежная система работает в штатном режиме!", emotion: "purple" },
+{ text: "— Вы самый лучший покупатель сегодня!", emotion: "heart" },
+{ text: "— Сканируйте QR-код в СберБанк Онлайн!", emotion: "blue" },
+{ text: "— Экономьте время с мгновенной QR-оплатой!", emotion: "happy" },
+{ text: "— Покупки — это отличный способ поднять настроение!", emotion: "heart" },
+{ text: "— Зеленый свет для всех ваших транзакций!", emotion: "happy" },
+{ text: "— Мягкий свет и неоновый комфорт!", emotion: "purple" },
+{ text: "— Технологии будущего доступны уже сегодня!", emotion: "blue" },
+{ text: "— Отличный выбор! Мы ценим ваш вкус!", emotion: "happy" },
+{ text: "— Всегда на связи и готов к расчётам!", emotion: "wink" },
+{ text: "— Сохраняйте чеки в электронном виде!", emotion: "blue" },
+{ text: "— Улыбка — лучший ответ на новый день!", emotion: "heart" },
+{ text: "— Мы гарантируем полную конфиденциальность!", emotion: "purple" },
+{ text: "— Приятных вам покупок и хорошего настроения!", emotion: "happy" },
+{ text: "— Оплата смартфоном — это быстро и экологично!", emotion: "blue" },
+{ text: "— Сервис мирового уровня специально для вас!", emotion: "happy" },
+{ text: "— Пусть этот день принесет много радости!", emotion: "heart" },
+{ text: "— Всё готово для проведения вашей оплаты!", emotion: "wink" }
+];
+let characterLoopTimeout = null;
+let idleTimer = null;
+let currentView = 'viewIdle';
+let hasActiveInvoice = false;
+let usedIndices = [];
+// Функция рандомайзера без повторов
+function getRandomReplica() {
+if (usedIndices.length >= REPLICAS_DATABASE.length) {
+usedIndices = [];
+}
+let randIndex;
+do {
+randIndex = Math.floor(Math.random() * REPLICAS_DATABASE.length);
+} while (usedIndices.includes(randIndex));
+usedIndices.push(randIndex);
+return REPLICAS_DATABASE[randIndex];
+}
+// Переключение слоев с МАКСИМАЛЬНО МЯГКИМ ПЕРЕХОДОМ
+function showLayer(layerId) {
+currentView = layerId;
+document.querySelectorAll('.view-layer').forEach(layer => {
+layer.classList.remove('active');
+});
+const target = document.getElementById(layerId);
+if (target) {
+target.classList.add('active');
+}
+const bgGlow = document.getElementById('bgGlow');
+if (layerId === 'viewSuccess') {
+document.body.style.backgroundColor = '#05080e';
+bgGlow.style.opacity = '0.85';
+bgGlow.style.background = 'rgba(56, 239, 125, 0.65)';
+} else if (layerId === 'viewPay') {
+document.body.style.backgroundColor = '#05080e';
+bgGlow.style.opacity = '0.5';
+bgGlow.style.background = 'var(--primary-glow)';
+} else if (layerId === 'viewCharacter') {
+document.body.style.backgroundColor = '#000000';
+bgGlow.style.opacity = '0.75';
+bgGlow.style.background = 'radial-gradient(circle, rgba(56, 239, 125, 0.5) 0%, rgba(181, 23, 158, 0.3) 60%, transparent 100%)';
+} else {
+document.body.style.backgroundColor = '#05080e';
+bgGlow.style.opacity = '0.35';
+bgGlow.style.background = 'var(--primary-glow)';
+}
+}
+// Таймер ожидания (15 секунд)
+function resetIdleTimer() {
+clearTimeout(idleTimer);
+if (hasActiveInvoice) return;
+idleTimer = setTimeout(() => {
+startCharacterMode();
+}, 15000);
+}
+function handleUserInteraction() {
+if (hasActiveInvoice) return;
+if (currentView === 'viewCharacter') {
+stopCharacterMode();
+showLayer('viewIdle');
+}
+resetIdleTimer();
+}
+// СЕКРЕТНАЯ КНОПКА НА PAY ЗНАЧОК
+function triggerSecretCharacter(event) {
+event.stopPropagation();
+if (hasActiveInvoice) return;
+startCharacterMode();
+}
+// ЗАПУСК И УПРАВЛЕНИЕ ПЕРСОНАЖЕМ
+function startCharacterMode() {
+showLayer('viewCharacter');
+cycleCharacterState();
+}
+function stopCharacterMode() {
+clearTimeout(characterLoopTimeout);
+const bubble = document.getElementById('speechBubble');
+bubble.classList.remove('text-visible');
+}
+// МЯГКАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ: СНАЧАЛА ЭМОЦИЯ ГЛАЗ -> ЗАТЕМ МЯГКО ТЕКСТ
+function cycleCharacterState() {
+if (currentView !== 'viewCharacter') return;
+const replica = getRandomReplica();
+const bubble = document.getElementById('speechBubble');
+const eyes = document.getElementById('eyesContainer');
+// 1. Скрываем прошлый текст
+bubble.classList.remove('text-visible');
+setTimeout(() => {
+// 2. Сначала плавно включаем эмоцию на глазках
+eyes.className = 'eyes-container ' + replica.emotion;
+// Моргание глаз для живости
+setTimeout(() => {
+eyes.classList.add('blinking');
+setTimeout(() => eyes.classList.remove('blinking'), 180);
+}, 300);
+// 3. Спустя 700ms плавно проявляем текст
+setTimeout(() => {
+bubble.textContent = replica.text;
+bubble.classList.add('text-visible');
+}, 700);
+}, 500);
+// Задержка между репликами (5.5 секунд для комфортного чтения)
+characterLoopTimeout = setTimeout(() => {
+cycleCharacterState();
+}, 5800);
+}
+// WebSocket связи
+socket.on('connect', () => {
+socket.emit('register_display', { id: displayId, name: ⁠Дисплей №${terminalNum}⁠ });
+});
+socket.on('show_qr', (data) => {
+hasActiveInvoice = true;
+stopCharacterMode();
+clearTimeout(idleTimer);
+document.getElementById('payAmountDisplay').textContent = data.amount.toLocaleString('ru-RU') + ' ₽';
+document.getElementById('qrImage').src = data.qrCode;
+showLayer('viewPay');
+});
+socket.on('processing_payment', () => {
+showLayer('viewProcessing');
+});
+socket.on('payment_success', (data) => {
+hasActiveInvoice = false;
+const amount = data.transaction ? data.transaction.amount : 0;
+document.getElementById('successAmountDisplay').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+showLayer('viewSuccess');
+const circle = document.getElementById('successCircle');
+const check = document.getElementById('successCheck');
+circle.classList.remove('run-circle-anim');
+check.classList.remove('run-check-anim');
+void circle.offsetWidth;
+circle.classList.add('run-circle-anim');
+check.classList.add('run-check-anim');
+setTimeout(() => {
+showLayer('viewIdle');
+resetIdleTimer();
+}, 4800);
+});
+socket.on('transaction_cancelled', () => {
+hasActiveInvoice = false;
+showLayer('viewIdle');
+resetIdleTimer();
+});
+socket.on('display_block_status', (data) => {
+const overlay = document.getElementById('blockedOverlay');
+if (data.isBlocked) {
+overlay.classList.add('active');
+} else {
+overlay.classList.remove('active');
+}
+});
+// Инициализация
+resetIdleTimer();
+</script>
 </body>
 </html>
