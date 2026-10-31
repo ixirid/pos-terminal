@@ -6,7 +6,7 @@
   <title>Дисплей покупателя</title>
   <!-- Подключаем Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Подключаем Socket.io клиент через CDN для гарантированной работы на любом POS-терминале -->
+  <!-- Подключаем Socket.io клиент через CDN -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
     :root {
@@ -332,17 +332,17 @@
   <div class="view-layer active" id="viewIdle">
     <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px;">
       <div style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: #ffffff;">Платите</div>
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <span style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: #ffffff;">как вам</span>
+      <div style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: var(--char-green); text-shadow: 0 0 30px rgba(0,255,102,0.4); display: flex; align-items: center; gap: 14px; justify-content: center;">
+        <span>как вам</span>
         <div style="width: 48px; height: 48px; background: var(--char-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(0,255,102,0.6);">
           <svg style="width: 26px; height: 26px; stroke: #000; stroke-width: 3.5; fill: none;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </div>
       </div>
-      <div style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: var(--char-green); text-shadow: 0 0 30px rgba(0,255,102,0.4);">удобно</div>
+      <div style="font-size: 58px; font-weight: 900; letter-spacing: -2px; color: #ffffff;">удобно</div>
     </div>
   </div>
 
-  <!-- 2. РЕЖИМ ПЕРСОНАЖА (ЧЕРЕЗ 15 СЕКУНД ИЛИ ПО КНОПКЕ) -->
+  <!-- 2. РЕЖИМ ПЕРСОНАЖА -->
   <div class="view-layer" id="viewCharacter">
     <div class="character-container">
       <div class="eyes-row" id="eyesRow">
@@ -407,14 +407,6 @@
   </div>
 
   <script>
-    // Безопасное подключение к Socket.io серверу POS-терминала
-    let socket;
-    try {
-      socket = (typeof io !== 'undefined') ? io() : null;
-    } catch (err) {
-      console.warn('Socket.io client connect error:', err);
-    }
-
     // База из 60 реплик
     const REPLICAS = [
       { text: "Добро пожаловать! Выбирайте любой удобный способ оплаты", emotion: "normal" },
@@ -422,7 +414,7 @@
       { text: "Приложите телефон или карту к терминалу", emotion: "normal" },
       { text: "Быстрая оплата за пару секунд без лишних ожиданий", emotion: "wink" },
       { text: "Мы принимаем любые бесконтактные карты", emotion: "smile" },
-      { text: "Оплачивайте смартфоном через СберПэй или СБП", emotion: "normal" },
+      { text: "Оплачивайте смартфоном через СБП", emotion: "normal" },
       { text: "Отличный выбор! Переходим к оплате заказа", emotion: "heart" },
       { text: "Спасибо, что вы с нами сегодня!", emotion: "smile" },
       { text: "Безопасность каждого платежа гарантирована банком", emotion: "normal" },
@@ -594,23 +586,25 @@
       }
     }
 
-    // Обработка получения счетов от POS-терминала
+    // Обработчики данных от POS-терминала
     function handleNewInvoice(data) {
       hasActiveInvoice = true;
       isCharacterActive = false;
       clearTimeout(idleTimer);
       clearInterval(replicaInterval);
 
-      const amount = data && data.amount ? data.amount : 0;
-      document.getElementById('invoiceAmount').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+      const amount = data && (data.amount !== undefined) ? data.amount : (data && data.sum ? data.sum : 0);
+      document.getElementById('invoiceAmount').textContent = Number(amount).toLocaleString('ru-RU') + ' ₽';
       
       switchView('viewInvoice');
     }
 
     function handlePaymentSuccess(data) {
       hasActiveInvoice = false;
-      const amount = data && data.transaction && data.transaction.amount ? data.transaction.amount : (data && data.amount ? data.amount : 0);
-      document.getElementById('successAmountDisplay').textContent = amount.toLocaleString('ru-RU') + ' ₽';
+      const transactionData = data && data.transaction ? data.transaction : data;
+      const amount = transactionData && (transactionData.amount !== undefined) ? transactionData.amount : 0;
+      
+      document.getElementById('successAmountDisplay').textContent = Number(amount).toLocaleString('ru-RU') + ' ₽';
 
       const successStage = document.getElementById('successStage');
       successStage.classList.remove('active');
@@ -656,13 +650,61 @@
       resetIdleTimer();
     }
 
-    // Подписка на сокет-события
-    if (socket) {
-      socket.on('new_invoice', handleNewInvoice);
-      socket.on('payment_success', handlePaymentSuccess);
-      socket.on('payment_error', handlePaymentError);
-      socket.on('transaction_cancelled', handleTransactionCancelled);
+    // --- МНОГОКАНАЛЬНАЯ СВЯЗЬ С ТЕРМИНАЛОМ (100% УНИВЕРСАЛЬНОСТЬ) ---
+
+    // 1. WebSocket / Socket.io
+    try {
+      if (typeof io !== 'undefined') {
+        const socket = io({
+          reconnection: true,
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 1000
+        });
+
+        socket.on('connect', () => console.log('POS Socket connected:', socket.id));
+        socket.on('new_invoice', handleNewInvoice);
+        socket.on('invoice', handleNewInvoice);
+        socket.on('payment_success', handlePaymentSuccess);
+        socket.on('success', handlePaymentSuccess);
+        socket.on('payment_error', handlePaymentError);
+        socket.on('error', handlePaymentError);
+        socket.on('transaction_cancelled', handleTransactionCancelled);
+        socket.on('cancel', handleTransactionCancelled);
+      }
+    } catch (err) {
+      console.warn('Socket.io init notice:', err);
     }
+
+    // 2. BroadcastChannel (Межвкладочная и межфреймовая связь в POS)
+    try {
+      const posBroadcast = new BroadcastChannel('pos_terminal_channel');
+      posBroadcast.onmessage = (event) => {
+        const msg = event.data;
+        if (!msg) return;
+        if (msg.type === 'new_invoice' || msg.action === 'invoice') handleNewInvoice(msg);
+        if (msg.type === 'payment_success' || msg.action === 'success') handlePaymentSuccess(msg);
+        if (msg.type === 'payment_error' || msg.action === 'error') handlePaymentError(msg);
+        if (msg.type === 'transaction_cancelled' || msg.action === 'cancel') handleTransactionCancelled();
+      };
+    } catch (err) {}
+
+    // 3. Window postMessage (Для iframe и родительских окон терминала)
+    window.addEventListener('message', (event) => {
+      const msg = event.data;
+      if (!msg) return;
+      if (msg.type === 'new_invoice' || msg.action === 'invoice') handleNewInvoice(msg);
+      if (msg.type === 'payment_success' || msg.action === 'success') handlePaymentSuccess(msg);
+      if (msg.type === 'payment_error' || msg.action === 'error') handlePaymentError(msg);
+      if (msg.type === 'transaction_cancelled' || msg.action === 'cancel') handleTransactionCancelled();
+    });
+
+    // Экспорт глобальных функций для отладки или прямого вызова из кассы
+    window.posDisplay = {
+      showInvoice: handleNewInvoice,
+      showSuccess: handlePaymentSuccess,
+      showError: handlePaymentError,
+      cancel: handleTransactionCancelled
+    };
 
     window.onload = function() {
       resetIdleTimer();
